@@ -1,0 +1,3 @@
+Milestone 1 logs placeholder.
+
+Use this file to record manual test runs, paper IDs, extraction notes, and Ollama behavior.

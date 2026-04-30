@@ -1,0 +1,13 @@
+.venv/
+.venv312/
+__pycache__/
+*.py[cod]
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+.env
+.env.local
+backend/data/papers/*/
+backend/data/search_cache.json
+!backend/data/papers/.gitkeep
