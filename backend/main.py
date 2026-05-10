@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
@@ -74,6 +75,63 @@ async def search(q: str = "", max_results: int = 12) -> dict[str, Any]:
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     return {"papers": papers}
+
+
+@app.post("/api/papers/upload")
+async def upload_paper(
+    file: UploadFile = File(...)
+) -> dict[str, Any]:
+
+    MAX_SIZE = 50 * 1024 * 1024  # 50 MB
+    content = await file.read(MAX_SIZE + 1)
+
+    if len(content) > MAX_SIZE:
+        raise HTTPException(status_code=413, detail="File too large")
+
+    if not content.startswith(b"%PDF"):
+        raise HTTPException(status_code=400, detail="Invalid PDF file")
+
+    content_hash = hashlib.sha256(content).hexdigest()[:8]
+    local_id = f"{safe_paper_id(file.filename)}_{content_hash}"
+
+    directory = paper_dir(local_id)
+    pdf_path = directory / "paper.pdf"
+    metadata_path = directory / "metadata.json"
+    pages_path = directory / "pages.json"
+    chunks_path = directory / "chunks.json"
+
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        pdf_path.write_bytes(content)
+
+        pages = extract_pages(pdf_path)
+        write_json(pages_path, pages)
+
+        chunks = chunk_pages(pages)
+        write_json(chunks_path, chunks)
+
+        first_page_text = " ".join(
+            chunk.get("text", "") for chunk in chunks if chunk.get("page") == 1
+        )[:2000]
+
+        metadata = {
+            "id": local_id,
+            "title": Path(file.filename).stem,
+            "uploaded": True,
+            "pages": len(pages),
+            "summary": first_page_text,
+            "authors": [],
+        }
+        write_json(metadata_path, metadata)
+
+        return {
+            "paper_id": local_id,
+            "pages": len(pages),
+            "chunks": len(chunks),
+        }
+
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @app.post("/api/papers/prepare")
@@ -169,7 +227,7 @@ async def study_goals(paper_id: str) -> dict[str, Any]:
         return {"goals": fallback_goals()}
 
     try:
-        goals = await asyncio.wait_for(generate_study_goals(metadata, chunks), timeout=10.0)
+        goals = await asyncio.wait_for(generate_study_goals(metadata, chunks), timeout=120.0)
         write_json(goals_path, goals)
     except Exception:
         goals = fallback_goals()
@@ -204,10 +262,11 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
         f"[{chunk.get('chunk_id')} | p. {chunk.get('page')}]\n{chunk.get('text', '')[:2400]}"
         for chunk in selected
     )
+
     prompt = f"""
-You answer questions about a research paper using only the provided context.
-If the context does not contain enough information, say: "The paper context does not contain enough information."
-Cite page numbers inline like [p. 2]. Keep the answer concise but useful.
+You are a helpful research paper tutor. Answer the question using the provided context from the paper.
+Be informative and detailed. If the context is related to the question, use it to give a thorough explanation.
+Cite page numbers inline like [p. 2].
 
 Context:
 {context}
