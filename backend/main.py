@@ -227,7 +227,7 @@ async def study_goals(paper_id: str) -> dict[str, Any]:
         return {"goals": fallback_goals()}
 
     try:
-        goals = await asyncio.wait_for(generate_study_goals(metadata, chunks), timeout=120.0)
+        goals = await asyncio.wait_for(generate_study_goals(metadata, chunks), timeout=40.0)
         write_json(goals_path, goals)
     except Exception:
         goals = fallback_goals()

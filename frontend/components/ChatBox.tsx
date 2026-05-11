@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Loader2, Send } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import type { ChatMessage } from "../types/paper";
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
@@ -90,7 +91,13 @@ export function ChatBox({ paperId, queuedPrompt }: ChatBoxProps) {
                   : "border-line bg-panel text-zinc-200"
               }`}
             >
-              {message.content}
+              {message.role === "assistant" ? (
+  <div className="prose prose-invert prose-sm max-w-none">
+    <ReactMarkdown>{message.content}</ReactMarkdown>
+  </div>
+) : (
+  message.content
+)}
               {message.citations?.length ? (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {message.citations.map((citation) => (
