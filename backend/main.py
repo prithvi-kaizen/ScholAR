@@ -29,6 +29,7 @@ from backend.services.pdf_service import (
     write_json,
 )
 from backend.services.retrieval_service import retrieve_chunks, short_quote
+from backend.services.rlm_service import recursive_generate
 
 
 app = FastAPI(title="ScholAR API")
@@ -247,6 +248,8 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
         return {
             "answer": "The paper context does not contain enough information to answer that.",
             "citations": [],
+            "rlm_depth": 0,
+            "rlm_confidence": 0.0,
         }
 
     citations = [
@@ -274,11 +277,21 @@ Context:
 Question: {payload.message}
 """.strip()
 
+    rlm_depth = 0
+    rlm_confidence = 0.0
+
     if await ollama_available():
         try:
-            answer = await generate(prompt)
+            answer, rlm_depth, rlm_confidence = await recursive_generate(
+                prompt=prompt,
+                context=context,
+                question=payload.message,
+                all_chunks=chunks,
+                history=payload.history,
+            )
         except Exception:
             answer = ""
+            rlm_confidence = 0.0
     else:
         answer = ""
 
@@ -294,4 +307,4 @@ Question: {payload.message}
             f"{page_text}. {best_quote}"
         )
 
-    return {"answer": answer, "citations": citations}
+    return {"answer": answer, "citations": citations, "rlm_depth": rlm_depth, "rlm_confidence": rlm_confidence}

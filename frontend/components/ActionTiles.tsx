@@ -1,5 +1,6 @@
 import { Bookmark, Compass, FileUp, Search, Settings, Sparkles } from "lucide-react";
 import { useRef } from "react";
+import { useRouter } from "next/navigation";
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
 
@@ -21,6 +22,7 @@ interface UploadResult {
 
 export function ActionTiles({ onUploadSuccess = (_data: UploadResult) => {} }: { onUploadSuccess?: (data: UploadResult) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -30,7 +32,6 @@ export function ActionTiles({ onUploadSuccess = (_data: UploadResult) => {} }: {
     form.append("file", file);
 
     try {
-      // Step 1: Upload the PDF
       const uploadRes = await fetch(`${backendUrl}/api/papers/upload`, { method: "POST", body: form });
       if (!uploadRes.ok) {
         const err = await uploadRes.json().catch(() => ({}));
@@ -38,7 +39,6 @@ export function ActionTiles({ onUploadSuccess = (_data: UploadResult) => {} }: {
       }
       const uploadData = await uploadRes.json();
 
-      // Step 2: Kick off the study goals pipeline
       const goalsRes = await fetch(`${backendUrl}/api/papers/${uploadData.paper_id}/study-goals`, {
         method: "POST",
       });
@@ -58,6 +58,7 @@ export function ActionTiles({ onUploadSuccess = (_data: UploadResult) => {} }: {
 
   const handleTileClick = (title: string) => {
     if (title === "Upload PDF") inputRef.current?.click();
+    if (title === "Bookmarks") router.push("/bookmarks");
   };
 
   return (
