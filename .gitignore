@@ -11,3 +11,5 @@ out/
 backend/data/papers/*/
 backend/data/search_cache.json
 !backend/data/papers/.gitkeep
+venv/
+.python-version

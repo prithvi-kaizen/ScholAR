@@ -1,4 +1,5 @@
 import { Bell, Bookmark, Settings } from "lucide-react";
+import Link from "next/link";
 
 export function Navbar() {
   return (
@@ -10,9 +11,11 @@ export function Navbar() {
         <span className="text-base font-semibold text-white">ScholAR</span>
       </div>
       <div className="flex items-center gap-2 text-zinc-400">
-        <button className="rounded-md border border-line p-2 transition hover:border-zinc-500 hover:text-white" aria-label="Bookmarks">
-          <Bookmark size={16} />
-        </button>
+        <Link href="/bookmarks">
+          <button className="rounded-md border border-line p-2 transition hover:border-zinc-500 hover:text-white" aria-label="Bookmarks">
+            <Bookmark size={16} />
+          </button>
+        </Link>
         <button className="rounded-md border border-line p-2 transition hover:border-zinc-500 hover:text-white" aria-label="Notifications">
           <Bell size={16} />
         </button>

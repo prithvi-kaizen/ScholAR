@@ -130,7 +130,20 @@ export default function HomePage() {
         </div>
 
         <div className="mb-8">
-          <ActionTiles />
+        <ActionTiles onUploadSuccess={(data) => {
+  const uploadedPaper: Paper = {
+    id: data.paper_id,
+    title: data.paper_id.replace(/_[a-f0-9]{8}$/, "").replace(/_/g, " "),
+    authors: [],
+    year: new Date().getFullYear().toString(),
+    summary: "",
+    categories: [],
+    pdf_url: "",
+    abs_url: "",
+  };
+  rememberPaper(uploadedPaper);
+  window.location.href = `/paper/${data.paper_id}`;
+}} />
         </div>
 
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
