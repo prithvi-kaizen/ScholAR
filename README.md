@@ -33,10 +33,10 @@ final submission/
 Important files:
 
 - `final submission/reports/FINAL_WRITTEN_REPORT.md`
+- `final submission/architecture/ScholAR_architecture_flow.png`
 - `final submission/evaluation/retrieval_eval_report.md`
 - `final submission/evaluation/retrieval_eval_results.json`
 - `final submission/evaluation/benchmark_cases.json`
-- `docs/FINAL_WRITTEN_REPORT.md`
 - `evaluation/run_retrieval_eval.py`
 
 ## Setup

@@ -5,6 +5,8 @@ __pycache__/
 node_modules/
 .next/
 out/
+output/
+tmp/
 *.tsbuildinfo
 .env
 .env.local

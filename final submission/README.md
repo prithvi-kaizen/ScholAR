@@ -8,8 +8,10 @@ This folder collects the main files for the final GenAI project submission.
 - `evaluation/retrieval_eval_report.md`: quantitative evaluation report with comparison and ablation.
 - `evaluation/retrieval_eval_results.json`: raw evaluation output.
 - `evaluation/benchmark_cases.json`: manually checked retrieval benchmark cases.
-- `project_docs/README.md`: project setup and running instructions.
-- `project_docs/domain_note.md`: project domain note.
+- `architecture/ScholAR_architecture_flow.png`: architecture and flow diagram for the system.
+- `architecture/ScholAR_architecture_flow.svg`: editable vector version of the diagram.
+
+Project setup instructions are in the root `README.md`. The domain note is in the root `domain_note.md`.
 
 ## Current evaluation summary
 

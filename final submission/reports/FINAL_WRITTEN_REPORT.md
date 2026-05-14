@@ -48,6 +48,10 @@ The frontend was designed around a split study workspace. The left side shows th
 
 ## 3. Technical approach
 
+The diagram below shows the actual implemented flow of the system.
+
+![ScholAR architecture and flow](../architecture/ScholAR_architecture_flow.png)
+
 The backend uses a retrieval augmented generation flow. The model does not receive the whole paper every time. Instead, ScholAR retrieves relevant chunks first and sends those chunks to the model as paper evidence.
 
 The paper processing flow is:
@@ -112,9 +116,7 @@ Another weakness was local model latency. Local Qwen can produce good answers, b
 
 Search quality also needed improvement. arXiv search can return surprising results because it depends on the query and arXiv matching behavior. The project improved search handling, but search is still not the main technical contribution. The main contribution is the study and retrieval workflow after a paper is selected.
 
-The light mode UI also had issues. Since the app was first designed as a dark interface, some colors and tag contrasts looked wrong in light mode. This was a design problem, not a model problem. It showed that UI themes need to be tested directly, not just added through variables.
-
-The biggest technical limitation is that the retrieval benchmark is still small. The first version of the hybrid retriever did not beat BM25-only on every metric. That was a useful failure because it changed the engineering decision. The current system now uses BM25 as the primary retrieval method and keeps hybrid signals as small reranking boosts.
+The biggest technical limitation is that the retrieval benchmark is still small. The first version of the hybrid retriever did not beat BM25-only on every metric. That was a useful failure because it changed the decision. The current system now uses BM25 as the primary retrieval method and keeps hybrid signals as small reranking boosts.
 
 ## 6. Quantitative evaluation
 
@@ -138,11 +140,11 @@ The benchmark covers main idea questions, method questions, architecture questio
 
 Four retrieval settings were compared:
 
-| System                         | What it means                                                   |
-| ------------------------------ | --------------------------------------------------------------- |
-| `keyword_overlap`            | A simple baseline using token overlap.                          |
-| `bm25_only`                  | A BM25-style lexical retrieval baseline.                        |
-| `bm25_primary_no_page_hints` | Current ScholAR retrieval without page hints.                   |
+| System                           | What it means                                                  |
+| -------------------------------- | -------------------------------------------------------------- |
+| `keyword_overlap`              | A simple baseline using token overlap.                         |
+| `bm25_only`                    | A BM25-style lexical retrieval baseline.                       |
+| `bm25_primary_no_page_hints`   | Current ScholAR retrieval without page hints.                  |
 | `bm25_primary_with_page_hints` | Current ScholAR retrieval with page hints when they are given. |
 
 The metrics were:
@@ -156,12 +158,12 @@ The metrics were:
 
 The results were:
 
-| System                         | Cases | Recall@1 | Recall@3 | Recall@5 |   MRR |
-| ------------------------------ | ----: | -------: | -------: | -------: | ----: |
-| `keyword_overlap`            |    14 |    0.571 |    0.786 |    0.929 | 0.687 |
-| `bm25_only`                  |    14 |    0.714 |    0.929 |    1.000 | 0.812 |
-| `bm25_primary_no_page_hints` |    14 |    0.714 |    0.929 |    1.000 | 0.812 |
-| `bm25_primary_with_page_hints` |  14 |    0.714 |    0.929 |    1.000 | 0.812 |
+| System                           | Cases | Recall@1 | Recall@3 | Recall@5 |   MRR |
+| -------------------------------- | ----: | -------: | -------: | -------: | ----: |
+| `keyword_overlap`              |    14 |    0.571 |    0.786 |    0.929 | 0.687 |
+| `bm25_only`                    |    14 |    0.714 |    0.929 |    1.000 | 0.812 |
+| `bm25_primary_no_page_hints`   |    14 |    0.714 |    0.929 |    1.000 | 0.812 |
+| `bm25_primary_with_page_hints` |    14 |    0.714 |    0.929 |    1.000 | 0.812 |
 
 The important result is that BM25 was the strongest and most reliable retrieval method on this benchmark. The earlier hybrid-primary version had slightly better top-rank behavior in one run, but it missed one result-table case in Recall@5. That was not acceptable because a paper assistant needs reliable evidence more than a fancy scoring formula.
 
