@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Share2, Sparkles, Star, X } from "lucide-react";
+import { ExternalLink, Sparkles, Star, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { Paper } from "../types/paper";
@@ -12,10 +12,11 @@ interface PaperModalProps {
   paper: Paper | null;
   onClose: () => void;
   onBookmark: (paper: Paper) => void;
+  isBookmarked: boolean;
   onViewed: (paper: Paper) => void;
 }
 
-export function PaperModal({ paper, onClose, onBookmark, onViewed }: PaperModalProps) {
+export function PaperModal({ paper, onClose, onBookmark, isBookmarked, onViewed }: PaperModalProps) {
   const router = useRouter();
   const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState("");
@@ -46,10 +47,6 @@ export function PaperModal({ paper, onClose, onBookmark, onViewed }: PaperModalP
     }
   }
 
-  function sharePaper() {
-    void navigator.clipboard?.writeText(currentPaper.abs_url);
-  }
-
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/75 px-4 py-8 backdrop-blur-sm">
       <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-line bg-panel shadow-glow">
@@ -74,23 +71,26 @@ export function PaperModal({ paper, onClose, onBookmark, onViewed }: PaperModalP
           <p className="text-sm leading-7 text-zinc-300">{currentPaper.summary}</p>
           {error ? <p className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p> : null}
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => onBookmark(currentPaper)} className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-sm text-zinc-200 hover:border-zinc-500">
-              <Star size={16} />
-              Bookmark
-            </button>
-            <button onClick={sharePaper} className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-sm text-zinc-200 hover:border-zinc-500">
-              <Share2 size={16} />
-              Share
-            </button>
-            <a
-              href={currentPaper.abs_url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-sm text-zinc-200 hover:border-zinc-500"
+            <button
+              onClick={() => onBookmark(currentPaper)}
+              className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:border-zinc-500 ${
+                isBookmarked ? "border-acid/40 bg-acid/10 text-acid" : "border-line text-zinc-200"
+              }`}
             >
-              <ExternalLink size={16} />
-              Go to Paper Page
-            </a>
+              <Star size={16} fill={isBookmarked ? "currentColor" : "none"} />
+              {isBookmarked ? "Bookmarked" : "Bookmark"}
+            </button>
+            {currentPaper.abs_url ? (
+              <a
+                href={currentPaper.abs_url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-sm text-zinc-200 hover:border-zinc-500"
+              >
+                <ExternalLink size={16} />
+                Go to Paper Page
+              </a>
+            ) : null}
             <button
               onClick={preparePaper}
               disabled={preparing}

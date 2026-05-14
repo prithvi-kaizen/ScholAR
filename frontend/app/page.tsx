@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ActionTiles } from "../components/ActionTiles";
 import { Navbar } from "../components/Navbar";
 import { PaperCard } from "../components/PaperCard";
@@ -62,16 +63,30 @@ function writePapers(key: string, papers: Paper[]) {
 }
 
 export default function HomePage() {
+  const router = useRouter();
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const [papers, setPapers] = useState<Paper[]>(editorPicks);
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null);
   const [recentlyViewed, setRecentlyViewed] = useState<Paper[]>([]);
+  const [bookmarks, setBookmarks] = useState<Paper[]>([]);
   const [activeTab, setActiveTab] = useState("Editor's Picks");
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadStep, setUploadStep] = useState(0);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState("");
 
+  const uploadSteps = [
+    "Uploading PDF",
+    "Extracting pages",
+    "Building study chunks",
+    "Creating Groq study plan",
+    "Opening workspace"
+  ];
+
   useEffect(() => {
     setRecentlyViewed(readPapers(RECENT_KEY));
+    setBookmarks(readPapers(BOOKMARK_KEY));
   }, []);
 
   const visiblePapers = useMemo(() => {
@@ -93,9 +108,59 @@ export default function HomePage() {
   }
 
   function bookmarkPaper(paper: Paper) {
-    const bookmarks = readPapers(BOOKMARK_KEY);
-    const next = [paper, ...bookmarks.filter((item) => item.id !== paper.id)];
+    const exists = bookmarks.some((item) => item.id === paper.id);
+    const next = exists ? bookmarks.filter((item) => item.id !== paper.id) : [paper, ...bookmarks];
+    setBookmarks(next);
     writePapers(BOOKMARK_KEY, next);
+  }
+
+  function openBookmarks() {
+    document.getElementById("bookmarks")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function uploadPdf(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      setError("Please choose a PDF file.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("title", file.name.replace(/\.pdf$/i, ""));
+
+    setUploading(true);
+    setUploadStep(0);
+    setError("");
+    try {
+      setUploadStep(0);
+      const response = await fetch(`${backendUrl}/api/papers/upload`, {
+        method: "POST",
+        body: formData
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.detail ?? "Upload failed");
+      }
+      setUploadStep(1);
+      const payload = (await response.json()) as { paper_id: string; metadata: Paper };
+      setUploadStep(2);
+      rememberPaper(payload.metadata);
+      setUploadStep(3);
+      await fetch(`${backendUrl}/api/papers/${encodeURIComponent(payload.paper_id)}/study-goals`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "groq", force: true })
+      }).catch(() => null);
+      setUploadStep(4);
+      router.push(`/paper/${encodeURIComponent(payload.paper_id)}`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function search(query: string) {
@@ -114,8 +179,8 @@ export default function HomePage() {
       setSearched(true);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Search failed");
-      setSearched(false);
-      setPapers(editorPicks);
+      setSearched(true);
+      setPapers([]);
     } finally {
       setLoading(false);
     }
@@ -130,7 +195,8 @@ export default function HomePage() {
         </div>
 
         <div className="mb-8">
-          <ActionTiles />
+          <ActionTiles onUploadClick={() => uploadInputRef.current?.click()} onBookmarksClick={openBookmarks} />
+          <input ref={uploadInputRef} type="file" accept="application/pdf" onChange={uploadPdf} className="hidden" />
         </div>
 
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -153,6 +219,35 @@ export default function HomePage() {
           {searched ? <span className="text-sm text-zinc-500">{papers.length} arXiv results</span> : null}
         </div>
 
+        {uploading ? (
+          <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 px-4 backdrop-blur-sm">
+            <div className="w-full max-w-lg rounded-lg border border-line bg-panel p-6 shadow-glow">
+              <div className="mb-5 flex items-center gap-4">
+                <div className="relative h-14 w-14 shrink-0">
+                  <div className="absolute inset-0 rounded-full border-2 border-acid/20" />
+                  <div className="absolute inset-0 animate-spin rounded-full border-2 border-acid border-t-transparent" />
+                  <div className="absolute inset-3 rounded-full bg-acid/15" />
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-acid">Preparing study workspace</p>
+                  <h2 className="mt-1 text-xl font-semibold text-white">{uploadSteps[uploadStep]}</h2>
+                  <p className="mt-1 text-sm text-zinc-400">Extracting the paper and creating one canonical study plan for both Local and Groq.</p>
+                </div>
+              </div>
+              <div className="mb-4 h-2 overflow-hidden rounded-full bg-white/10">
+                <div className="h-full rounded-full bg-acid transition-all duration-500" style={{ width: `${((uploadStep + 1) / uploadSteps.length) * 100}%` }} />
+              </div>
+              <div className="space-y-2">
+                {uploadSteps.map((step, index) => (
+                  <div key={step} className={`flex items-center gap-2 text-sm ${index <= uploadStep ? "text-zinc-100" : "text-zinc-600"}`}>
+                    <span className={`h-2 w-2 rounded-full ${index <= uploadStep ? "bg-acid" : "bg-zinc-700"}`} />
+                    {step}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
         {error ? <div className="mb-5 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</div> : null}
 
         {loading ? (
@@ -190,9 +285,33 @@ export default function HomePage() {
             </div>
           )}
         </section>
+
+        <section id="bookmarks" className="mt-10 scroll-mt-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white">Bookmarked Papers</h2>
+            <span className="text-xs text-zinc-500">{bookmarks.length} saved locally</span>
+          </div>
+          {bookmarks.length ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {bookmarks.map((paper) => (
+                <PaperCard key={`bookmark-${paper.id}`} paper={paper} onSelect={handleSelect} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-line bg-panel px-5 py-6 text-sm text-zinc-500">
+              Bookmark papers from the paper preview to keep them here.
+            </div>
+          )}
+        </section>
       </section>
 
-      <PaperModal paper={selectedPaper} onClose={() => setSelectedPaper(null)} onBookmark={bookmarkPaper} onViewed={rememberPaper} />
+      <PaperModal
+        paper={selectedPaper}
+        onClose={() => setSelectedPaper(null)}
+        onBookmark={bookmarkPaper}
+        isBookmarked={selectedPaper ? bookmarks.some((paper) => paper.id === selectedPaper.id) : false}
+        onViewed={rememberPaper}
+      />
     </main>
   );
 }

@@ -5,12 +5,12 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#050505",
-        panel: "#101113",
-        panelSoft: "#17191d",
-        line: "#2a2d33",
-        muted: "#9ca3af",
-        acid: "#b7f96d"
+        ink: "rgb(var(--color-ink) / <alpha-value>)",
+        panel: "rgb(var(--color-panel) / <alpha-value>)",
+        panelSoft: "rgb(var(--color-panel-soft) / <alpha-value>)",
+        line: "rgb(var(--color-line) / <alpha-value>)",
+        muted: "rgb(var(--color-muted) / <alpha-value>)",
+        acid: "rgb(var(--color-acid) / <alpha-value>)"
       },
       boxShadow: {
         glow: "0 18px 60px rgba(0, 0, 0, 0.55)"

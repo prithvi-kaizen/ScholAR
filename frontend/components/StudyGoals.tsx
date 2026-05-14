@@ -36,6 +36,25 @@ export function StudyGoals({ goals, loading, onGoalClick }: StudyGoalsProps) {
                 <h3 className="text-sm font-semibold text-white">{goal.title}</h3>
               </div>
               <p className="mt-2 text-xs leading-5 text-zinc-400">{goal.description}</p>
+              {goal.subquestions?.length ? (
+                <div className="mt-3 space-y-2 rounded-md border border-line bg-ink/60 p-3">
+                  {goal.subquestions.slice(0, 5).map((subquestion) => (
+                    <div key={subquestion.id} className="text-xs leading-5 text-zinc-300">
+                      <div>{subquestion.question}</div>
+                      {subquestion.evidence_chunks?.length ? (
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          {subquestion.evidence_chunks.slice(0, 3).map((evidence) => (
+                            <span key={`${subquestion.id}-${evidence.chunk_id}`} className="rounded-md border border-line px-2 py-0.5 text-[11px] text-zinc-500">
+                              p. {evidence.page}
+                              {evidence.chunk_type ? ` · ${evidence.chunk_type}` : ""}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {goal.source_pages.map((page) => (
                   <span key={`${goal.id}-${page}`} className="rounded-md border border-line px-2 py-0.5 text-xs text-zinc-400">

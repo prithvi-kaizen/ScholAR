@@ -1,33 +1,40 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import FastAPI, HTTPException
+import httpx
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
 from backend.services.arxiv_service import search_arxiv
 from backend.services.chunking_service import chunk_pages
+from backend.services.groq_service import GROQ_MODEL, generate_with_groq, groq_available, groq_configured
 from backend.services.ollama_service import (
     OLLAMA_MODEL,
     fallback_goals,
     generate,
     generate_study_goals,
     ollama_available,
+    STUDY_GOAL_PROMPT_VERSION,
 )
 from backend.services.pdf_service import (
     download_pdf,
     extract_pages,
+    infer_uploaded_metadata,
     paper_dir,
     read_json,
     render_page_png,
     safe_paper_id,
     write_json,
 )
-from backend.services.retrieval_service import retrieve_chunks, short_quote
+from backend.services.retrieval_service import extract_page_hints, retrieve_chunks, short_quote, tokenize
+from backend.services.web_search_service import search_web, web_search_enabled
 
 
 app = FastAPI(title="ScholAR API")
@@ -56,6 +63,338 @@ class PaperInput(BaseModel):
 class ChatInput(BaseModel):
     message: str
     history: list[dict[str, Any]] = Field(default_factory=list)
+    provider: Literal["local", "groq"] = "local"
+    web_search: bool = True
+
+
+class StudyGoalsInput(BaseModel):
+    provider: Literal["local", "groq"] = "local"
+    force: bool = False
+
+
+def _ensure_chunk_metadata(chunks_path: Path, pages_path: Path) -> list[dict[str, Any]]:
+    chunks = read_json(chunks_path) if chunks_path.exists() else []
+    if chunks and all("section_title" in chunk and "chunk_type" in chunk and "paragraph_text" in chunk for chunk in chunks):
+        return chunks
+    if not pages_path.exists():
+        return chunks
+    pages = read_json(pages_path)
+    upgraded = chunk_pages(pages)
+    write_json(chunks_path, upgraded)
+    return upgraded
+
+
+def _important_sentences(text: str) -> list[str]:
+    import re
+
+    banned = ("table 1:", "figure", "copyright", "provided proper attribution")
+    sentences = [item.strip() for item in re.split(r"(?<=[.!?])\s+", text.replace("\n", " ")) if len(item.strip()) > 45]
+    ranked: list[tuple[int, str]] = []
+    for sentence in sentences:
+        lowered = sentence.lower()
+        if any(term in lowered for term in banned):
+            continue
+        score = 0
+        for term in (
+            "we introduce",
+            "we propose",
+            "we show",
+            "we find",
+            "results",
+            "achieves",
+            "outperforms",
+            "significant",
+            "accuracy",
+            "benchmark",
+            "evaluation",
+            "dataset",
+            "method",
+            "framework",
+            "limitation",
+        ):
+            if term in lowered:
+                score += 2
+        if any(char.isdigit() for char in sentence):
+            score += 1
+        ranked.append((score, sentence[:420]))
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    return [sentence for score, sentence in ranked if score > 0][:8] or [sentence[:420] for sentence in sentences[:6]]
+
+
+def _extractive_tutor_answer(question: str, selected: list[dict[str, Any]]) -> str:
+    lines = ["I could not get a full model response, so here is the best grounded answer from the paper context:"]
+    used = 0
+    for chunk in selected:
+        page = chunk.get("page")
+        for sentence in _important_sentences(chunk.get("text", ""))[:2]:
+            lines.append(f"- {sentence} [p. {page}]")
+            used += 1
+            if used >= 6:
+                return "\n".join(lines)
+    return "\n".join(lines)
+
+
+def _provider_error_payload(error_code: str, message: str, payload: ChatInput, effective_provider: str | None) -> dict[str, Any]:
+    return {
+        "answer": "",
+        "citations": [],
+        "web_results": [],
+        "used_web_search": False,
+        "provider": effective_provider or payload.provider,
+        "requested_provider": payload.provider,
+        "model": _provider_label(effective_provider or payload.provider),
+        "provider_error": error_code,
+        "message": message,
+    }
+
+
+def _model_failure_payload(payload: ChatInput, effective_provider: str, exc: Exception | None = None) -> dict[str, Any]:
+    if effective_provider == "local":
+        if isinstance(exc, (httpx.ReadTimeout, httpx.TimeoutException)):
+            return _provider_error_payload(
+                "local_timeout",
+                "Local Qwen took too long to answer. Try again with a shorter question, or switch back to Groq when limits reset.",
+                payload,
+                effective_provider,
+            )
+        return _provider_error_payload(
+            "local_error",
+            "Local Qwen could not complete this answer. Make sure Ollama is running and the selected model is loaded.",
+            payload,
+            effective_provider,
+        )
+    return _provider_error_payload(
+        "provider_error",
+        "The selected model could not complete this answer.",
+        payload,
+        effective_provider,
+    )
+
+
+def _should_search_web(message: str, selected_chunks: list[dict[str, Any]]) -> bool:
+    lowered = message.lower()
+    explicit_terms = (
+        "web",
+        "internet",
+        "search",
+        "latest",
+        "recent",
+        "current",
+        "today",
+        "news",
+        "who is",
+        "what is",
+        "compare with",
+        "outside this paper",
+        "other papers",
+        "implementation library",
+        "github",
+        "dataset link",
+    )
+    if any(term in lowered for term in explicit_terms):
+        return True
+    if not selected_chunks:
+        return True
+    if len(message.split()) > 10 and len(selected_chunks) < 3:
+        return True
+    return False
+
+
+def _web_query(message: str, metadata: dict[str, Any]) -> str:
+    title = metadata.get("title") or ""
+    if any(term in message.lower() for term in ("this paper", "the paper", "authors", "code", "github", "dataset")):
+        return f"{title} {message}".strip()
+    return message.strip()
+
+
+def _format_web_context(results: list[dict[str, Any]]) -> str:
+    if not results:
+        return "No web results were available."
+    return "\n\n".join(
+        f"[web:{index}]\nTitle: {result.get('title')}\nURL: {result.get('url')}\nSnippet: {result.get('snippet')}"
+        for index, result in enumerate(results, start=1)
+    )
+
+
+def _extractive_web_answer(results: list[dict[str, Any]]) -> str:
+    if not results:
+        return ""
+    lines = ["I could not get a full model response, but the web search returned these potentially useful sources:"]
+    for index, result in enumerate(results[:5], start=1):
+        snippet = result.get("snippet") or "No snippet available."
+        lines.append(f"- {result.get('title')} [web:{index}]\n  {snippet}\n  {result.get('url')}")
+    return "\n".join(lines)
+
+
+def _citation_candidates(text: str) -> list[str]:
+    sentences = [item.strip() for item in re.split(r"(?<=[.!?])\s+", text.replace("\n", " ")) if len(item.strip()) > 55]
+    return [sentence[:500] for sentence in sentences]
+
+
+def _build_evidence_items(question: str, chunks: list[dict[str, Any]], limit: int = 8) -> list[dict[str, Any]]:
+    question_terms = set(tokenize(question))
+    banned = (
+        "author name redacted",
+        "copyright",
+        "provided proper attribution",
+        "equal contribution",
+        "arxiv:",
+        "preprint.",
+        "facebook ai research",
+        "university college london",
+        "new york university",
+    )
+    scored: list[tuple[float, int, dict[str, Any]]] = []
+
+    for chunk_index, chunk in enumerate(chunks):
+        page = chunk.get("page")
+        chunk_id = chunk.get("chunk_id")
+        for sentence_index, sentence in enumerate(_citation_candidates(chunk.get("text", ""))):
+            lowered = sentence.lower()
+            if any(term in lowered for term in banned):
+                continue
+            sentence_terms = set(tokenize(sentence))
+            if not sentence_terms:
+                continue
+            overlap = len(question_terms.intersection(sentence_terms))
+            score = overlap * 2.0
+            if any(term in lowered for term in ("we propose", "we introduce", "we present", "we show", "we find")):
+                score += 4.0
+            if any(term in lowered for term in ("result", "achieve", "outperform", "benchmark", "dataset", "experiment", "limitation")):
+                score += 2.0
+            if any(char.isdigit() for char in sentence):
+                score += 0.4
+            score += max(0, 2.5 - chunk_index * 0.35)
+            score += max(0, 0.8 - sentence_index * 0.05)
+            if score <= 1.2:
+                continue
+            scored.append(
+                (
+                    score,
+                    chunk_index,
+                    {
+                        "page": page,
+                        "chunk_id": chunk_id,
+                        "section_title": chunk.get("section_title") or "Paper",
+                        "chunk_type": chunk.get("chunk_type") or "body",
+                        "quote": sentence[:520],
+                    },
+                )
+            )
+
+    scored.sort(key=lambda item: item[0], reverse=True)
+    evidence: list[dict[str, Any]] = []
+    seen_quotes: set[str] = set()
+    for _, _, item in scored:
+        quote_key = re.sub(r"\W+", " ", item["quote"].lower())[:120]
+        if quote_key in seen_quotes:
+            continue
+        seen_quotes.add(quote_key)
+        item["evidence_id"] = f"E{len(evidence) + 1}"
+        evidence.append(item)
+        if len(evidence) >= limit:
+            break
+    return evidence
+
+
+def _format_evidence_context(evidence_items: list[dict[str, Any]]) -> str:
+    if not evidence_items:
+        return "No relevant paper evidence was retrieved."
+    return "\n\n".join(
+        f"[{item['evidence_id']} | p. {item.get('page')} | {item.get('chunk_id')}]\n{item.get('quote')}"
+        for item in evidence_items
+    )
+
+
+def _normalize_evidence_citations(answer: str, evidence_items: list[dict[str, Any]]) -> tuple[str, list[dict[str, Any]]]:
+    evidence_by_id = {item["evidence_id"].upper(): item for item in evidence_items}
+    used_ids: list[str] = []
+    answer_without_direct_pages = re.sub(r"\[p\.\s*\d+\]", "", answer, flags=re.IGNORECASE)
+
+    def replace_evidence_id(match: re.Match[str]) -> str:
+        evidence_id = f"E{match.group(1)}".upper()
+        item = evidence_by_id.get(evidence_id)
+        if not item:
+            return ""
+        if evidence_id not in used_ids:
+            used_ids.append(evidence_id)
+        return f"[{used_ids.index(evidence_id) + 1}]"
+
+    normalized = re.sub(r"\[E\s*(\d+)\]", replace_evidence_id, answer_without_direct_pages, flags=re.IGNORECASE)
+    valid_pages = {int(item["page"]) for item in evidence_items if isinstance(item.get("page"), int)}
+
+    def remove_unverified_page(match: re.Match[str]) -> str:
+        try:
+            page = int(match.group(1))
+        except ValueError:
+            return ""
+        return match.group(0) if page in valid_pages else ""
+
+    normalized = re.sub(r"\[p\.\s*(\d+)\]", remove_unverified_page, normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"[ \t]{2,}", " ", normalized)
+    citations = [
+        {
+            "ref_id": index,
+            "page": evidence_by_id[evidence_id].get("page"),
+            "chunk_id": evidence_by_id[evidence_id].get("chunk_id"),
+            "section_title": evidence_by_id[evidence_id].get("section_title"),
+            "chunk_type": evidence_by_id[evidence_id].get("chunk_type"),
+            "quote": evidence_by_id[evidence_id].get("quote"),
+        }
+        for index, evidence_id in enumerate(used_ids[:5], start=1)
+        if evidence_id in evidence_by_id
+    ]
+    return normalized.strip(), citations
+
+
+def _build_answer_citations(answer: str, question: str, chunks: list[dict[str, Any]], limit: int = 4) -> list[dict[str, Any]]:
+    answer_terms = set(tokenize(answer))
+    question_terms = set(tokenize(question))
+    page_hints = set(extract_page_hints(question))
+    scored: list[tuple[float, dict[str, Any]]] = []
+
+    banned = ("author name redacted", "abstract", "when models know better", "april 3, 2026")
+    for chunk in chunks:
+        page = chunk.get("page")
+        for sentence in _citation_candidates(chunk.get("text", "")):
+            lowered = sentence.lower()
+            if any(term in lowered for term in banned):
+                continue
+            sentence_terms = set(tokenize(sentence))
+            if not sentence_terms:
+                continue
+            answer_overlap = len(answer_terms.intersection(sentence_terms))
+            question_overlap = len(question_terms.intersection(sentence_terms))
+            score = answer_overlap * 2.0 + question_overlap
+            if page in page_hints:
+                score += 6.0
+            if any(char.isdigit() for char in sentence):
+                score += 0.5
+            if score <= 1:
+                continue
+            scored.append(
+                (
+                    score,
+                    {
+                        "page": page,
+                        "chunk_id": chunk.get("chunk_id"),
+                        "quote": sentence,
+                    },
+                )
+            )
+
+    scored.sort(key=lambda item: item[0], reverse=True)
+    citations: list[dict[str, Any]] = []
+    seen_quotes: set[str] = set()
+    for _, citation in scored:
+        quote_key = citation["quote"][:90].lower()
+        if quote_key in seen_quotes:
+            continue
+        seen_quotes.add(quote_key)
+        citations.append(citation)
+        if len(citations) >= limit:
+            break
+    return citations
 
 
 @app.get("/health")
@@ -63,6 +402,13 @@ async def health() -> dict[str, Any]:
     return {
         "status": "ok",
         "ollama_available": await ollama_available(),
+        "groq_configured": groq_configured(),
+        "groq_available": await groq_available(),
+        "web_search_enabled": web_search_enabled(),
+        "models": {
+            "local": OLLAMA_MODEL,
+            "groq": GROQ_MODEL,
+        },
         "model": OLLAMA_MODEL,
     }
 
@@ -105,7 +451,62 @@ async def prepare_paper(paper: PaperInput) -> dict[str, Any]:
             chunks = chunk_pages(pages)
             write_json(chunks_path, chunks)
         else:
-            chunks = read_json(chunks_path)
+            chunks = _ensure_chunk_metadata(chunks_path, pages_path)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    return {
+        "paper_id": local_id,
+        "metadata": metadata,
+        "pages": len(pages),
+        "chunks": len(chunks),
+    }
+
+
+@app.post("/api/papers/upload")
+async def upload_paper(file: UploadFile = File(...), title: str = Form("")) -> dict[str, Any]:
+    filename = file.filename or "uploaded-paper.pdf"
+    if not filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Please upload a PDF file")
+
+    content = await file.read()
+    if not content.startswith(b"%PDF"):
+        raise HTTPException(status_code=400, detail="Uploaded file does not look like a PDF")
+
+    digest = hashlib.sha1(content).hexdigest()[:12]
+    local_id = safe_paper_id(f"upload_{digest}")
+    directory = paper_dir(local_id)
+    pdf_path = directory / "paper.pdf"
+    metadata_path = directory / "metadata.json"
+    pages_path = directory / "pages.json"
+    chunks_path = directory / "chunks.json"
+
+    clean_title = title.strip() or Path(filename).stem.replace("_", " ").replace("-", " ").strip() or "Uploaded PDF"
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        if not pdf_path.exists():
+            pdf_path.write_bytes(content)
+
+        pages = extract_pages(pdf_path)
+        chunks = chunk_pages(pages)
+        inferred = infer_uploaded_metadata(pages, clean_title)
+        metadata = {
+            "id": local_id,
+            "local_id": local_id,
+            "title": inferred["title"],
+            "authors": ["Uploaded PDF"],
+            "year": "",
+            "summary": inferred["summary"],
+            "categories": ["PDF"],
+            "pdf_url": "",
+            "abs_url": "",
+            "published": "",
+            "source": "upload",
+            "filename": filename,
+        }
+        write_json(metadata_path, metadata)
+        write_json(pages_path, pages)
+        write_json(chunks_path, chunks)
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -132,8 +533,14 @@ def _paths_or_404(paper_id: str) -> tuple[Path, Path, Path, Path]:
 async def get_paper(paper_id: str) -> dict[str, Any]:
     metadata_path, pages_path, chunks_path, _ = _paths_or_404(paper_id)
     metadata = read_json(metadata_path)
+    if metadata.get("source") == "upload" and metadata.get("summary") == "Custom PDF uploaded for local study." and pages_path.exists():
+        inferred = infer_uploaded_metadata(read_json(pages_path), metadata.get("title", "Uploaded PDF"))
+        metadata["title"] = inferred["title"]
+        metadata["summary"] = inferred["summary"]
+        write_json(metadata_path, metadata)
     metadata["pages"] = len(read_json(pages_path)) if pages_path.exists() else 0
-    metadata["chunks"] = len(read_json(chunks_path)) if chunks_path.exists() else 0
+    chunks = _ensure_chunk_metadata(chunks_path, pages_path) if chunks_path.exists() else []
+    metadata["chunks"] = len(chunks)
     return metadata
 
 
@@ -146,34 +553,106 @@ async def get_pdf(paper_id: str) -> FileResponse:
 
 
 @app.get("/api/papers/{paper_id}/page/{page_number}.png")
-async def get_pdf_page(paper_id: str, page_number: int, zoom: float = 1.8) -> Response:
+async def get_pdf_page(paper_id: str, page_number: int, zoom: float = 1.8, highlight: str = "") -> Response:
     _, _, _, pdf_path = _paths_or_404(paper_id)
     try:
-        image_bytes = render_page_png(pdf_path, page_number, zoom)
+        image_bytes = render_page_png(pdf_path, page_number, zoom, highlight)
     except RuntimeError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return Response(content=image_bytes, media_type="image/png")
 
 
+def _provider_label(provider: str) -> str:
+    return "Groq" if provider == "groq" else "local Qwen"
+
+
+async def _provider_available(provider: str) -> bool:
+    return await groq_available() if provider == "groq" else await ollama_available()
+
+
+async def _effective_provider(requested_provider: str) -> str | None:
+    if requested_provider == "groq":
+        if await groq_available():
+            return "groq"
+        if await ollama_available():
+            return "local"
+        return None
+    if await ollama_available():
+        return "local"
+    if await groq_available():
+        return "groq"
+    return None
+
+
+async def _generate_with_provider(provider: str, prompt: str, temperature: float = 0.2) -> str:
+    if provider == "groq":
+        return await generate_with_groq(prompt, temperature=temperature)
+    return await generate(prompt, temperature=temperature)
+
+
+async def _planning_provider() -> str | None:
+    if await groq_available():
+        return "groq"
+    if await ollama_available():
+        return "local"
+    return None
+
+
 @app.post("/api/papers/{paper_id}/study-goals")
-async def study_goals(paper_id: str) -> dict[str, Any]:
-    metadata_path, _, chunks_path, _ = _paths_or_404(paper_id)
+async def study_goals(
+    paper_id: str,
+    payload: StudyGoalsInput | None = None,
+) -> dict[str, Any]:
+    payload = payload or StudyGoalsInput()
+    metadata_path, pages_path, chunks_path, _ = _paths_or_404(paper_id)
     metadata = read_json(metadata_path)
-    chunks = read_json(chunks_path) if chunks_path.exists() else []
-    goals_path = metadata_path.parent / "goals.json"
+    chunks = _ensure_chunk_metadata(chunks_path, pages_path) if chunks_path.exists() else []
+    if metadata.get("source") == "upload" and metadata.get("summary") == "Custom PDF uploaded for local study.":
+        pages_path = metadata_path.parent / "pages.json"
+        if pages_path.exists():
+            inferred = infer_uploaded_metadata(read_json(pages_path), metadata.get("title", "Uploaded PDF"))
+            metadata["title"] = inferred["title"]
+            metadata["summary"] = inferred["summary"]
+            write_json(metadata_path, metadata)
+    effective_provider = await _planning_provider()
 
-    if goals_path.exists():
-        return {"goals": read_json(goals_path)}
+    if not effective_provider:
+        return {
+            "goals": fallback_goals(metadata, chunks),
+            "provider": payload.provider,
+            "planning_provider": payload.provider,
+            "fallback": True,
+        }
 
-    if not await ollama_available():
-        return {"goals": fallback_goals()}
+    goals_path = metadata_path.parent / f"goals_canonical_{STUDY_GOAL_PROMPT_VERSION}.json"
+
+    if goals_path.exists() and not payload.force:
+        return {
+            "goals": read_json(goals_path),
+            "provider": payload.provider,
+            "requested_provider": payload.provider,
+            "planning_provider": effective_provider,
+        }
 
     try:
-        goals = await asyncio.wait_for(generate_study_goals(metadata, chunks), timeout=10.0)
+        goals = await asyncio.wait_for(
+            generate_study_goals(
+                metadata,
+                chunks,
+                generate_func=lambda prompt, temperature=0.2: _generate_with_provider(effective_provider, prompt, temperature),
+                provider=effective_provider,
+            ),
+            timeout=45.0 if effective_provider == "groq" else 120.0,
+        )
         write_json(goals_path, goals)
     except Exception:
-        goals = fallback_goals()
-    return {"goals": goals}
+        goals = fallback_goals(metadata, chunks)
+    return {
+        "goals": goals,
+        "provider": payload.provider,
+        "requested_provider": payload.provider,
+        "planning_provider": effective_provider,
+    }
 
 
 @app.post("/api/papers/{paper_id}/chat")
@@ -181,58 +660,170 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
     if not payload.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 
-    _, _, chunks_path, _ = _paths_or_404(paper_id)
-    chunks = read_json(chunks_path) if chunks_path.exists() else []
-    selected = retrieve_chunks(payload.message, chunks, limit=4)
+    metadata_path, pages_path, chunks_path, _ = _paths_or_404(paper_id)
+    metadata = read_json(metadata_path)
+    chunks = _ensure_chunk_metadata(chunks_path, pages_path) if chunks_path.exists() else []
+    if metadata.get("source") == "upload" and metadata.get("summary") == "Custom PDF uploaded for local study.":
+        pages_path = metadata_path.parent / "pages.json"
+        if pages_path.exists():
+            inferred = infer_uploaded_metadata(read_json(pages_path), metadata.get("title", "Uploaded PDF"))
+            metadata["title"] = inferred["title"]
+            metadata["summary"] = inferred["summary"]
+            write_json(metadata_path, metadata)
+    page_hints = extract_page_hints(payload.message)
+    selected = retrieve_chunks(payload.message, chunks, limit=6, preferred_pages=page_hints)
+    web_results: list[dict[str, Any]] = []
+    used_web_search = False
 
-    if not selected:
+    if payload.web_search and web_search_enabled() and _should_search_web(payload.message, selected):
+        used_web_search = True
+        web_results = await search_web(_web_query(payload.message, metadata), limit=5)
+
+    if not selected and not web_results:
         return {
             "answer": "The paper context does not contain enough information to answer that.",
             "citations": [],
+            "web_results": [],
+            "used_web_search": used_web_search,
         }
 
-    citations = [
-        {
-            "page": chunk.get("page"),
-            "chunk_id": chunk.get("chunk_id"),
-            "quote": short_quote(chunk, payload.message),
-        }
-        for chunk in selected
-    ]
+    effective_provider = await _effective_provider(payload.provider)
+    context_chunks: list[dict[str, Any]] = []
+    seen_chunk_ids: set[str] = set()
+    for chunk in chunks[:2] + selected:
+        chunk_id = str(chunk.get("chunk_id"))
+        if chunk_id in seen_chunk_ids:
+            continue
+        seen_chunk_ids.add(chunk_id)
+        context_chunks.append(chunk)
+    prompt_chunks = context_chunks[:4] if effective_provider == "local" else context_chunks[:10]
+    history_char_limit = 180 if effective_provider == "local" else 700
+    abstract = str(metadata.get("summary") or "")
+    if effective_provider == "local":
+        abstract = abstract[:350]
+    question_text = payload.message[:900] if effective_provider == "local" else payload.message
 
-    context = "\n\n".join(
-        f"[{chunk.get('chunk_id')} | p. {chunk.get('page')}]\n{chunk.get('text', '')[:2400]}"
-        for chunk in selected
+    evidence_items = _build_evidence_items(question_text, prompt_chunks, limit=7 if effective_provider == "local" else 10)
+    paper_context = _format_evidence_context(evidence_items)
+    web_context = _format_web_context(web_results)
+    recent_history = "\n".join(
+        f"{item.get('role', 'user')}: {str(item.get('content', ''))[:history_char_limit]}"
+        for item in payload.history[-6:]
+        if isinstance(item, dict)
     )
     prompt = f"""
-You answer questions about a research paper using only the provided context.
-If the context does not contain enough information, say: "The paper context does not contain enough information."
-Cite page numbers inline like [p. 2]. Keep the answer concise but useful.
+You are ScholAR, a rigorous research paper tutor with two tools:
+1. Paper retrieval: selected chunks from the PDF being studied.
+2. Web search: free web results, used only when paper context is insufficient or the question asks for outside/current information.
 
-Context:
-{context}
+Think in this order:
+1. Identify whether the user is asking about the paper itself, outside context, or both.
+2. Use paper context first for paper-specific claims.
+3. Use web context only for outside/current/general facts or when the paper context is missing.
+4. Reconcile conflicts explicitly instead of blending sources.
 
-Question: {payload.message}
+Paper metadata:
+Title: {metadata.get("title")}
+Authors: {", ".join(metadata.get("authors", []))}
+Abstract: {abstract}
+
+Recent conversation:
+{recent_history or "No previous conversation."}
+
+Response requirements:
+- Give a detailed, precise study answer, not a shallow summary.
+- Format the answer with bold section labels only, such as **Answer**, **Evidence**, **What this means**, and **Limits / what to verify**.
+- Do not use Markdown heading markers like #, ##, or ###.
+- Put each section label on its own line, for example **Answer**.
+- Use bullet points for multi-part explanations.
+- Cite paper claims inline only with evidence IDs from the Paper evidence list, such as [E1] or [E2].
+- Never invent page citations. Do not write [p. 1], [p. 2], or any page number yourself.
+- The app will convert evidence IDs into compact numbered references like [1], [2].
+- Every paper-specific claim in the Evidence section must cite one of the provided evidence IDs.
+- Cite web claims inline as [web:1].
+- Never cite web results as if they came from the paper.
+- If paper context is insufficient, say what is missing before using web context.
+- If web search was unavailable or empty, do not pretend you searched.
+- For methods/results questions, include the specific mechanism, dataset, metric, number, or comparison when the evidence provides it.
+- Use concise sections: "Answer", "Evidence", "What this means", and "Limits / what to verify" when helpful.
+- If the active model is local Qwen, answer directly in 180 to 320 words. Do not include hidden reasoning or long deliberation.
+- If the active model is local Qwen, use only the strongest 2 to 4 evidence points and keep citations close to the claims they support.
+
+Paper evidence:
+{paper_context}
+
+Web context:
+{web_context}
+
+Question: {question_text}
 """.strip()
 
-    if await ollama_available():
+    if effective_provider:
         try:
-            answer = await generate(prompt)
-        except Exception:
-            answer = ""
+            answer = await _generate_with_provider(effective_provider, prompt, temperature=0.1)
+        except httpx.HTTPStatusError as exc:
+            if effective_provider == "groq" and exc.response.status_code == 429:
+                return {
+                    **_provider_error_payload(
+                        "groq_rate_limit",
+                        "Groq rate limit reached. Switch to Local Qwen to continue studying this paper.",
+                        payload,
+                        effective_provider,
+                    ),
+                    "used_web_search": used_web_search,
+                    "web_results": web_results,
+                }
+            return {
+                **_model_failure_payload(payload, effective_provider, exc),
+                "used_web_search": used_web_search,
+                "web_results": web_results,
+            }
+        except Exception as exc:
+            return {
+                **_model_failure_payload(payload, effective_provider, exc),
+                "used_web_search": used_web_search,
+                "web_results": web_results,
+            }
     else:
         answer = ""
 
     if not answer:
-        pages = sorted({citation["page"] for citation in citations if citation.get("page")})
-        page_text = ", ".join(f"[p. {page}]" for page in pages)
-        best_quote = next(
-            (citation["quote"] for citation in citations if len(citation.get("quote", "")) > 80),
-            citations[0]["quote"],
-        )
-        answer = (
-            "Based on the retrieved paper context, the most relevant passages are on "
-            f"{page_text}. {best_quote}"
-        )
+        if effective_provider:
+            return {
+                **_provider_error_payload(
+                    "empty_model_response",
+                    "The selected model returned an empty answer. Try again, or switch providers.",
+                    payload,
+                    effective_provider,
+                ),
+                "used_web_search": used_web_search,
+                "web_results": web_results,
+            }
+        answer = _extractive_tutor_answer(payload.message, selected) if selected else ""
+        web_answer = _extractive_web_answer(web_results)
+        if web_answer:
+            answer = f"{answer}\n\n{web_answer}".strip()
 
-    return {"answer": answer, "citations": citations}
+    answer, citations = _normalize_evidence_citations(answer, evidence_items)
+    if not citations and evidence_items:
+        citations = [
+            {
+                "ref_id": index,
+                "page": item.get("page"),
+                "chunk_id": item.get("chunk_id"),
+                "section_title": item.get("section_title"),
+                "chunk_type": item.get("chunk_type"),
+                "quote": item.get("quote"),
+            }
+            for index, item in enumerate(evidence_items[:2], start=1)
+        ]
+
+    return {
+        "answer": answer,
+        "citations": citations,
+        "web_results": web_results,
+        "used_web_search": used_web_search,
+        "provider": effective_provider or payload.provider,
+        "requested_provider": payload.provider,
+        "model": _provider_label(effective_provider or payload.provider),
+    }

@@ -4,6 +4,24 @@
 
 :root {
   color-scheme: dark;
+  --color-ink: 5 5 5;
+  --color-panel: 16 17 19;
+  --color-panel-soft: 23 25 29;
+  --color-line: 42 45 51;
+  --color-muted: 156 163 175;
+  --color-acid: 183 249 109;
+  --color-paper-bg: 32 33 36;
+}
+
+:root.theme-light {
+  color-scheme: light;
+  --color-ink: 236 228 214;
+  --color-panel: 246 239 228;
+  --color-panel-soft: 229 218 200;
+  --color-line: 189 174 149;
+  --color-muted: 101 88 69;
+  --color-acid: 95 125 55;
+  --color-paper-bg: 224 214 196;
 }
 
 * {
@@ -13,12 +31,65 @@
 html,
 body {
   min-height: 100%;
-  background: #050505;
+  background: rgb(var(--color-ink));
 }
 
 body {
   color: #f8fafc;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+:root.theme-light body {
+  color: #2e261d;
+}
+
+:root.theme-light,
+:root.theme-light body {
+  background: #ece4d6 !important;
+}
+
+:root.theme-light .bg-ink,
+:root.theme-light .bg-ink\/95 {
+  background-color: #ece4d6 !important;
+}
+
+:root.theme-light .bg-ink\/70,
+:root.theme-light .bg-ink\/60 {
+  background-color: rgba(220, 208, 188, 0.82) !important;
+}
+
+:root.theme-light .bg-panel {
+  background-color: #f6efe4 !important;
+}
+
+:root.theme-light .bg-panelSoft {
+  background-color: #e5dac8 !important;
+}
+
+:root.theme-light .bg-black\/75,
+:root.theme-light .bg-black\/80 {
+  background-color: rgba(46, 38, 29, 0.36) !important;
+}
+
+:root.theme-light .bg-white\/5,
+:root.theme-light .bg-white\/10 {
+  background-color: rgba(92, 75, 52, 0.08) !important;
+}
+
+:root.theme-light .border-line {
+  border-color: #bdae95 !important;
+}
+
+:root.theme-light .hover\:border-zinc-500:hover {
+  border-color: #8f7f68 !important;
+}
+
+:root.theme-light .hover\:bg-panelSoft:hover {
+  background-color: #ded0ba !important;
+}
+
+:root.theme-light .hover\:bg-white\/5:hover {
+  background-color: rgba(92, 75, 52, 0.1) !important;
 }
 
 button,
@@ -28,4 +99,168 @@ input {
 
 ::selection {
   background: rgba(183, 249, 109, 0.28);
+}
+
+:root.theme-light .text-white {
+  color: #2e261d !important;
+}
+
+:root.theme-light .text-zinc-100,
+:root.theme-light .text-zinc-200,
+:root.theme-light .text-zinc-300,
+:root.theme-light .text-zinc-400 {
+  color: #554a3c !important;
+}
+
+:root.theme-light .text-zinc-500,
+:root.theme-light .text-zinc-600,
+:root.theme-light .placeholder\:text-zinc-500::placeholder {
+  color: #7a6d5a !important;
+}
+
+:root.theme-light .text-zinc-700 {
+  color: #8f806a !important;
+}
+
+:root.theme-light .bg-white {
+  background-color: #f4eee4 !important;
+}
+
+:root.theme-light .bg-acid {
+  background-color: rgb(var(--color-acid)) !important;
+}
+
+:root.theme-light .text-acid {
+  color: #567331 !important;
+}
+
+:root.theme-light .text-emerald-200 {
+  color: #08734f !important;
+}
+
+:root.theme-light .text-sky-200 {
+  color: #0b6791 !important;
+}
+
+:root.theme-light .text-purple-200 {
+  color: #7550a8 !important;
+}
+
+:root.theme-light .text-orange-200 {
+  color: #9a5313 !important;
+}
+
+:root.theme-light .text-violet-200 {
+  color: #684fb2 !important;
+}
+
+:root.theme-light .text-pink-200 {
+  color: #a33b72 !important;
+}
+
+:root.theme-light .text-blue-100,
+:root.theme-light .text-blue-200 {
+  color: #174f9f !important;
+}
+
+:root.theme-light .text-red-200 {
+  color: #9b1c1c !important;
+}
+
+:root.theme-light .bg-acid\/10,
+:root.theme-light .bg-acid\/15 {
+  background-color: rgba(95, 125, 55, 0.14) !important;
+}
+
+:root.theme-light .bg-emerald-400\/12 {
+  background-color: rgba(8, 115, 79, 0.12) !important;
+}
+
+:root.theme-light .bg-sky-400\/12 {
+  background-color: rgba(11, 103, 145, 0.12) !important;
+}
+
+:root.theme-light .bg-purple-400\/12 {
+  background-color: rgba(117, 80, 168, 0.12) !important;
+}
+
+:root.theme-light .bg-orange-400\/12 {
+  background-color: rgba(154, 83, 19, 0.12) !important;
+}
+
+:root.theme-light .bg-violet-400\/12 {
+  background-color: rgba(104, 79, 178, 0.12) !important;
+}
+
+:root.theme-light .bg-pink-400\/12 {
+  background-color: rgba(163, 59, 114, 0.12) !important;
+}
+
+:root.theme-light .bg-zinc-800 {
+  background-color: #ded2bf !important;
+}
+
+:root.theme-light .bg-zinc-700 {
+  background-color: #9c8c73 !important;
+}
+
+:root.theme-light .bg-blue-500\/15,
+:root.theme-light .bg-blue-500\/20 {
+  background-color: rgba(23, 79, 159, 0.13) !important;
+}
+
+:root.theme-light .hover\:bg-blue-500\/10:hover {
+  background-color: rgba(23, 79, 159, 0.1) !important;
+}
+
+:root.theme-light .border-acid\/30,
+:root.theme-light .border-acid\/40 {
+  border-color: rgba(95, 125, 55, 0.42) !important;
+}
+
+:root.theme-light .border-emerald-400\/40 {
+  border-color: rgba(8, 115, 79, 0.42) !important;
+}
+
+:root.theme-light .border-sky-400\/40 {
+  border-color: rgba(11, 103, 145, 0.44) !important;
+}
+
+:root.theme-light .border-purple-400\/40 {
+  border-color: rgba(117, 80, 168, 0.42) !important;
+}
+
+:root.theme-light .border-orange-400\/40 {
+  border-color: rgba(154, 83, 19, 0.42) !important;
+}
+
+:root.theme-light .border-violet-400\/40 {
+  border-color: rgba(104, 79, 178, 0.42) !important;
+}
+
+:root.theme-light .border-pink-400\/40 {
+  border-color: rgba(163, 59, 114, 0.42) !important;
+}
+
+:root.theme-light .border-blue-400,
+:root.theme-light .border-blue-400\/40,
+:root.theme-light .border-blue-400\/60 {
+  border-color: rgba(23, 79, 159, 0.48) !important;
+}
+
+:root.theme-light .hover\:border-blue-400:hover {
+  border-color: rgba(23, 79, 159, 0.62) !important;
+}
+
+:root.theme-light .bg-red-500.text-white {
+  color: #fff !important;
+}
+
+:root.theme-light .text-black {
+  color: #2e261d !important;
+}
+
+:root.theme-light .shadow-2xl,
+:root.theme-light .shadow-glow {
+  box-shadow: 0 18px 60px rgba(77, 59, 36, 0.16) !important;
 }

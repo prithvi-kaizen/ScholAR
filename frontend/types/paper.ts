@@ -9,6 +9,8 @@ export type Paper = {
   categories: string[];
   pdf_url: string;
   abs_url: string;
+  source?: "arxiv" | "upload";
+  filename?: string;
 };
 
 export type StudyGoal = {
@@ -16,17 +18,42 @@ export type StudyGoal = {
   title: string;
   description: string;
   source_pages: number[];
+  subquestions?: {
+    id: string;
+    question: string;
+    evidence_chunks?: {
+      chunk_id: string;
+      page: number;
+      section_title?: string;
+      chunk_type?: string;
+      quote?: string;
+    }[];
+  }[];
   status: "not_started" | "in_progress" | "done";
 };
 
 export type Citation = {
+  ref_id?: number;
   page: number;
   chunk_id: string;
+  section_title?: string;
+  chunk_type?: string;
   quote: string;
+};
+
+export type WebResult = {
+  id: string;
+  title: string;
+  url: string;
+  snippet: string;
 };
 
 export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   citations?: Citation[];
+  web_results?: WebResult[];
+  used_web_search?: boolean;
+  provider_error?: "groq_rate_limit" | string;
+  retry_text?: string;
 };

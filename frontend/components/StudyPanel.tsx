@@ -1,24 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookOpen, Brain, Camera, Eye, Layers, MessageCircle, PanelRight, Settings2, ShieldAlert } from "lucide-react";
-import type { StudyGoal } from "../types/paper";
+import { BookOpen } from "lucide-react";
+import type { Citation, StudyGoal } from "../types/paper";
 import { ChatBox } from "./ChatBox";
 import { StudyGoals } from "./StudyGoals";
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
+const providerStorageKey = "scholar-ai-provider-v2";
 
 interface StudyPanelProps {
   paperId: string;
+  onCitationClick: (citation: Citation) => void;
 }
-
-const quickStart = [
-  { title: "Ask Questions", icon: MessageCircle },
-  { title: "Interactive Citations", icon: Eye },
-  { title: "Visual Explanations", icon: Layers },
-  { title: "Screenshots", icon: Camera },
-  { title: "Scope & Limitations", icon: ShieldAlert }
-];
 
 const defaultGoals: StudyGoal[] = [
   {
@@ -79,11 +73,23 @@ const defaultGoals: StudyGoal[] = [
   }
 ];
 
-export function StudyPanel({ paperId }: StudyPanelProps) {
-  const [activeTab, setActiveTab] = useState<"goals" | "quick">("goals");
+export function StudyPanel({ paperId, onCitationClick }: StudyPanelProps) {
   const [goals, setGoals] = useState<StudyGoal[]>(defaultGoals);
   const [loadingGoals, setLoadingGoals] = useState(false);
   const [queuedPrompt, setQueuedPrompt] = useState<{ id: number; text: string } | null>(null);
+  const [provider, setProvider] = useState<"local" | "groq">("groq");
+  const [providerNotice, setProviderNotice] = useState("");
+  const [chatActive, setChatActive] = useState(false);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(providerStorageKey);
+    if (saved === "groq" || saved === "local") setProvider(saved);
+  }, []);
+
+  function changeProvider(nextProvider: "local" | "groq") {
+    setProvider(nextProvider);
+    window.localStorage.setItem(providerStorageKey, nextProvider);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -92,11 +98,20 @@ export function StudyPanel({ paperId }: StudyPanelProps) {
       setLoadingGoals(true);
       try {
         const response = await fetch(`${backendUrl}/api/papers/${encodeURIComponent(paperId)}/study-goals`, {
-          method: "POST"
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider })
         });
         if (!response.ok) throw new Error("Could not load study goals");
         const payload = await response.json();
         if (!cancelled && payload.goals?.length) setGoals(payload.goals);
+        if (!cancelled) {
+          setProviderNotice(
+            payload.requested_provider && payload.provider && payload.requested_provider !== payload.provider
+              ? "Groq API key is not configured, so this response used local Qwen."
+              : ""
+          );
+        }
       } finally {
         if (!cancelled) setLoadingGoals(false);
       }
@@ -105,97 +120,74 @@ export function StudyPanel({ paperId }: StudyPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [paperId]);
+  }, [paperId, provider]);
 
   function explainGoal(goal: StudyGoal) {
+    const subquestions = goal.subquestions?.length
+      ? ` Subquestions: ${goal.subquestions.map((item) => item.question).join(" ")}`
+      : "";
+    setChatActive(true);
     setQueuedPrompt({
       id: Date.now(),
-      text: `Explain this study goal in detail: ${goal.title}`
+      text: `Explain this study goal in detail for this paper: ${goal.title}. Goal details: ${goal.description}${subquestions} Start with pages ${goal.source_pages.join(", ")} if they are relevant.`
     });
   }
 
   return (
     <aside className="flex min-h-0 flex-col bg-ink">
-      <div className="flex h-16 shrink-0 items-center justify-between border-b border-line bg-[#101114] px-4">
+      <div className="flex h-16 shrink-0 items-center justify-between border-b border-line bg-panel px-4">
         <div className="flex items-center gap-2">
-          <button className="rounded-md border border-line p-2 text-zinc-400 hover:text-white" aria-label="Toggle study sidebar">
-            <PanelRight size={17} />
-          </button>
-          <button className="rounded-md border border-line bg-white/5 p-2 text-zinc-200" aria-label="Study controls">
-            <Settings2 size={17} />
-          </button>
+          <div className="grid grid-cols-2 rounded-lg border border-line bg-ink p-1 text-xs">
+            <button
+              onClick={() => changeProvider("local")}
+              className={`rounded-md px-3 py-1.5 transition ${provider === "local" ? "bg-white text-black" : "text-zinc-400 hover:text-white"}`}
+            >
+              Local
+            </button>
+            <button
+              onClick={() => changeProvider("groq")}
+              className={`rounded-md px-3 py-1.5 transition ${provider === "groq" ? "bg-acid text-black" : "text-zinc-400 hover:text-white"}`}
+            >
+              Groq
+            </button>
+          </div>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <button className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-3 py-2 text-sm text-white">
+          <button onClick={() => setChatActive(false)} className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-3 py-2 text-sm text-white">
             <BookOpen size={16} />
-            Study Goals
+            ScholAR
             <span className="rounded-md bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">0/8</span>
           </button>
-          <button disabled className="inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-line bg-panel px-3 py-2 text-sm text-zinc-500">
-            <Brain size={16} />
-            Evaluate Knowledge
-          </button>
         </div>
       </div>
 
+      {!chatActive ? (
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
         <div className="mb-6 text-center">
-          <p className="text-xs uppercase tracking-[0.2em] text-acid">Local Qwen session</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-acid">
+            {provider === "groq" ? "Groq API session" : "Local Qwen session"}
+          </p>
           <h1 className="mt-2 text-2xl font-semibold text-white">Let&apos;s study research!</h1>
+          {providerNotice ? <p className="mt-2 text-xs text-amber-300">{providerNotice}</p> : null}
         </div>
 
-        <div className="mx-auto mb-5 grid max-w-2xl grid-cols-2 rounded-lg border border-line bg-panel p-1 text-sm">
-          <button
-            onClick={() => setActiveTab("goals")}
-            className={`rounded-md px-3 py-2 ${activeTab === "goals" ? "bg-white text-black" : "text-zinc-400 hover:text-white"}`}
-          >
-            Study Goals
-          </button>
-          <button
-            onClick={() => setActiveTab("quick")}
-            className={`rounded-md px-3 py-2 ${activeTab === "quick" ? "bg-white text-black" : "text-zinc-400 hover:text-white"}`}
-          >
-            Quick Start
-          </button>
-        </div>
-
-        {activeTab === "goals" ? (
-          <StudyGoals goals={goals} loading={loadingGoals} onGoalClick={explainGoal} />
-        ) : (
-          <div className="mx-auto grid max-w-2xl gap-4">
-            {quickStart.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.title}
-                  onClick={() => setQueuedPrompt({ id: Date.now(), text: item.title })}
-                  className="flex items-start gap-4 rounded-lg border border-line bg-panel p-5 text-left text-sm font-medium text-zinc-200 hover:border-zinc-500 hover:bg-panelSoft"
-                >
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-white/5 text-zinc-200">
-                    <Icon size={18} />
-                  </span>
-                  <span>
-                    <span className="block text-base text-white">{item.title}</span>
-                    <span className="mt-1 block font-normal leading-6 text-zinc-400">
-                      {item.title === "Ask Questions"
-                        ? "Inquire about the methodology, key findings, or specific details within the text."
-                        : item.title === "Interactive Citations"
-                          ? "The AI cites relevant sections so you can connect answers back to the paper."
-                          : item.title === "Visual Explanations"
-                            ? "Ask for diagrams or structured explanations to understand complex concepts."
-                            : item.title === "Screenshots"
-                              ? "Use the visible paper page as your reading anchor while chatting."
-                              : "Conversations are focused on this paper and its extracted context."}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
+        <StudyGoals goals={goals} loading={loadingGoals} onGoalClick={explainGoal} />
       </div>
+      ) : (
+        <div className="shrink-0 border-b border-line px-5 py-3 text-sm text-zinc-400">
+          Chat session active. Click ScholAR to return to the study plan.
+        </div>
+      )}
 
-      <ChatBox paperId={paperId} queuedPrompt={queuedPrompt} />
+      <ChatBox
+        paperId={paperId}
+        queuedPrompt={queuedPrompt}
+        provider={provider}
+        onProviderChange={changeProvider}
+        onCitationClick={onCitationClick}
+        expanded={chatActive}
+        onChatActivity={() => setChatActive(true)}
+      />
     </aside>
   );
 }

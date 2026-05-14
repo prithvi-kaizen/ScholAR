@@ -12,8 +12,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+try {
+  if (window.localStorage.getItem("scholar-theme") === "light") {
+    document.documentElement.classList.add("theme-light");
+  }
+} catch (_) {}
+            `.trim()
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }
