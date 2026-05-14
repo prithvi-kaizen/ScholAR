@@ -1,7 +1,7 @@
 # ScholAR Final Report
 
 **Project:** ScholAR, a local first research paper study assistant  
-**Goal:** Help students read technical research papers with a grounded AI assistant that shows evidence from the paper.
+**Goal:** Help students read technical research papers with a local AI assistant that shows evidence from the paper.
 
 ## 1. Problem and Motivation
 
