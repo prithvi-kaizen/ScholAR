@@ -1,227 +1,203 @@
 # ScholAR Final Report
 
-## Project title
+**Project:** ScholAR, a local first research paper study assistant  
+**Goal:** Help students read technical research papers with a grounded AI assistant that shows evidence from the paper.
 
-ScholAR: A Local First Research Paper Study Assistant
+## 1. Problem and Motivation
 
-## 1. The real problem
+Reading research papers is difficult for students, early researchers, and builders who are trying to understand a new technical area. A paper is not just a long article. It contains a research problem, motivation, method, assumptions, experiments, results, limitations, and connections to earlier work. These parts are often mixed together, and the writing assumes that the reader already knows the field.
 
-Research papers are hard to study, especially for students who are still learning how to read technical work. A paper usually has many layers at once. There is the main idea, the motivation, the method, the math, the experiments, the results, the limitations, and the connection to prior work. Even when the paper is important, it is easy to get lost.
+This is especially true for machine learning and NLP papers. A student may understand the abstract but get stuck when the paper moves into model architecture, retrieval methods, training details, datasets, evaluation metrics, ablation studies, or result tables. The reader may also miss the difference between what the authors actually prove and what the paper only suggests.
 
-This problem becomes worse in machine learning and NLP papers because the writing often assumes background knowledge. A student may understand some parts of the introduction but then struggle when the paper moves into architecture details, datasets, metrics, ablations, or result tables. Many students end up reading passively. They highlight text, copy notes, or ask a general chatbot for help. The issue is that a general chatbot can answer confidently without being grounded in the paper. That creates a trust problem. If the system gives an answer but the user cannot see where the answer came from, the answer is not very useful for real studying.
+General chatbots can help explain papers, but they create a trust problem. If a chatbot answers from memory or general internet knowledge, the answer may sound confident while not being grounded in the paper. For studying, this is a serious issue. A student needs to know where an answer came from. They should be able to click a citation, inspect the actual paper passage, and decide whether the answer is supported.
 
-ScholAR was built to address this problem in a practical way. The goal was not to build a huge research platform. The goal was to build a working assistant that lets a student search or upload a paper, view the PDF, generate a study plan, ask questions, and see cited evidence from the paper.
+ScholAR was built for this problem. The project is a working GenAI research paper assistant. It lets the user search arXiv papers or upload a custom PDF, prepare the paper locally, view the PDF, generate a study plan, ask questions, and inspect cited evidence from the paper. The goal is not to replace reading. The goal is to make reading more structured and less lonely.
 
-The main idea is simple:
+The main motivation is supported understanding. ScholAR should help the user move from passive reading to active study. Instead of only asking “summarize this paper”, the user should be able to ask:
 
-- Keep the paper visible while the AI answers.
-- Use retrieval before generation so the model sees relevant paper context.
-- Make study goals specific to the paper instead of generic.
-- Let the user use either a Groq API model or a local Ollama Qwen model.
-- Keep the system understandable enough to debug and evaluate.
+- What is the paper’s main contribution?
+- What method does it use?
+- What evidence supports the method?
+- What experiments were run?
+- What limitations should I be careful about?
+- What would an implementation plan look like?
 
-This matters because the real user need is not just summarization. The real need is supported understanding. A good research paper assistant should help the reader ask better questions, trace answers back to the PDF, and notice what the paper does not prove.
+This connects directly to the real problem. Students do not only need shorter summaries. They need a tool that helps them read carefully, stay grounded in the PDF, and build a mental model of the paper.
 
-## 2. What was built
+## 2. Method
 
-ScholAR is a full stack GenAI application. The frontend is built with Next.js, TypeScript, and Tailwind CSS. The backend is built with FastAPI and Python. PDFs are processed with PyMuPDF. arXiv search is handled through the arXiv API. Local model support is handled through Ollama, with Qwen 3.5 9B as the default local model. Groq support was added so the user can switch to a stronger cloud model when needed. (llama-3.3-70b-versatile)
+ScholAR is a full stack GenAI application. The frontend is built with Next.js, TypeScript, and Tailwind CSS. The backend is built with FastAPI and Python. PDFs are processed with PyMuPDF. arXiv search is handled through the arXiv API. Local model support uses Ollama with Qwen. Cloud model support uses Groq, with `llama-3.3-70b-versatile` configured as the Groq model.
 
-The current system supports these main flows:
+The system supports two main ways to start studying a paper:
 
-1. Search for papers from arXiv.
-2. Select a paper and prepare it for study.
-3. Upload a custom PDF and prepare it for study.
-4. Extract paper text page by page.
-5. Chunk the paper into retrievable passages.
-6. View the paper side by side with the study assistant.
-7. Generate 8 paper-specific study goals.
-8. Generate recursive subquestions under each study goal.
-9. Ask questions about the paper.
-10. Retrieve relevant evidence chunks.
-11. Generate an answer from Groq or local Qwen.
-12. Show cited references and let the user click them to jump back to the PDF.
-13. Fall back to local Qwen when Groq rate limits are reached.
+1. Search arXiv, select a paper, and prepare it.
+2. Upload a custom PDF and prepare it.
 
-The system is intentionally local first. The backend stores prepared papers in local folders under `backend/data/papers`. Each paper has a PDF, metadata, extracted pages, chunks, and generated study goals. This keeps the project easy to inspect. It also makes the system explainable because the whole pipeline is visible on disk.
+After a paper is prepared, the user studies it in a split workspace. The left side shows the PDF. The right side shows the ScholAR assistant, study goals, chat, model toggle, and cited references.
 
-The frontend was designed around a split study workspace. The left side shows the PDF pages. The right side shows the ScholAR study panel and chat. This is important because the AI answer should not replace the paper. The answer should sit next to the paper.
-
-## 3. Technical approach
-
-The diagram below shows the actual implemented flow of the system.
+The diagram below shows the implemented system flow.
 
 ![ScholAR architecture and flow](../architecture/ScholAR_architecture_flow.png)
 
-The backend uses a retrieval augmented generation flow. The model does not receive the whole paper every time. Instead, ScholAR retrieves relevant chunks first and sends those chunks to the model as paper evidence.
+The backend processing pipeline works as follows:
 
-The paper processing flow is:
+1. The user searches arXiv or uploads a PDF.
+2. The backend saves the PDF locally as `paper.pdf`.
+3. PyMuPDF extracts text page by page.
+4. The backend writes `metadata.json`, `pages.json`, and `chunks.json`.
+5. The chunking service creates page-preserving chunks.
+6. Each chunk stores text, page number, character offsets, and available section metadata.
+7. The frontend displays rendered PDF page images.
+8. The study panel calls backend APIs for study goals and chat.
 
-1. Download or receive the PDF.
-2. Save it locally as `paper.pdf`.
-3. Extract text page by page with PyMuPDF.
-4. Save extracted pages as `pages.json`.
-5. Split the pages into chunks.
-6. Add chunk metadata such as page number, section title, paragraph text, and chunk type when possible.
-7. Save chunks as `chunks.json`.
+The local storage structure is simple on purpose. A prepared paper lives under:
 
-The retrieval layer started as simple keyword overlap. Later it was improved into a hybrid retrieval system. After evaluation, the design was changed again because BM25 was the most reliable method on the project benchmark. The current retrieval is BM25-primary. That means BM25 does the main ranking, and the other signals only make small reranking adjustments.
+```text
+backend/data/papers/{paper_id}/
+```
 
-- BM25-style lexical scoring as the main retrieval signal.
-- Lightweight hashed embedding similarity as a small tie-breaker.
-- Query expansion for common research terms such as method, result, contribution, architecture, experiment, and limitation.
+Each prepared paper includes:
+
+```text
+paper.pdf
+metadata.json
+pages.json
+chunks.json
+goals_canonical_*.json
+```
+
+This makes the system easy to inspect and debug. It also avoids a database dependency for the current project stage.
+
+The main AI flow is retrieval augmented generation. The model does not receive the full paper every time. Instead, ScholAR retrieves relevant chunks from `chunks.json`, builds a grounded prompt, and asks the selected model to answer from that evidence.
+
+The final retrieval design is BM25-primary. Earlier versions used a more aggressive hybrid scoring method, but the evaluation showed that BM25 was the most reliable tested retriever. Because of that, ScholAR now uses BM25 as the main retrieval signal and keeps other signals as small reranking boosts.
+
+The retrieval method includes:
+
+- BM25 lexical scoring as the primary ranking signal.
+- Lightweight hashed semantic overlap as a small tie-breaker.
+- Query expansion for terms like method, result, contribution, architecture, experiment, and limitation.
 - Page hints when the user or study goal mentions specific pages.
-- Small reranking boosts for useful paper phrases such as “we propose”, “we introduce”, “we show”, and “we find”.
-- Small section or chunk-type boosts when the query asks about methods, results, experiments, or limitations.
+- Small boosts for research phrases like “we propose”, “we introduce”, “we show”, and “we find”.
+- Small boosts for section or chunk type when the query asks about methods, results, experiments, or limitations.
 
-This retrieval layer is still simple compared to a production system with learned embeddings and a cross-encoder reranker, but it is a meaningful improvement over plain keyword matching. More importantly, it follows the evaluation result instead of forcing a more complicated method when BM25 is already strong.
+The generation layer supports two providers:
 
-The answer generation prompt asks the model to answer in a structured way. The model is asked to use paper evidence first, cite evidence IDs, and avoid inventing page citations. The frontend converts evidence IDs into clean numbered references. This was done because page-only citations were confusing and sometimes looked less formal. Numbered references are closer to a research style, and the reference panel can show the actual passage text.
+- **Local Qwen through Ollama:** useful for local, private, offline-style study, but slower.
+- **Groq API:** useful for stronger and faster answers, but depends on API availability and rate limits.
 
-The system also supports two model providers:
+If Groq hits a rate limit, the frontend warns the user and allows switching to local Qwen. This is important because the tool should not completely fail during a demo or study session.
 
-- Local Qwen through Ollama.
-- Groq API through a stronger hosted model.
+The study plan feature generates 8 paper-specific study goals. Each goal can include recursive subquestions, cited evidence, limitations, and implementation notes. This is meant to guide the student through the paper instead of giving only one flat summary.
 
-The goal is to keep both modes consistent. Groq is usually faster and stronger, but it can hit rate limits. Local Qwen is slower but keeps the system usable when API limits are reached. This is why the app includes a provider toggle and Groq limit fallback behavior.
+The citation design changed during development. Early versions allowed the model to write page citations directly. That was risky because the model could invent or misuse page numbers. The final design gives the model evidence IDs such as `E1` and `E2`. The frontend then converts those IDs into numbered references like `[1]` and `[2]`. The reference panel shows the supporting passage and lets the user click back to the PDF.
 
-## 4. What worked
+## 3. Experiments and Results
 
-The biggest thing that worked was the end-to-end study flow. A user can search or upload a paper, prepare it, view it, generate goals, and ask questions in the same interface. This is important because many GenAI class projects only show one isolated feature. ScholAR became a real study workflow instead of just a chat demo.
+The evaluation focuses on retrieval quality. This is the right first experiment because ScholAR depends on retrieval before generation. If retrieval gives the model the wrong chunks, the answer and citations can be wrong even if the language model is strong.
 
-The split PDF and assistant layout also worked well. It matches the actual reading behavior of a student. The user can look at the PDF and the AI response at the same time. This makes the tool feel more like a reading companion than a detached chatbot.
+The benchmark uses 14 manually checked retrieval cases from 3 prepared papers:
 
-Paper-specific study goals were another strong part. Early versions used generic study goals such as “summarize core idea” and “explain methodology”. That was too shallow. The improved version generates goals that reflect the actual paper. For example, for a RAG paper, the goals focus on retrieval augmented generation, parametric and non-parametric memory, training, and evaluation. For the Transformer paper, the goals focus on attention, encoder-decoder design, positional encoding, parallelization, and translation results.
+- `1706.03762`: *Attention Is All You Need*.
+- `2005.11401`: *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks*.
+- `2302.13971`: *LLaMA: Open and Efficient Foundation Language Models*.
 
-The recursive breakdown is also useful. Instead of giving only 8 high-level goals, the system can break each goal into subquestions. This is closer to how someone actually studies a paper. A goal like “Understand methodology” is too broad by itself. It becomes more useful when broken into questions like:
-
-- What problem does the method solve?
-- What are the main components?
-- What assumptions does it make?
-- What evidence supports it?
-- What are its limitations?
-
-The Groq and local model toggle also worked as a practical feature. Groq improves answer quality when available. Local Qwen keeps the app usable when the API is unavailable or rate-limited. This is important for a classroom project because demos should not completely depend on one external API.
-
-The quantitative evaluation also worked as a real project artifact. Instead of only saying “retrieval improved”, the project now has a benchmark script, benchmark cases, raw results, and a written evaluation report. This makes the project much stronger for final submission.
-
-## 5. What failed or was weaker than expected
-
-The hardest part was citations. At first, the model sometimes produced page citations that looked correct but were not reliable enough. This happened because the model was allowed to write page numbers directly. That is risky because the model may copy a number from the prompt or infer a page number incorrectly. The fix was to make citations evidence-based. The backend provides evidence IDs, and the model is asked to cite only those IDs. The app then turns those IDs into numbered references.
-
-Another issue was citation highlighting. Sometimes the cited text really existed in the PDF, but the frontend did not highlight it correctly. This happened because PDF text extraction and PDF visual text are not always identical. Line breaks, ligatures, hyphenation, and spacing can make exact string search fail. For example, a sentence may exist in the PDF, but PyMuPDF search may not find the full sentence as one exact string. This made it look like the citation was wrong even when the evidence text was present.
-
-This is a real limitation of PDF-based systems. PDFs are layout documents, not clean semantic documents. The project improved this by adding more flexible quote matching, but citation highlighting still needs more work before it can be considered robust.
-
-Another weakness was local model latency. Local Qwen can produce good answers, but it is slower than Groq and sometimes times out on longer prompts. This is expected because the local machine has limited compute compared to hosted inference. The solution was to shorten local prompts, limit evidence size, and show clearer failure messages. Still, local mode is not as smooth as Groq mode.
-
-Search quality also needed improvement. arXiv search can return surprising results because it depends on the query and arXiv matching behavior. The project improved search handling, but search is still not the main technical contribution. The main contribution is the study and retrieval workflow after a paper is selected.
-
-The biggest technical limitation is that the retrieval benchmark is still small. The first version of the hybrid retriever did not beat BM25-only on every metric. That was a useful failure because it changed the decision. The current system now uses BM25 as the primary retrieval method and keeps hybrid signals as small reranking boosts.
-
-## 6. Quantitative evaluation
-
-For the final evaluation, the project uses a small retrieval benchmark. This benchmark measures whether ScholAR retrieves the right evidence chunks before the model answers. This is the right place to start because the quality of the model answer depends heavily on retrieval. If retrieval gives the wrong chunks, the model may answer with weak or incorrect evidence.
-
-The benchmark uses 14 manually checked test cases from 3 prepared papers:
-
-- `1706.03762`: Attention Is All You Need.
-- `2005.11401`: Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks.
-- `2302.13971`: LLaMA: Open and Efficient Foundation Language Models.
-
-Each test case includes:
+Each test case contains:
 
 - A realistic user question.
-- The paper ID.
-- The chunk IDs that contain relevant evidence.
-- The expected pages.
-- A short reason explaining what the case tests.
+- A paper ID.
+- The relevant chunk IDs that contain the answer evidence.
+- Expected pages.
+- A short explanation of what the case tests.
 
-The benchmark covers main idea questions, method questions, architecture questions, result table questions, training details, human evaluation, safety, bias, toxicity, carbon footprint, and page-hint questions.
+The benchmark covers these query types:
+
+- Main idea and contribution.
+- Method and architecture.
+- Training or implementation details.
+- Result tables and benchmark numbers.
+- Human evaluation.
+- Safety, bias, toxicity, and carbon footprint.
+- Page-hint questions.
 
 Four retrieval settings were compared:
 
-| System                           | What it means                                                  |
-| -------------------------------- | -------------------------------------------------------------- |
-| `keyword_overlap`              | A simple baseline using token overlap.                         |
-| `bm25_only`                    | A BM25-style lexical retrieval baseline.                       |
-| `bm25_primary_no_page_hints`   | Current ScholAR retrieval without page hints.                  |
-| `bm25_primary_with_page_hints` | Current ScholAR retrieval with page hints when they are given. |
+| System | Description |
+|---|---|
+| `keyword_overlap` | Simple token overlap baseline. |
+| `bm25_only` | BM25-style lexical retrieval baseline. |
+| `bm25_primary_no_page_hints` | Current ScholAR retriever without page hints. |
+| `bm25_primary_with_page_hints` | Current ScholAR retriever with page hints. |
 
-The metrics were:
+The metrics are:
 
-| Metric   | Meaning                                                            |
-| -------- | ------------------------------------------------------------------ |
-| Recall@1 | The first retrieved chunk is relevant.                             |
-| Recall@3 | At least one of the first 3 chunks is relevant.                    |
-| Recall@5 | At least one of the first 5 chunks is relevant.                    |
-| MRR      | Mean reciprocal rank. Higher means relevant chunks appear earlier. |
+| Metric | Meaning |
+|---|---|
+| Recall@1 | The first retrieved chunk is relevant. |
+| Recall@3 | At least one of the first 3 retrieved chunks is relevant. |
+| Recall@5 | At least one of the first 5 retrieved chunks is relevant. |
+| MRR | Mean reciprocal rank. Higher means the first relevant chunk appears earlier. |
 
-The results were:
+The final results were:
 
-| System                           | Cases | Recall@1 | Recall@3 | Recall@5 |   MRR |
-| -------------------------------- | ----: | -------: | -------: | -------: | ----: |
-| `keyword_overlap`              |    14 |    0.571 |    0.786 |    0.929 | 0.687 |
-| `bm25_only`                    |    14 |    0.714 |    0.929 |    1.000 | 0.812 |
-| `bm25_primary_no_page_hints`   |    14 |    0.714 |    0.929 |    1.000 | 0.812 |
-| `bm25_primary_with_page_hints` |    14 |    0.714 |    0.929 |    1.000 | 0.812 |
+| System | Cases | Recall@1 | Recall@3 | Recall@5 | MRR |
+|---|---:|---:|---:|---:|---:|
+| `keyword_overlap` | 14 | 0.571 | 0.786 | 0.929 | 0.687 |
+| `bm25_only` | 14 | 0.714 | 0.929 | 1.000 | 0.812 |
+| `bm25_primary_no_page_hints` | 14 | 0.714 | 0.929 | 1.000 | 0.812 |
+| `bm25_primary_with_page_hints` | 14 | 0.714 | 0.929 | 1.000 | 0.812 |
 
-The important result is that BM25 was the strongest and most reliable retrieval method on this benchmark. The earlier hybrid-primary version had slightly better top-rank behavior in one run, but it missed one result-table case in Recall@5. That was not acceptable because a paper assistant needs reliable evidence more than a fancy scoring formula.
+The main result is that BM25 was the strongest tested retrieval backbone. Keyword overlap was weaker, especially on Recall@1 and MRR. The BM25-only baseline found at least one relevant chunk in the top 5 for every test case.
 
-Because of that, the project changed the actual retrieval design. ScholAR now uses BM25 as the main retriever. Semantic similarity, page hints, section hints, and paper phrase boosts are still present, but they are small reranking signals. They should help when candidates are close, but they should not overpower BM25.
+This result changed the project. An earlier hybrid-primary version had slightly better top-rank behavior in one run, but it missed an important result-table case in Recall@5. The missed case was `rag_qa_results`, where the question asked about open-domain QA scores in the RAG paper. The correct evidence was in `chunk_006`, but the older hybrid-primary retriever did not return it in the top 5. Since correct evidence is more important than a fancy scoring formula, the final system was changed to BM25-primary retrieval.
 
-After this change, the current BM25-primary system matched BM25-only on the 14-case benchmark:
+After this change, the current BM25-primary retriever matched BM25-only on the 14-case benchmark:
 
 - Recall@1: 0.714.
 - Recall@3: 0.929.
 - Recall@5: 1.000.
 - MRR: 0.812.
 
-This means the current system found at least one correct evidence chunk in the top 5 for every test case. It also means the previous failure case, `rag_qa_results`, was fixed by making BM25 dominant.
+The page-hint ablation did not improve the aggregate score in this small benchmark. Both `bm25_primary_no_page_hints` and `bm25_primary_with_page_hints` scored the same. This does not prove that page hints are useless. It means this benchmark is too small to measure their benefit. Page hints are still useful in the interface because study goals and user questions often mention specific pages.
 
-The page-hint ablation did not change the aggregate metric on this small benchmark after BM25 became dominant. That does not mean page hints are useless. It means the current benchmark is too small to prove their value. Page hints are still reasonable to keep because they are intuitive for study goals and user questions that mention specific pages.
+The experiment also shows a limitation. The benchmark has only 14 cases from 3 papers. This is enough for a course project comparison and ablation, but it is not enough for a strong research claim. A future version should evaluate 75 to 150 cases across more papers and more paper types.
 
-## 7. Why the results matter
+## 4. Analysis
 
-The evaluation connects directly to the real problem. ScholAR is supposed to help students understand papers with grounded evidence. If the system retrieves the wrong passages, it cannot reliably teach the paper. The retrieval benchmark measures the part of the system that decides what evidence the model sees.
+The strongest part of ScholAR is the end-to-end study workflow. The user can search or upload a paper, prepare it, view it, generate a paper-specific study plan, ask questions, and inspect cited evidence. This makes the tool feel like a real study assistant instead of a disconnected chatbot.
 
-The results show that ScholAR has a real technical direction:
+The split-screen interface also helps with the original problem. The user does not need to leave the paper to ask questions. The PDF stays visible, and the assistant sits next to it. This supports careful reading because the user can compare the model answer with the paper.
 
-- Keyword retrieval is simple but weaker at ranking.
-- BM25 is the strongest tested retrieval backbone for this project.
-- Hybrid signals should be used carefully as reranking aids, not as the main signal.
-- Page hints are useful conceptually, but this small benchmark does not yet prove a measurable gain after switching to BM25-primary retrieval.
-- Table and result retrieval improved after BM25 became dominant.
+The study goals worked better after they became paper-specific. Generic goals like “summarize the core idea” were too shallow. Paper-specific goals are more useful because they reflect the actual topic, method, and evaluation of the paper. Recursive subquestions also helped because they turn broad goals into smaller study tasks.
 
-This is an honest and useful result. It does not claim the system is solved. It shows where the system works and where it needs work.
+The Groq and local Qwen toggle is useful, but it comes with tradeoffs. Groq gives stronger and faster answers, but it depends on API limits. Local Qwen is more private and keeps the app usable without Groq, but it is slower and can time out on longer prompts. The current fallback behavior is practical, but local model latency is still a weakness.
 
-For a final class project, this is enough to show a real comparison and ablation. For a research conference direction, the next version would need a larger benchmark, better retrieval models, and stronger citation faithfulness evaluation.
+The biggest failure during development was citation reliability. The model sometimes produced citations that looked correct but were not actually safe enough. This happened when the model was allowed to write page citations directly. The fix was to make the backend control evidence IDs and make the frontend display numbered references. This made citations more formal and less dependent on the model inventing page numbers.
 
-## 8. What should be improved next
+Citation highlighting was also difficult. Sometimes the cited text exists in the extracted paper text, but the PDF renderer cannot highlight it correctly. This happens because PDF text extraction does not always match the visual PDF exactly. Line breaks, ligatures, hyphenation, and spacing can break exact matching. This is a real issue with PDF-based AI systems, not only with ScholAR. The system improved by using more flexible matching, but highlighting still needs more work.
 
-The first improvement should still be retrieval, but the direction is clearer now. BM25 should remain the backbone, especially for result tables and exact metric questions. Future work should test whether learned embeddings or a reranker can improve over BM25 without hurting Recall@5.
+The retrieval evaluation gave the most useful technical lesson. More complex does not automatically mean better. BM25 worked better than the first hybrid-primary scoring method for this project. That is why the final system uses BM25 as the backbone. This is a good outcome because the system changed based on evidence.
 
-The second improvement should be citation faithfulness. The system should check whether every cited quote can be found in the extracted paper text and ideally highlighted in the rendered PDF. If a citation cannot be matched, it should not be shown as confident evidence.
+Does ScholAR actually help with the stated problem? I think the answer is yes for the current project scope, but not perfectly. It helps because it keeps the paper visible, generates study goals, answers from retrieved paper chunks, and shows cited evidence. It does not fully solve the problem because citation highlighting is not perfect, local model speed is limited, and the evaluation benchmark is still small.
 
-The third improvement should be a larger benchmark. The current benchmark has 14 cases across 3 papers. A stronger final benchmark should have at least 75 to 150 cases across more papers and more research areas. It should include method, results, equations, limitations, ablations, and implementation questions.
-
-The fourth improvement should be answer-level evaluation. Retrieval evaluation is the right first step, but eventually the project should also measure answer quality. Possible answer metrics include citation precision, answer completeness, unsupported claim rate, and human preference between Groq and local Qwen answers.
-
-The fifth improvement should be a better local model experience. Local Qwen should use shorter prompts, stronger evidence selection, and possibly streaming output. That would make local mode feel more reliable.
-
-## 9. Final reflection
-
-ScholAR worked best when it treated the model as a study assistant, not as a replacement for the paper. The strongest part of the project is the full workflow: prepare the PDF, view the paper, generate a paper-specific study plan, ask questions, and inspect cited evidence.
-
-The project also showed why grounded AI systems are hard. The model is only one part of the system. Retrieval, chunking, PDF extraction, citation formatting, highlighting, UI design, and fallback behavior all affect whether the user trusts the answer.
-
-The most honest conclusion is this: ScholAR is a working MVP with a real evaluation, but it is not yet a finished research system. It has a strong direction. It helps users study papers in a more structured way, and the evaluation gives clear evidence about what works and what still needs improvement.
-
-The next version should focus less on adding more features and more on making the core loop reliable:
+The next version should focus on reliability instead of adding many new features. The core loop should be:
 
 1. Retrieve the right evidence.
-2. Generate a clear explanation.
-3. Cite only what is actually supported.
+2. Generate a clear answer.
+3. Cite only supported claims.
 4. Highlight the cited passage in the PDF.
-5. Help the user move from paper reading to real understanding.
+5. Help the user understand the paper more deeply.
 
-That loop is the real problem ScholAR is trying to solve.
+That loop is the real value of the project.
+
+## 5. References
+
+[1] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, and Illia Polosukhin. *Attention Is All You Need*. NeurIPS, 2017. https://arxiv.org/abs/1706.03762
+
+[2] Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Kuttler, Mike Lewis, Wen-tau Yih, Tim Rocktaschel, Sebastian Riedel, and Douwe Kiela. *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks*. NeurIPS, 2020. https://arxiv.org/abs/2005.11401
+
+[3] Hugo Touvron, Thibaut Lavril, Gautier Izacard, Xavier Martinet, Marie-Anne Lachaux, Timothee Lacroix, Baptiste Roziere, Naman Goyal, Eric Hambro, Faisal Azhar, Aurelien Rodriguez, Armand Joulin, Edouard Grave, and Guillaume Lample. *LLaMA: Open and Efficient Foundation Language Models*. arXiv, 2023. https://arxiv.org/abs/2302.13971
+
+[4] Stephen Robertson and Hugo Zaragoza. *The Probabilistic Relevance Framework: BM25 and Beyond*. Foundations and Trends in Information Retrieval, 2009. https://doi.org/10.1561/1500000019
+
+[5] Qwen Team. *Qwen Technical Report*. arXiv, 2023. https://arxiv.org/abs/2309.16609
