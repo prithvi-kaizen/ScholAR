@@ -1,0 +1,127 @@
+\begin{thebibliography}{10}
+
+\bibitem{blecher2023nougat}
+Lukas Blecher, Guillem Cucurull, Thomas Scialom, and Robert Stojnic.
+\newblock {Nougat}: Neural optical understanding for academic documents.
+\newblock In {\em arXiv preprint arXiv:2308.13418}, 2023.
+
+\bibitem{cormack2009rrf}
+Gordon~V Cormack, Charles L~A Clarke, and Stefan Buettcher.
+\newblock Reciprocal rank fusion outperforms {Condorcet} and individual rank
+  learning methods.
+\newblock In {\em Proceedings of the 32nd International ACM SIGIR Conference on
+  Research and Development in Information Retrieval}, pages 758--759, 2009.
+
+\bibitem{dasigi2021qasper}
+Pradeep Dasigi, Kyle Lo, Iz~Beltagy, Arman Cohan, Noah~A Smith, and Matt
+  Gardner.
+\newblock A dataset of information-seeking questions and answers anchored in
+  research papers.
+\newblock In {\em Proceedings of the 2021 Conference of the North American
+  Chapter of the Association for Computational Linguistics (NAACL)}, pages
+  4599--4610, 2021.
+
+\bibitem{faysse2024colpali}
+Manuel Faysse, Hugues Sibille, Tony Wu, Gautier Viaud, C{\'e}line Hudelot, and
+  Pierre Colombo.
+\newblock {ColPali}: Efficient document retrieval with vision language models.
+\newblock In {\em The Thirty-Eighth Annual Conference on Neural Information
+  Processing Systems}, 2024.
+
+\bibitem{gao2023attributing}
+Tianyu Gao, Howard Yen, Jiatong Yu, and Danqi Chen.
+\newblock Enabling large language models to generate text with citations.
+\newblock In {\em Proceedings of the 2023 Conference on Empirical Methods in
+  Natural Language Processing (EMNLP)}, pages 6465--6488, 2023.
+
+\bibitem{laban2022summac}
+Philippe Laban, Tobias Schnabel, Paul~N Bennett, and Marti~A Hearst.
+\newblock {SummaC}: Re-visiting {NLI}-based models for inconsistency detection
+  in summarization.
+\newblock In {\em Transactions of the Association for Computational Linguistics
+  (TACL)}, volume~10, pages 163--177, 2022.
+
+\bibitem{lewis2020rag}
+Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir
+  Karpukhin, Naman Goyal, Heinrich K{\"u}ttler, Mike Lewis, Wen-tau Yih, Tim
+  Rockt{\"a}schel, Sebastian Riedel, and Douwe Kiela.
+\newblock Retrieval-augmented generation for knowledge-intensive {NLP} tasks.
+\newblock In {\em Advances in Neural Information Processing Systems (NeurIPS)},
+  volume~33, pages 9459--9474, 2020.
+
+\bibitem{lo2020s2orc}
+Kyle Lo, Lucy~Lu Wang, Mark Neumann, Rodney Kinney, and Daniel Weld.
+\newblock {S2ORC}: The semantic scholar open research corpus.
+\newblock In {\em Proceedings of the 58th Annual Meeting of the Association for
+  Computational Linguistics (ACL)}, pages 4969--4983, 2020.
+
+\bibitem{lopez2009grobid}
+Patrice Lopez.
+\newblock {GROBID}: Combining automatic bibliographic data recognition and term
+  extraction for scholarship publications.
+\newblock In {\em Research and Advanced Technology for Digital Libraries},
+  pages 473--474, 2009.
+
+\bibitem{min2023factscore}
+Sewon Min, Kalpesh Krishna, Xinxi Lyu, Mike Lewis, Wen-tau Yih, Pang~Wei Koh,
+  Mohit Iyyer, Luke Zettlemoyer, and Hannaneh Hajishirzi.
+\newblock {FActScore}: Fine-grained atomic evaluation of factual precision in
+  long form text generation.
+\newblock {\em arXiv preprint arXiv:2305.14251}, 2023.
+
+\bibitem{reimers2019sbert}
+Nils Reimers and Iryna Gurevych.
+\newblock Sentence-{BERT}: Sentence embeddings using siamese {BERT}-networks.
+\newblock In {\em Proceedings of the 2019 Conference on Empirical Methods in
+  Natural Language Processing (EMNLP)}, pages 3982--3992, 2019.
+
+\bibitem{robertson2009bm25}
+Stephen Robertson and Hugo Zaragoza.
+\newblock The probabilistic relevance framework: {BM25} and beyond.
+\newblock {\em Foundations and Trends in Information Retrieval}, 3(4):333--389,
+  2009.
+
+\bibitem{thakur2021beir}
+Nandan Thakur, Nils Reimers, Andreas R{\"u}ckl{\'e}, Abhishek Srivastava, and
+  Iryna Gurevych.
+\newblock {BEIR}: A heterogeneous benchmark for zero-shot evaluation of
+  information retrieval models.
+\newblock In {\em Thirty-Fifth Conference on Neural Information Processing
+  Systems Datasets and Benchmarks Track}, 2021.
+
+\bibitem{touvron2023llama}
+Hugo Touvron, Thibaut Lavril, Gautier Izacard, Xavier Martinet, Marie-Anne
+  Lachaux, Timoth{\'e}e Lacroix, Baptiste Rozi{\`e}re, Naman Goyal, Eric
+  Hambro, Faisal Azhar, et~al.
+\newblock {LLaMA}: Open and efficient foundation language models.
+\newblock {\em arXiv preprint arXiv:2302.13971}, 2023.
+
+\bibitem{vaswani2017attention}
+Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones,
+  Aidan~N Gomez, Lukasz Kaiser, and Illia Polosukhin.
+\newblock Attention is all you need.
+\newblock In {\em Advances in Neural Information Processing Systems (NeurIPS)},
+  volume~30, 2017.
+
+\bibitem{wadden2020scifact}
+David Wadden, Shanchuan Lin, Kyle Lo, Lucy~Lu Wang, Madeleine van Zuylen, Arman
+  Cohan, and Hannaneh Hajishirzi.
+\newblock Fact or fiction: Verifying scientific claims.
+\newblock In {\em Proceedings of the 2020 Conference on Empirical Methods in
+  Natural Language Processing (EMNLP)}, pages 7534--7550, 2020.
+
+\bibitem{zeng2026slidetailor}
+Wenzheng Zeng, Mingyu Ouyang, Langyuan Cui, and Hwee~Tou Ng.
+\newblock {SlideTailor}: Personalized presentation slide generation for
+  scientific papers.
+\newblock In {\em Proceedings of the Fortieth AAAI Conference on Artificial
+  Intelligence (AAAI-26)}, 2026.
+
+\bibitem{zha2023alignscore}
+Yuheng Zha, Yichi Yang, Ruichen Li, and Zhiting Hu.
+\newblock {AlignScore}: Evaluating factual consistency with a unified alignment
+  function.
+\newblock In {\em Proceedings of the 61st Annual Meeting of the Association for
+  Computational Linguistics (ACL)}, pages 11328--11348, 2023.
+
+\end{thebibliography}

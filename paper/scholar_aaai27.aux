@@ -1,0 +1,95 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\citation{lewis2020rag}
+\citation{robertson2009bm25}
+\citation{thakur2021beir}
+\citation{lopez2009grobid}
+\citation{blecher2023nougat}
+\citation{zeng2026slidetailor}
+\citation{lo2020s2orc}
+\citation{dasigi2021qasper}
+\citation{wadden2020scifact}
+\citation{gao2023attributing}
+\citation{min2023factscore}
+\citation{laban2022summac}
+\citation{zha2023alignscore}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Related Work}{1}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Retrieval-Augmented Generation}{1}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Scientific Document Understanding}{1}{subsection.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Question Answering over Documents}{1}{subsection.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Citation Grounding and Faithfulness}{1}{subsection.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Problem Formulation}{1}{section.3}\protected@file@percent }
+\citation{laban2022summac}
+\citation{min2023factscore}
+\citation{reimers2019sbert}
+\citation{vaswani2017attention}
+\citation{lewis2020rag}
+\citation{touvron2023llama}
+\citation{vaswani2017attention}
+\citation{lewis2020rag}
+\citation{touvron2023llama}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces ScholAR document processing and retrieval pipeline. The system extracts page-level text, applies page-preserving chunking, and serves grounded answers with indirect citation IDs.}}{2}{figure.caption.1}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:pipeline}{{1}{2}{ScholAR document processing and retrieval pipeline. The system extracts page-level text, applies page-preserving chunking, and serves grounded answers with indirect citation IDs}{figure.caption.1}{}}
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces Page-Preserving Chunking}}{2}{algorithm.1}\protected@file@percent }
+\newlabel{alg:chunking}{{1}{2}{Page-Preserving Chunking}{algorithm.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Method}{2}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Document Processing Pipeline}{2}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Page-Preserving Chunking}{2}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}BM25-Primary Retrieval with Heuristic Reranking}{2}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Indirect Citation Grounding}{2}{subsection.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Study Goal Generation}{2}{subsection.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Faithfulness Evaluation: SummaC-ZS + Semantic Coverage}{2}{subsection.4.6}\protected@file@percent }
+\newlabel{sec:cfs-method}{{4.6}{2}{Faithfulness Evaluation: SummaC-ZS + Semantic Coverage}{subsection.4.6}{}}
+\newlabel{eq:summac-zs}{{2}{2}{Faithfulness Evaluation: SummaC-ZS + Semantic Coverage}{equation.2}{}}
+\newlabel{eq:nli-cfs}{{3}{2}{Faithfulness Evaluation: SummaC-ZS + Semantic Coverage}{equation.3}{}}
+\newlabel{eq:cfs}{{4}{2}{Faithfulness Evaluation: SummaC-ZS + Semantic Coverage}{equation.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}System Architecture}{2}{subsection.4.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Evaluation}{2}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Retrieval Benchmark}{2}{subsection.5.1}\protected@file@percent }
+\citation{cormack2009rrf}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Retrieval results on 14 manually annotated cases. PH = page hints. Best values in \textbf  {bold}.}}{3}{table.caption.2}\protected@file@percent }
+\newlabel{tab:retrieval}{{1}{3}{Retrieval results on 14 manually annotated cases. PH = page hints. Best values in \textbf {bold}}{table.caption.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Faithfulness Benchmark}{3}{subsection.5.2}\protected@file@percent }
+\newlabel{sec:faith-bench}{{5.2}{3}{Faithfulness Benchmark}{subsection.5.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Baseline Systems}{3}{subsection.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Retrieval Results}{3}{subsection.5.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Faithfulness Results}{3}{subsection.5.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces SummaC-ZS faithfulness results on 51 oracle-claim cases. T1 = SummaC-ZS entailment fraction; SCR = whole-claim cosine similarity; KFP = Key Fact Presence; SCHR@$K$ = Supporting Chunk Hit Rate.}}{3}{table.caption.3}\protected@file@percent }
+\newlabel{tab:faithfulness}{{2}{3}{SummaC-ZS faithfulness results on 51 oracle-claim cases. T1 = SummaC-ZS entailment fraction; SCR = whole-claim cosine similarity; KFP = Key Fact Presence; SCHR@$K$ = Supporting Chunk Hit Rate}{table.caption.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Combined CFS at each retrieval depth ($N$ = 51 cases). Hybrid leads at every depth; both improve monotonically.}}{3}{table.caption.4}\protected@file@percent }
+\newlabel{tab:rank-ablation}{{3}{3}{Combined CFS at each retrieval depth ($N$ = 51 cases). Hybrid leads at every depth; both improve monotonically}{table.caption.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}Ablation: CFS vs.\ Retrieval Depth}{3}{subsection.5.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.7}Ablation: CFS by Claim Type}{3}{subsection.5.7}\protected@file@percent }
+\citation{zha2023alignscore}
+\citation{blecher2023nougat}
+\citation{faysse2024colpali}
+\bibstyle{plain}
+\bibdata{scholar_references}
+\bibcite{blecher2023nougat}{1}
+\bibcite{cormack2009rrf}{2}
+\bibcite{dasigi2021qasper}{3}
+\bibcite{faysse2024colpali}{4}
+\bibcite{gao2023attributing}{5}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces CFS breakdown by claim type, BM25-primary system, $N$=51.}}{4}{table.caption.5}\protected@file@percent }
+\newlabel{tab:type-ablation}{{4}{4}{CFS breakdown by claim type, BM25-primary system, $N$=51}{table.caption.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Discussion}{4}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Future Work}{4}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusion}{4}{section.8}\protected@file@percent }
+\bibcite{laban2022summac}{6}
+\bibcite{lewis2020rag}{7}
+\bibcite{lo2020s2orc}{8}
+\bibcite{lopez2009grobid}{9}
+\bibcite{min2023factscore}{10}
+\bibcite{reimers2019sbert}{11}
+\bibcite{robertson2009bm25}{12}
+\bibcite{thakur2021beir}{13}
+\bibcite{touvron2023llama}{14}
+\bibcite{vaswani2017attention}{15}
+\bibcite{wadden2020scifact}{16}
+\bibcite{zeng2026slidetailor}{17}
+\bibcite{zha2023alignscore}{18}
+\gdef \@abspage@last{5}

@@ -1,0 +1,217 @@
+% -----------------------------------------------------------------------
+% scholar_references.bib
+% Bibliography for ScholAR AAAI-27 submission
+% -----------------------------------------------------------------------
+
+% ---- Foundational Models ----
+@inproceedings{vaswani2017attention,
+  title     = {Attention Is All You Need},
+  author    = {Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and Uszkoreit,
+               Jakob and Jones, Llion and Gomez, Aidan N and Kaiser, Lukasz and
+               Polosukhin, Illia},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {30},
+  year      = {2017}
+}
+
+@article{touvron2023llama,
+  title   = {{LLaMA}: Open and Efficient Foundation Language Models},
+  author  = {Touvron, Hugo and Lavril, Thibaut and Izacard, Gautier and Martinet,
+             Xavier and Lachaux, Marie-Anne and Lacroix, Timoth{\'e}e and Rozi{\`e}re,
+             Baptiste and Goyal, Naman and Hambro, Eric and Azhar, Faisal and others},
+  journal = {arXiv preprint arXiv:2302.13971},
+  year    = {2023}
+}
+
+% ---- RAG & Retrieval ----
+@inproceedings{lewis2020rag,
+  title     = {Retrieval-Augmented Generation for Knowledge-Intensive {NLP} Tasks},
+  author    = {Lewis, Patrick and Perez, Ethan and Piktus, Aleksandra and Petroni,
+               Fabio and Karpukhin, Vladimir and Goyal, Naman and K{\"u}ttler, Heinrich
+               and Lewis, Mike and Yih, Wen-tau and Rockt{\"a}schel, Tim and
+               Riedel, Sebastian and Kiela, Douwe},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {33},
+  pages     = {9459--9474},
+  year      = {2020}
+}
+
+@article{robertson2009bm25,
+  title   = {The Probabilistic Relevance Framework: {BM25} and Beyond},
+  author  = {Robertson, Stephen and Zaragoza, Hugo},
+  journal = {Foundations and Trends in Information Retrieval},
+  volume  = {3},
+  number  = {4},
+  pages   = {333--389},
+  year    = {2009},
+  doi     = {10.1561/1500000019}
+}
+
+@inproceedings{thakur2021beir,
+  title     = {{BEIR}: A Heterogeneous Benchmark for Zero-Shot Evaluation of
+               Information Retrieval Models},
+  author    = {Thakur, Nandan and Reimers, Nils and R{\"u}ckl{\'e}, Andreas and
+               Srivastava, Abhishek and Gurevych, Iryna},
+  booktitle = {Thirty-Fifth Conference on Neural Information Processing Systems
+               Datasets and Benchmarks Track},
+  year      = {2021}
+}
+
+% ---- Visual Document Retrieval ----
+@inproceedings{faysse2024colpali,
+  title     = {{ColPali}: Efficient Document Retrieval with Vision Language Models},
+  author    = {Faysse, Manuel and Sibille, Hugues and Wu, Tony and Viaud, Gautier and
+               Hudelot, C{\'e}line and Colombo, Pierre},
+  booktitle = {The Thirty-Eighth Annual Conference on Neural Information Processing
+               Systems},
+  year      = {2024}
+}
+
+% ---- Document Parsing ----
+@inproceedings{blecher2023nougat,
+  title     = {{Nougat}: Neural Optical Understanding for Academic Documents},
+  author    = {Blecher, Lukas and Cucurull, Guillem and Scialom, Thomas and Stojnic, Robert},
+  booktitle = {arXiv preprint arXiv:2308.13418},
+  year      = {2023}
+}
+
+@inproceedings{lopez2009grobid,
+  title     = {{GROBID}: Combining Automatic Bibliographic Data Recognition and Term
+               Extraction for Scholarship Publications},
+  author    = {Lopez, Patrice},
+  booktitle = {Research and Advanced Technology for Digital Libraries},
+  pages     = {473--474},
+  year      = {2009}
+}
+
+% ---- Scientific QA Benchmarks ----
+@inproceedings{dasigi2021qasper,
+  title     = {A Dataset of Information-Seeking Questions and Answers Anchored in
+               Research Papers},
+  author    = {Dasigi, Pradeep and Lo, Kyle and Beltagy, Iz and Cohan, Arman and
+               Smith, Noah A and Gardner, Matt},
+  booktitle = {Proceedings of the 2021 Conference of the North American Chapter of the
+               Association for Computational Linguistics (NAACL)},
+  pages     = {4599--4610},
+  year      = {2021}
+}
+
+@inproceedings{wadden2020scifact,
+  title     = {Fact or Fiction: Verifying Scientific Claims},
+  author    = {Wadden, David and Lin, Shanchuan and Lo, Kyle and Wang, Lucy Lu and
+               van Zuylen, Madeleine and Cohan, Arman and Hajishirzi, Hannaneh},
+  booktitle = {Proceedings of the 2020 Conference on Empirical Methods in Natural
+               Language Processing (EMNLP)},
+  pages     = {7534--7550},
+  year      = {2020}
+}
+
+% ---- Faithfulness Evaluation ----
+@article{es2024ragas,
+  title   = {{RAGAS}: Automated Evaluation of Retrieval Augmented Generation},
+  author  = {Es, Shahul and James, Jithin and Anke, Luis Espinosa and Schockaert, Steven},
+  journal = {arXiv preprint arXiv:2309.15217},
+  year    = {2024}
+}
+@inproceedings{gao2023attributing,
+  title     = {Enabling Large Language Models to Generate Text with Citations},
+  author    = {Gao, Tianyu and Yen, Howard and Yu, Jiatong and Chen, Danqi},
+  booktitle = {Proceedings of the 2023 Conference on Empirical Methods in Natural
+               Language Processing (EMNLP)},
+  pages     = {6465--6488},
+  year      = {2023}
+}
+
+@article{min2023factscore,
+  title   = {{FActScore}: Fine-Grained Atomic Evaluation of Factual Precision in
+             Long Form Text Generation},
+  author  = {Min, Sewon and Krishna, Kalpesh and Lyu, Xinxi and Lewis, Mike and
+             Yih, Wen-tau and Koh, Pang Wei and Iyyer, Mohit and Zettlemoyer, Luke
+             and Hajishirzi, Hannaneh},
+  journal = {arXiv preprint arXiv:2305.14251},
+  year    = {2023}
+}
+
+% ---- Slide Generation (Related) ----
+@inproceedings{zeng2026slidetailor,
+  title     = {{SlideTailor}: Personalized Presentation Slide Generation for
+               Scientific Papers},
+  author    = {Zeng, Wenzheng and Ouyang, Mingyu and Cui, Langyuan and Ng, Hwee Tou},
+  booktitle = {Proceedings of the Fortieth AAAI Conference on Artificial Intelligence
+               (AAAI-26)},
+  year      = {2026}
+}
+
+% ---- LLMs Used ----
+@article{team2023qwen,
+  title   = {Qwen Technical Report},
+  author  = {{Qwen Team}},
+  journal = {arXiv preprint arXiv:2309.16609},
+  year    = {2023}
+}
+
+@misc{meta2024llama3,
+  title  = {{Llama 3}: Herd of Models},
+  author = {{Meta AI}},
+  year   = {2024},
+  url    = {https://ai.meta.com/blog/meta-llama-3/}
+}
+
+% ---- PDF Processing ----
+@software{pymupdf,
+  title  = {{PyMuPDF}: Python Bindings for {MuPDF}},
+  author = {{Artifex Software}},
+  year   = {2024},
+  url    = {https://github.com/pymupdf/PyMuPDF}
+}
+
+% ---- Citation Networks ----
+@inproceedings{lo2020s2orc,
+  title     = {{S2ORC}: The Semantic Scholar Open Research Corpus},
+  author    = {Lo, Kyle and Wang, Lucy Lu and Neumann, Mark and Kinney, Rodney and
+               Weld, Daniel},
+  booktitle = {Proceedings of the 58th Annual Meeting of the Association for
+               Computational Linguistics (ACL)},
+  pages     = {4969--4983},
+  year      = {2020}
+}
+
+% ---- Faithfulness \& NLI Evaluation ----
+@inproceedings{laban2022summac,
+  title     = {{SummaC}: Re-Visiting {NLI}-Based Models for Inconsistency Detection
+               in Summarization},
+  author    = {Laban, Philippe and Schnabel, Tobias and Bennett, Paul N and
+               Hearst, Marti A},
+  booktitle = {Transactions of the Association for Computational Linguistics (TACL)},
+  volume    = {10},
+  pages     = {163--177},
+  year      = {2022}
+}
+
+@inproceedings{zha2023alignscore,
+  title     = {{AlignScore}: Evaluating Factual Consistency with a Unified Alignment Function},
+  author    = {Zha, Yuheng and Yang, Yichi and Li, Ruichen and Hu, Zhiting},
+  booktitle = {Proceedings of the 61st Annual Meeting of the Association for
+               Computational Linguistics (ACL)},
+  pages     = {11328--11348},
+  year      = {2023}
+}
+
+@inproceedings{reimers2019sbert,
+  title     = {Sentence-{BERT}: Sentence Embeddings using Siamese {BERT}-Networks},
+  author    = {Reimers, Nils and Gurevych, Iryna},
+  booktitle = {Proceedings of the 2019 Conference on Empirical Methods in
+               Natural Language Processing (EMNLP)},
+  pages     = {3982--3992},
+  year      = {2019}
+}
+
+@inproceedings{cormack2009rrf,
+  title     = {Reciprocal Rank Fusion Outperforms {Condorcet} and Individual Rank
+               Learning Methods},
+  author    = {Cormack, Gordon V and Clarke, Charles L A and Buettcher, Stefan},
+  booktitle = {Proceedings of the 32nd International ACM SIGIR Conference on
+               Research and Development in Information Retrieval},
+  pages     = {758--759},
+  year      = {2009}
+}
