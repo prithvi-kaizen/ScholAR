@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.3.8)  16 JUN 2026 13:34
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.3.8)  17 JUN 2026 10:39
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -646,13 +646,28 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
 
-Overfull \hbox (10.1595pt too wide) in paragraph at lines 72--88
+Overfull \hbox (10.1595pt too wide) in paragraph at lines 70--86
 []\T1/ptm/m/n/9 (-20) Understanding and query-ing sci-en-tific pa-pers de-mands
  pre-cise, evidence-
  []
 
+
+Overfull \hbox (10.34889pt too wide) in paragraph at lines 70--86
+\T1/ptm/m/n/9 (-20) back to ver-i-fi-able source pages. We present \T1/ptm/b/n/
+9 (-20) ScholAR \T1/ptm/m/n/9 (-20) (\T1/ptm/b/n/9 (-20) S\T1/ptm/m/n/9 (-20) m
+art \T1/ptm/b/n/9 (-20) C\T1/ptm/m/n/9 (-20) ompanion
+ []
+
+
+Overfull \hbox (2.48668pt too wide) in paragraph at lines 70--86
+\T1/ptm/m/n/9 (-20) for \T1/ptm/b/n/9 (-20) H\T1/ptm/m/n/9 (-20) olistic \T1/pt
+m/b/n/9 (-20) O\T1/ptm/m/n/9 (-20) rganization, \T1/ptm/b/n/9 (-20) L\T1/ptm/m/
+n/9 (-20) iterature \T1/ptm/b/n/9 (-20) A\T1/ptm/m/n/9 (-20) nalysis & \T1/ptm/
+b/n/9 (-20) R\T1/ptm/m/n/9 (-20) esearch), a retrieval-
+ []
+
 LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 1
-07.
+05.
 (/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
 )
@@ -666,24 +681,18 @@ ocal/texlive/2025/texmf-dist/fonts/enc/dvips/base/8r.enc}
 
 ]
 Package hyperref Info: bookmark level for unknown algorithm defaults to 0 on in
-put line 207.
-
-Overfull \hbox (0.39772pt too wide) in paragraph at lines 256--261
-[]\T1/ptm/b/n/10 (-20) Tier 1 --- SummaC-ZS (Se-man-tic En-tail-ment). \T1/ptm/
-m/n/10 (-20) Each ground-
- []
+put line 205.
 
 
-Overfull \hbox (27.84067pt too wide) in paragraph at lines 256--261
+
+Overfull \hbox (27.84067pt too wide) in paragraph at lines 254--259
 \T1/ptm/m/n/10 (-20) truth claim $\OML/cmm/m/it/10 c$ \T1/ptm/m/n/10 (-20) is f
 irst de-com-posed into atomic sub-claims $\OMS/cmsy/m/n/10 f\OML/cmm/m/it/10 a[
 ]; [] ; a[]\OMS/cmsy/m/n/10 g$
  []
 
 
-
-
-Overfull \hbox (5.28018pt too wide) in paragraph at lines 264--273
+Overfull \hbox (5.28018pt too wide) in paragraph at lines 262--271
 \T1/ptm/m/n/10 (-20) where $\OML/cmm/m/it/10 ^^^\OT1/cmr/m/n/10 (\OMS/cmsy/m/n/
 10 ^^A\OT1/cmr/m/n/10 )$ \T1/ptm/m/n/10 (-20) is the \T1/pcr/m/n/10 all-MiniLM-
 L6-v2 \T1/ptm/m/n/10 (-20) sen-tence en-coder [[]]
@@ -692,7 +701,13 @@ L6-v2 \T1/ptm/m/n/10 (-20) sen-tence en-coder [[]]
 
 
 [2]
-Overfull \hbox (4.89928pt too wide) in paragraph at lines 336--344
+Overfull \hbox (2.21219pt too wide) in paragraph at lines 320--332
+\T1/pcr/m/n/10 technical_claim \T1/ptm/m/n/10 (-20) (11), \T1/pcr/m/n/10 archit
+ecture_detail \T1/ptm/m/n/10 (-20) (10),
+ []
+
+
+Overfull \hbox (4.89928pt too wide) in paragraph at lines 334--342
 \T1/ptm/m/n/10 (-20) ScholAR pro-duc-tion re-triever; (6) \T1/ptm/b/n/10 (-20) 
 Hy-brid BM25+Dense+RRF\T1/ptm/m/n/10 (-20) :
  []
@@ -700,20 +715,20 @@ Hy-brid BM25+Dense+RRF\T1/ptm/m/n/10 (-20) :
 
 
 
-Overfull \hbox (24.94627pt too wide) in paragraph at lines 388--403
+Overfull \hbox (24.94627pt too wide) in paragraph at lines 386--401
  [][] 
  []
 
 
 
 [3]
-Overfull \hbox (67.64673pt too wide) in paragraph at lines 477--486
+Overfull \hbox (67.64673pt too wide) in paragraph at lines 475--484
 \T1/ptm/m/n/10 (-20) SummaC-ZS uses sentence-level co-sine sim-i-lar-ity (via \
 T1/pcr/m/n/10 all-MiniLM-L6-v2\T1/ptm/m/n/10 (-20) )
  []
 
 
-Overfull \hbox (95.47896pt too wide) in paragraph at lines 487--492
+Overfull \hbox (95.47896pt too wide) in paragraph at lines 485--490
 \T1/ptm/m/n/10 (-20) non-FAITHFUL cases (\T1/pcr/m/n/10 attn_training_steps\T1/
 ptm/m/n/10 (-20) , \T1/pcr/m/n/10 llama_training_tokens\T1/ptm/m/n/10 (-20) )
  []
@@ -735,11 +750,11 @@ Package rerunfilecheck Info: File `scholar_aaai27.out' has not changed.
 (rerunfilecheck)             Checksum: F28B81D8166EDC7FB4D2FFE48BC066CC;4488.
  ) 
 Here is how much of TeX's memory you used:
- 16444 strings out of 473190
- 260283 string characters out of 5715801
- 712298 words of memory out of 5000000
+ 16448 strings out of 473190
+ 260316 string characters out of 5715801
+ 710286 words of memory out of 5000000
  39073 multiletter control sequences out of 15000+600000
- 613524 words of font info for 291 fonts, out of 8000000 for 9000
+ 613717 words of font info for 294 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  75i,9n,79p,1011b,713s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb
@@ -756,7 +771,7 @@ ve/2025/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2025/
 texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2025/texmf-dist
 /fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/typ
 e1/urw/times/utmri8a.pfb>
-Output written on scholar_aaai27.pdf (5 pages, 195601 bytes).
+Output written on scholar_aaai27.pdf (5 pages, 196189 bytes).
 PDF statistics:
  290 PDF objects out of 1000 (max. 8388607)
  252 compressed objects within 3 object streams

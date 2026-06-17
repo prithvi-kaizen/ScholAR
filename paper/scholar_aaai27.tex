@@ -53,9 +53,9 @@
 
 \author{
   Prithviraj Patil$^1$ \quad Nidhi Goyal$^2$ \\
-  $^1$Department of Computer Science, [University Name] \\
-  $^2$Department of Computer Science, [University Name] \\
-  \texttt{prithviraj@[university].edu, nidhi@[university].edu}
+  $^1$Department of Computer Science, Anonymous Institution \\
+  $^2$Department of Computer Science, Anonymous Institution \\
+  \texttt{\{prithviraj, nidhi\}@example.edu}
 }
 
 \date{}
@@ -67,24 +67,22 @@
 % -----------------------------------------------------------------------
 \begin{abstract}
 % -----------------------------------------------------------------------
-% TODO: Replace this placeholder with the final abstract (150--200 words).
-% Structure: Problem → Gap → Method → Evaluation → Result.
 Understanding and querying scientific papers demands precise, evidence-grounded
 comprehension that general-purpose language models struggle to provide reliably.
 Existing PDF-chat systems hallucinate citations, discard document structure, and
 cannot trace generated claims back to verifiable source pages.
-We present \textbf{ScholAR}, a retrieval-augmented generation framework designed
+We present \textbf{ScholAR} (\textbf{S}mart \textbf{C}ompanion for \textbf{H}olistic \textbf{O}rganization, \textbf{L}iterature \textbf{A}nalysis \& \textbf{R}esearch), a retrieval-augmented generation framework designed
 specifically for scientific document comprehension.
 ScholAR enforces strict page-boundary-preserving text segmentation, ensuring that
 every retrieved chunk maps exactly to a single PDF page.
 An indirect citation grounding mechanism decouples LLM generation from
 page-number prediction, replacing fragile in-context page references with
 verifiable evidence identifiers that the frontend resolves to precise PDF highlights.
-We introduce a manually annotated retrieval benchmark spanning [N] query--chunk
-pairs across [K] landmark NLP papers, evaluated using Recall@$K$ and
+We introduce a manually annotated retrieval benchmark spanning 14 query--chunk
+pairs across 3 landmark NLP papers, evaluated using Recall@$K$ and
 Mean Reciprocal Rank (MRR).
-Our BM25-primary retrieval system achieves Recall@5 of 1.00 and MRR of 0.81,
-outperforming keyword-overlap baselines by [X] MRR points.
+Our BM25-primary retrieval system achieves Recall@5 of 1.00 and MRR of 0.812,
+outperforming keyword-overlap baselines by 12.5 percentage points in MRR.
 \end{abstract}
 
 % -----------------------------------------------------------------------
@@ -146,8 +144,8 @@ SciFact \cite{wadden2020scifact} evaluates fact verification over biomedical lit
 Gao et al.\ \cite{gao2023attributing} study attribution in LLM generation;
 their analysis shows that citation quality degrades sharply without retrieval grounding.
 Min et al.\ \cite{min2023factscore} propose FActScore, which decomposes generated text
-into atomic claims and verifies each claim against a knowledge source ---
-we adopt this decomposition strategy in our benchmark construction.
+into atomic claims and verifies each claim against a knowledge source, adopting
+this decomposition strategy in our benchmark construction.
 Laban et al.\ \cite{laban2022summac} introduce SummaC for consistency detection
 in summarization, with two variants: SummaC-Conv (fine-tuned NLI) and SummaC-ZS
 (zero-shot via sentence embeddings).
@@ -238,7 +236,7 @@ this motivates our choice of SummaC-ZS over lexical alternatives.
 \subsection{Study Goal Generation}
 ScholAR generates eight paper-specific study goals per document using the Groq
 \texttt{llama-3.3-70b-versatile} API when available, falling back to Ollama
-(\texttt{qwen3:9b}) for local inference.
+(\texttt{qwen3.5:9b}) for local inference.
 Each goal has a title, a 2--4 sentence description grounded in paper text,
 and 3--5 recursive subquestions whose evidence chunks are resolved by
 a second BM25 retrieval pass.
@@ -250,10 +248,10 @@ directly from sentence patterns in the abstract and introduction.
 We evaluate citation faithfulness using the SummaC-ZS protocol~\cite{laban2022summac},
 the zero-shot variant of SummaC that does not require a fine-tuned NLI model.
 The key advantage of SummaC-ZS over ROUGE-family metrics is that it operates
-at the \emph{semantic} level via dense embeddings, not at the lexical level ---
+at the \emph{semantic} level via dense embeddings, not at the lexical level,
 making it robust to paraphrased hallucinations that ROUGE cannot detect.
 
-\textbf{Tier 1 --- SummaC-ZS (Semantic Entailment).}
+\textbf{Tier 1: SummaC-ZS (Semantic Entailment).}
 Each ground-truth claim $c$ is first decomposed into atomic sub-claims
 $\{a_1,\ldots,a_m\}$ via sentence- and clause-level splitting
 (FActScore-style~\cite{min2023factscore}).
@@ -276,11 +274,11 @@ down-graded from \textsc{Entailment} to \textsc{Neutral}.
   \label{eq:nli-cfs}
 \end{equation}
 
-\textbf{Tier 2 --- SCR (Semantic Coverage Rate).}
+\textbf{Tier 2: SCR (Semantic Coverage Rate).}
 Whole-claim vs.\ best-chunk cosine similarity (a coarser, complementary signal):
 $\mathrm{SCR}(c, \mathcal{C}) = \max_j \cos(\phi(c), \phi(\mathcal{C}_j))$.
 
-\textbf{Tier 3 --- KFP (Key Fact Presence).}
+\textbf{Tier 3: KFP (Key Fact Presence).}
 Fraction of numeric values and technical proper nouns from the claim
 found verbatim in the top-5 retrieved chunks (exact lexical recall for
 quantities and named entities, where semantics cannot substitute).
@@ -326,10 +324,10 @@ annotated across three landmark NLP papers:
 \textit{LLaMA}~\cite{touvron2023llama} (24 cases).
 Each case contains a natural-language query, a ground-truth claim,
 a manually verified supporting chunk ID, and a claim type label.
-Claim types include: \texttt{result\_number} (9), \texttt{training\_detail} (8),
-\texttt{technical\_claim} (8), \texttt{architecture\_detail} (9),
-\texttt{formula} (1), \texttt{conceptual\_claim} (7),
-\texttt{human\_eval} (4), and \texttt{environmental\_claim} (1).
+Claim types include: \texttt{result\_number} (13), \texttt{training\_detail} (8),
+\texttt{technical\_claim} (11), \texttt{architecture\_detail} (10),
+\texttt{formula} (1), \texttt{conceptual\_claim} (5),
+\texttt{human\_eval} (2), and \texttt{environmental\_claim} (1).
 All annotations were produced manually by the authors.
 
 \subsection{Baseline Systems}
@@ -479,7 +477,7 @@ Our Tier~1 SummaC-ZS score (0.961 for both systems) is significantly higher
 than a purely lexical approach would yield for the same cases.
 The key distinction is that SummaC-ZS uses sentence-level cosine similarity
 (via \texttt{all-MiniLM-L6-v2}) which captures semantic equivalence across
-paraphrased formulations --- a property that ROUGE-family metrics fail to exhibit
+paraphrased formulations, a property that ROUGE-family metrics fail to exhibit
 \cite{zha2023alignscore}.
 The SCR tier (whole-claim cosine, 0.484 BM25 vs.\ 0.509 Hybrid) is the primary
 differentiating signal between the two retrieval systems.
