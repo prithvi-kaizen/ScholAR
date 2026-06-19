@@ -1,93 +1,55 @@
-# ScholAR: Page-Preserving Retrieval-Augmented Grounding for Research Paper Comprehension
+# ScholAR — Smart Companion for Holistic Organization, Literature Analysis & Research
 
-ScholAR is an academic research assistant designed to facilitate the comprehension of technical scientific documents. It implements a local-first, privacy-preserving **Retrieval-Augmented Generation (RAG)** pipeline optimized specifically for scientific layout structures (such as PDFs). 
+ScholAR is a local-first, privacy-preserving **Retrieval-Augmented Generation (RAG)** system for scientific document comprehension. It is built as a research tool for deep reading and Q&A over academic PDFs, with a focus on faithful, page-grounded citations.
 
-By enforcing strict page boundaries during document segmentation and using an indirect citation-grounding mechanism, ScholAR provides reliable, clickable visual citations directly linked to PDF coordinate regions, bypassing the common hallucination issues of standard conversational LLMs.
+This project is being developed as a thesis-track submission to **AAAI-27** (The Forty-First AAAI Conference on Artificial Intelligence).
 
 ---
 
 ## Key Technical Contributions
 
 ### 1. Page-Preserving Chunking
-Standard RAG pipelines chunk text based on arbitrary character limits (e.g., recursive character split), which frequently cross page boundaries. In contrast, ScholAR restricts text segmentation boundaries to PDF page limits. This guarantees a strict 1-to-1 mapping between any retrieved text chunk and its visual page, enabling reliable page-level citations.
+ScholAR segments PDFs by enforcing strict page boundaries. Every text chunk maps exactly to a single PDF page, enabling reliable visual citations. This is implemented as a sliding window over per-page tokens (`target_words=1400`, `overlap=120`), with section title detection via regex.
 
-### 2. Lexical-Heuristic Retrieval (BM25-Primary)
-Quantitative evaluations show that standard vector embeddings often fail to retrieve exact result tables and specialized terminology (e.g., BLEU scores, dataset names, model parameters). ScholAR implements:
-- **BM25 Lexical Backbone:** The primary ranking signal to ensure exact keyword and number matching.
-- **Lightweight Semantic overlap:** Cosine similarity over MD5-hashed term vectors (for lightweight, zero-dependency semantic matching).
-- **Heuristic Reranking:** Small ranking boosts for user-specified page hints (e.g., "on pages 6 and 7"), section labels (Abstract, Method, Results), and research-specific phrases (e.g., "we introduce", "we present").
+### 2. BM25-Primary Retrieval with Heuristic Reranking
+The retrieval layer uses BM25 as the primary lexical signal, supplemented by lightweight heuristic boosts:
+- **Query Expansion:** A curated dictionary expands research-specific terms (e.g., `result` → `accuracy, table, score, BLEU`).
+- **Page Hints:** +1.25 score boost when the user query references a specific page number.
+- **Section Hints:** Boosts for chunks whose `section_title` matches the semantic category inferred from the query (Abstract, Method, Results, Limitation).
+- **Phrase Boosts:** Small boosts for research-writing patterns (e.g., `"we introduce"`, `"we present"`).
 
-### 3. Indirect Citation Grounding
-Instead of allowing the LLM to write inline page numbers (which leads to hallucinated page citations), ScholAR's backend maps retrieved chunks to unique evidence IDs (`E1`, `E2`, etc.) in the LLM prompt. The LLM is forced to cite claims using only these IDs. The backend then resolves the IDs back to the actual PDF coordinates, and the frontend highlights the exact text bounding boxes on the PDF page.
+### 3. Hybrid BM25 + Dense + RRF Retrieval (Research Evaluation)
+For the AAAI-27 faithfulness evaluation, ScholAR implements a full hybrid retrieval pipeline:
+- **Dense Ranking:** `all-MiniLM-L6-v2` embeddings loaded directly from the local HuggingFace cache (no `sentence-transformers` library required — pure PyTorch + safetensors).
+- **Reciprocal Rank Fusion (RRF, k=60):** Combines BM25 and dense rank lists using the Cormack et al. (SIGIR 2009) formula.
+- **Post-Fusion Page Boost:** +0.05 applied to chunks matching user-specified page hints.
 
-### 4. Hybrid Cloud-Local Inference
-The system supports:
-- **Local Qwen via Ollama:** For offline, private research paper analysis.
-- **Llama 3 via Groq API:** For fast, high-performance reasoning.
-- **Graceful Fallback:** If the Groq API hits rate limits, the UI warns the user and falls back to local Qwen, ensuring uninterrupted study sessions.
+### 4. Indirect Citation Grounding
+The backend assigns evidence IDs (`E1`, `E2`, ...) to retrieved chunks and prompts the LLM to cite only these IDs — never raw page numbers. The frontend resolves IDs back to PDF bounding box coordinates and highlights the exact source text.
 
----
+### 5. NLI-Based Citation Faithfulness Evaluation (NLI-CFS)
+ScholAR includes a three-tier faithfulness metric aligned with 2024–2026 SOTA practices:
 
-## Repository Structure
+| Tier | Method | Weight |
+|---|---|---|
+| Tier 1: SummaC-ZS | Sentence-level cosine entailment via MiniLM embeddings | 50% |
+| Tier 2: SCR | Whole-claim vs. best-chunk cosine similarity | 30% |
+| Tier 3: KFP | Exact recall of numbers and technical terms | 20% |
 
-```text
-ScholAR/
-├── backend/                  # Python/FastAPI backend API
-│   ├── data/                 # Extracted papers, page images, metadata, and goals
-│   ├── services/             # Chunking, PDF parser, retrieval, and LLM APIs
-│   └── main.py               # FastAPI entry point
-├── frontend/                 # Next.js / TypeScript / Tailwind CSS web application
-│   ├── app/                  # Application routing and layout
-│   └── components/           # Navbar, PDF viewer, Chat panel, action modules
-├── evaluation/               # Quantitative benchmarking suite
-│   ├── results/              # Evaluation reports and output JSONs
-│   ├── benchmark_cases.json  # Ground-truth queries and relevant chunk mappings
-│   ├── run_retrieval_eval.py # Quantitative retrieval evaluator script
-│   └── README.md             # Benchmark execution instructions
-├── docs/                     # Documentation & Figures
-│   ├── architecture/         # PDF and SVG system diagrams
-│   └── domain_note.md        # Domain problem analysis & real-world use case
-├── .archive/                 # Course project archive
-│   └── course_report.md      # Legacy course project report
-├── requirements.txt          # Python requirements
-└── README.md                 # Main research README
-```
+**Combined CFS = 0.50 × SummaC-ZS + 0.30 × SCR + 0.20 × KFP**
+
+Claims are labeled FAITHFUL (CFS ≥ 0.55), PARTIAL (≥ 0.35), or UNFAITHFUL.
+
+### 6. Hybrid Cloud-Local Inference
+- **Local:** Ollama with `qwen3.5:9b` for offline, private analysis.
+- **Cloud:** Groq API with `llama-3.3-70b-versatile` for fast inference.
+- **Graceful Fallback:** If the Groq API is unavailable, the system falls back to local Ollama without interruption.
 
 ---
 
-## Getting Started
+## Evaluation Results
 
-### Prerequisites
-- Python 3.11 or 3.12
-- Node.js (v18+)
-- Ollama (running locally with `qwen2.5:7b` or `qwen3.5:9b` loaded)
-
-### 1. Backend Setup
-```bash
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Run the FastAPI server
-python3 run_backend.py
-```
-*The API server runs at `http://127.0.0.1:8000`. You can configure environment keys (like `GROQ_API_KEY`) in `backend/.env`.*
-
-### 2. Frontend Setup
-```bash
-cd frontend
-npm install
-npm run dev
-```
-*The interface will start at `http://localhost:3000`.*
-
----
-
-## Quantitative Evaluation & Benchmarking
-
-ScholAR features an integrated retrieval evaluation framework to test the accuracy of the grounding layer. The benchmark runs over **14 manually annotated query-to-chunk test cases** across 3 landmark papers (*Attention Is All You Need*, *RAG*, and *LLaMA*).
-
-### Benchmark Results
-The table below compares ScholAR's BM25-primary retriever against key baselines:
+### Retrieval Benchmark (14 manually annotated cases, 3 papers)
 
 | System | Recall@1 | Recall@3 | Recall@5 | MRR |
 |---|---:|---:|---:|---:|
@@ -96,8 +58,89 @@ The table below compares ScholAR's BM25-primary retriever against key baselines:
 | `bm25_primary_no_page_hints` | 0.714 | 0.929 | 1.000 | 0.812 |
 | `bm25_primary_with_page_hints` | 0.714 | 0.929 | 1.000 | 0.812 |
 
-To reproduce these results, run the evaluation script:
-```bash
-python3 evaluation/run_retrieval_eval.py
+### Faithfulness Benchmark (51 oracle-claim cases, 3 papers, 8 claim types)
+
+| System | Combined CFS | SCHR@5 | Faithful |
+|---|---:|---:|---:|
+| BM25-primary | 0.820 | 0.863 | 49 / 51 |
+| Hybrid BM25 + Dense + RRF | 0.829 | 0.922 | 49 / 51 |
+
+The faithfulness benchmark spans *Attention Is All You Need*, *RAG*, and *LLaMA* across 8 claim types: `result_number` (13), `technical_claim` (11), `architecture_detail` (10), `training_detail` (8), `conceptual_claim` (5), `human_eval` (2), `formula` (1), `environmental_claim` (1).
+
+---
+
+## Repository Structure
+
+```text
+ScholAR/
+├── backend/                        # Python/FastAPI backend
+│   ├── data/                       # Extracted papers, page images, metadata
+│   ├── services/                   # Chunking, retrieval, PDF parser, LLM services
+│   └── main.py                     # FastAPI entry point
+├── frontend/                       # Next.js / TypeScript / Tailwind CSS UI
+│   ├── app/                        # Application routing and layout
+│   └── components/                 # PDF viewer, Chat panel, Study panel
+├── evaluation/                     # Research evaluation suite
+│   ├── embedder.py                 # Local MiniLM-L6-v2 embedder (pure PyTorch)
+│   ├── hybrid_retrieval.py         # Hybrid BM25 + Dense + RRF retrieval
+│   ├── nli_faithfulness.py         # SummaC-ZS faithfulness scorer
+│   ├── run_faithfulness_eval.py    # 51-case faithfulness evaluation runner
+│   ├── faithfulness_cases.json     # Oracle-claim benchmark cases
+│   └── results/                    # Evaluation reports and JSON outputs
+├── paper/                          # AAAI-27 LaTeX manuscript
+│   ├── scholar_aaai27.tex          # Main paper source
+│   ├── scholar_aaai27.pdf          # Compiled PDF draft
+│   └── scholar_references.bib     # Bibliography
+├── docs/                           # Architecture diagrams and domain notes
+├── .archive/                       # Legacy course project files
+├── RESEARCH_ROADMAP.md             # Thesis checklist and future directions
+├── run_backend.py                  # Backend launcher script
+└── requirements.txt                # Python dependencies
 ```
-The script outputs raw logs to `evaluation/results/retrieval_eval_results.json` and generates a markdown summary in `evaluation/results/retrieval_eval_report.md`.
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Python 3.11 or 3.12
+- Node.js v18+
+- Ollama running locally with `qwen3.5:9b` loaded
+
+### 1. Backend
+```bash
+source .venv312/bin/activate
+python run_backend.py
+```
+Configure `GROQ_API_KEY` and `OLLAMA_MODEL` in `backend/.env`.
+
+### 2. Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The interface runs at `http://localhost:3000` and the API at `http://127.0.0.1:8000`.
+
+---
+
+## Running the Evaluation
+
+```bash
+# Retrieval benchmark (14 cases)
+python3 evaluation/run_retrieval_eval.py
+
+# Faithfulness benchmark (51 cases — takes ~2 min)
+python3 evaluation/run_faithfulness_eval.py
+```
+
+Results are written to `evaluation/results/`.
+
+---
+
+## Research Paper
+
+The AAAI-27 draft is in `paper/scholar_aaai27.pdf`. It covers the page-preserving chunking design, indirect citation grounding, the NLI-CFS faithfulness pipeline, and ablation studies over retrieval depth and claim type.
+
+**Target submission window:** AAAI-27, August 2026.
