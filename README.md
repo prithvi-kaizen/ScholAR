@@ -85,13 +85,18 @@ ScholAR/
 │   ├── hybrid_retrieval.py         # Hybrid BM25 + Dense + RRF retrieval
 │   ├── nli_faithfulness.py         # SummaC-ZS faithfulness scorer
 │   ├── run_faithfulness_eval.py    # 51-case faithfulness evaluation runner
-│   ├── faithfulness_cases.json     # Oracle-claim benchmark cases
+│   ├── benchmark_cases.json        # Retrieval benchmark (14 annotated cases)
+│   ├── faithfulness_cases.json     # Faithfulness benchmark (51 oracle-claim cases)
 │   └── results/                    # Evaluation reports and JSON outputs
 ├── paper/                          # AAAI-27 LaTeX manuscript
 │   ├── scholar_aaai27.tex          # Main paper source
 │   ├── scholar_aaai27.pdf          # Compiled PDF draft
-│   └── scholar_references.bib     # Bibliography
-├── docs/                           # Architecture diagrams and domain notes
+│   └── scholar_references.bib      # Bibliography
+├── docs/                           # Documentation and research references
+│   ├── architecture/               # Architecture diagrams (PNG, SVG)
+│   ├── reference_papers/           # Related papers (PaperQA, SCIDQA, M3SCIQA, etc.)
+│   ├── preliminary/                # Early experiment logs and notes
+│   └── domain_note.md              # Domain problem analysis
 ├── .archive/                       # Legacy course project files
 ├── RESEARCH_ROADMAP.md             # Thesis checklist and future directions
 ├── run_backend.py                  # Backend launcher script
