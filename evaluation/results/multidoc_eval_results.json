@@ -2,18 +2,26 @@
   "all": {
     "label": "all",
     "n": 18,
-    "recall@1": 0.167,
-    "recall@3": 0.167,
-    "recall@5": 0.167,
-    "mrr": 0.167
+    "recall@1": 0.222,
+    "recall@3": 0.389,
+    "recall@5": 0.611,
+    "mrr": 0.355
   },
   "locality": {
     "label": "locality",
     "n": 15,
-    "recall@1": 0.0,
-    "recall@3": 0.0,
-    "recall@5": 0.0,
-    "mrr": 0.0
+    "recall@1": 0.067,
+    "recall@3": 0.267,
+    "recall@5": 0.533,
+    "mrr": 0.226
+  },
+  "locality_arxiv": {
+    "label": "locality_arxiv",
+    "n": 10,
+    "recall@1": 0.1,
+    "recall@3": 0.4,
+    "recall@5": 0.8,
+    "mrr": 0.338
   },
   "detail": {
     "label": "detail",
@@ -37,16 +45,9 @@
         "bpe"
       ],
       "recall@1": 0,
-      "recall@3": 0,
-      "recall@5": 0,
-      "mrr": 0.0,
-      "_debug_top_srcs": [
-        "1706.03762",
-        "1706.03762",
-        "1706.03762",
-        "1706.03762",
-        "1706.03762"
-      ]
+      "recall@3": 1,
+      "recall@5": 1,
+      "mrr": 0.5
     },
     {
       "case_id": "md_002",
@@ -78,15 +79,8 @@
       ],
       "recall@1": 0,
       "recall@3": 0,
-      "recall@5": 0,
-      "mrr": 0.0,
-      "_debug_top_srcs": [
-        "1706.03762",
-        "1706.03762",
-        "1706.03762",
-        "1706.03762",
-        "1706.03762"
-      ]
+      "recall@5": 1,
+      "mrr": 0.25
     },
     {
       "case_id": "md_004",
@@ -100,16 +94,9 @@
         "image recognition"
       ],
       "recall@1": 0,
-      "recall@3": 0,
-      "recall@5": 0,
-      "mrr": 0.0,
-      "_debug_top_srcs": [
-        "1706.03762",
-        "1706.03762",
-        "1706.03762",
-        "1706.03762",
-        "1706.03762"
-      ]
+      "recall@3": 1,
+      "recall@5": 1,
+      "mrr": 0.333
     },
     {
       "case_id": "md_005",
@@ -141,15 +128,8 @@
       ],
       "recall@1": 0,
       "recall@3": 0,
-      "recall@5": 0,
-      "mrr": 0.0,
-      "_debug_top_srcs": [
-        "2005.11401",
-        "2005.11401",
-        "1706.03762",
-        "2005.11401",
-        "2005.11401"
-      ]
+      "recall@5": 1,
+      "mrr": 0.25
     },
     {
       "case_id": "md_007",
@@ -165,13 +145,13 @@
       "recall@1": 0,
       "recall@3": 0,
       "recall@5": 0,
-      "mrr": 0.0,
+      "mrr": 0.1,
       "_debug_top_srcs": [
         "2005.11401",
         "2005.11401",
         "2005.11401",
-        "2005.11401",
-        "1706.03762"
+        "2004.04906",
+        "2005.11401"
       ]
     },
     {
@@ -205,15 +185,8 @@
       ],
       "recall@1": 0,
       "recall@3": 0,
-      "recall@5": 0,
-      "mrr": 0.0,
-      "_debug_top_srcs": [
-        "2005.11401",
-        "1706.03762",
-        "2005.11401",
-        "2005.11401",
-        "2005.11401"
-      ]
+      "recall@5": 1,
+      "mrr": 0.25
     },
     {
       "case_id": "md_010",
@@ -228,15 +201,8 @@
       ],
       "recall@1": 0,
       "recall@3": 0,
-      "recall@5": 0,
-      "mrr": 0.0,
-      "_debug_top_srcs": [
-        "2005.11401",
-        "2005.11401",
-        "2005.11401",
-        "2005.11401",
-        "1706.03762"
-      ]
+      "recall@5": 1,
+      "mrr": 0.2
     },
     {
       "case_id": "md_011",
@@ -285,8 +251,8 @@
         "2005.11401",
         "2005.11401",
         "2005.11401",
-        "1706.03762",
-        "2005.11401"
+        "1705.03551",
+        "1702.08734"
       ]
     },
     {
@@ -301,17 +267,10 @@
         "attention",
         "jointly learning"
       ],
-      "recall@1": 0,
-      "recall@3": 0,
-      "recall@5": 0,
-      "mrr": 0.0,
-      "_debug_top_srcs": [
-        "1706.03762",
-        "1706.03762",
-        "1706.03762",
-        "1706.03762",
-        "1706.03762"
-      ]
+      "recall@1": 1,
+      "recall@3": 1,
+      "recall@5": 1,
+      "mrr": 1.0
     },
     {
       "case_id": "md_015",
@@ -341,16 +300,9 @@
         "layer normalization"
       ],
       "recall@1": 0,
-      "recall@3": 0,
-      "recall@5": 0,
-      "mrr": 0.0,
-      "_debug_top_srcs": [
-        "1706.03762",
-        "1706.03762",
-        "1706.03762",
-        "1706.03762",
-        "1706.03762"
-      ]
+      "recall@3": 1,
+      "recall@5": 1,
+      "mrr": 0.5
     },
     {
       "case_id": "md_017",
@@ -384,5 +336,12 @@
       "recall@5": 0,
       "mrr": 0.0
     }
-  ]
+  ],
+  "meta": {
+    "total_cases": 18,
+    "locality_evaluable": 10,
+    "locality_no_id": 5,
+    "detail_cases": 3,
+    "note": "5 locality cases have no arXiv ID (WMT, Dropout, Wikipedia, WebQ, BM25) and score 0 by definition."
+  }
 }
