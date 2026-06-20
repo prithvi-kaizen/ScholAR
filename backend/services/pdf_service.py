@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import unicodedata
@@ -34,23 +35,85 @@ def write_json(path: Path, payload: Any) -> None:
         json.dump(payload, handle, indent=2, ensure_ascii=False)
 
 
+_PDF_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/pdf,*/*",
+}
+
+
+_ARXIV_ID_RE = re.compile(
+    r"(?:arxiv\.org/(?:abs|pdf)/|arXiv:)([0-9]{4}\.[0-9]+(?:v\d+)?|[a-z\-]+/\d+)",
+    re.IGNORECASE,
+)
+
+
+def _extract_arxiv_id(url_or_id: str) -> str | None:
+    """Extract a bare arXiv ID (e.g. '1706.03762') from a URL or ID string."""
+    m = _ARXIV_ID_RE.search(url_or_id)
+    if m:
+        return re.sub(r"v\d+$", "", m.group(1))
+    # Maybe it's already a bare id like '1706.03762'
+    if re.fullmatch(r"[0-9]{4}\.[0-9]+", url_or_id.strip()):
+        return url_or_id.strip()
+    return None
+
+
+def _arxiv_url_candidates(pdf_url: str, oa_pdf_url: str | None = None) -> list[str]:
+    """Return URLs to try in order. Prefers known open-access URLs."""
+    candidates: list[str] = []
+    if oa_pdf_url and oa_pdf_url.startswith("http"):
+        candidates.append(oa_pdf_url)
+
+    arxiv_id = _extract_arxiv_id(pdf_url)
+    if arxiv_id:
+        candidates += [
+            f"https://arxiv.org/pdf/{arxiv_id}",
+            f"https://export.arxiv.org/pdf/{arxiv_id}",
+        ]
+    elif pdf_url not in candidates:
+        candidates.append(pdf_url)
+
+    return candidates
+
+
+
 async def download_pdf(pdf_url: str, destination: Path) -> None:
     if not pdf_url:
         raise RuntimeError("Paper is missing a PDF URL")
 
     destination.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        async with httpx.AsyncClient(timeout=45.0, follow_redirects=True) as client:
-            response = await client.get(pdf_url)
-            response.raise_for_status()
-    except httpx.HTTPError as exc:
-        raise RuntimeError(f"PDF download failed: {exc}") from exc
 
-    content_type = response.headers.get("content-type", "")
-    if "pdf" not in content_type.lower() and not response.content.startswith(b"%PDF"):
-        raise RuntimeError("Downloaded file does not look like a PDF")
+    urls_to_try = _arxiv_url_candidates(pdf_url)
+    last_exc: Exception | None = None
 
-    destination.write_bytes(response.content)
+    async with httpx.AsyncClient(timeout=60.0, follow_redirects=True, headers=_PDF_HEADERS) as client:
+        for attempt, url in enumerate(urls_to_try):
+            try:
+                if attempt > 0:
+                    await asyncio.sleep(2.0 * attempt)
+                response = await client.get(url)
+                if response.status_code == 403 and attempt < len(urls_to_try) - 1:
+                    continue  # try next URL
+                response.raise_for_status()
+
+                content_type = response.headers.get("content-type", "")
+                if "pdf" in content_type.lower() or response.content.startswith(b"%PDF"):
+                    destination.write_bytes(response.content)
+                    return
+                # Not a PDF — try next
+            except httpx.HTTPStatusError as exc:
+                last_exc = exc
+                if attempt < len(urls_to_try) - 1:
+                    continue
+            except httpx.HTTPError as exc:
+                last_exc = exc
+                break
+
+    raise RuntimeError(f"PDF download failed: {last_exc}") from last_exc
 
 
 def extract_pages(pdf_path: Path) -> list[dict[str, Any]]:
