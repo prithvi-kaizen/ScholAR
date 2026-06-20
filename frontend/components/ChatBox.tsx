@@ -19,6 +19,8 @@ interface ChatBoxProps {
   onCitationClick: (citation: Citation) => void;
   expanded: boolean;
   onChatActivity: () => void;
+  /** Local IDs of secondary papers already ingested into this session */
+  secondaryPaperIds?: string[];
 }
 
 function renderInline(text: string, citations: Citation[] = [], onCitationClick?: (citation: Citation) => void) {
@@ -90,7 +92,7 @@ function sectionLabel(citation: Citation) {
   return citation.section_title || citation.chunk_type || "Paper";
 }
 
-export function ChatBox({ paperId, queuedPrompt, provider, onProviderChange, onCitationClick, expanded, onChatActivity }: ChatBoxProps) {
+export function ChatBox({ paperId, queuedPrompt, provider, onProviderChange, onCitationClick, expanded, onChatActivity, secondaryPaperIds = [] }: ChatBoxProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -116,7 +118,13 @@ export function ChatBox({ paperId, queuedPrompt, provider, onProviderChange, onC
       const response = await fetch(`${backendUrl}/api/papers/${encodeURIComponent(paperId)}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: trimmed, history, provider: activeProvider, web_search: true })
+        body: JSON.stringify({
+          message: trimmed,
+          history,
+          provider: activeProvider,
+          web_search: true,
+          secondary_paper_ids: secondaryPaperIds,
+        })
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
@@ -230,7 +238,14 @@ export function ChatBox({ paperId, queuedPrompt, provider, onProviderChange, onC
                   <div className="mt-3 space-y-3">
                   {message.citations.map((citation) => (
                     <div key={`${citation.chunk_id}-${citation.page}-${citation.quote}`} className="space-y-1">
-                      <div className="text-xs font-medium text-zinc-400">{sectionLabel(citation)}:</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-zinc-400">{sectionLabel(citation)}:</span>
+                        {citation.source_paper_id && citation.source_paper_id !== paperId && (
+                          <span className="rounded bg-acid/20 px-1.5 py-0.5 text-[10px] font-semibold text-acid">
+                            ref
+                          </span>
+                        )}
+                      </div>
                       <button
                         onClick={() => onCitationClick(citation)}
                         className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-xs text-zinc-400 transition hover:bg-blue-500/10 hover:text-blue-100"

@@ -5,6 +5,7 @@ import { BookOpen } from "lucide-react";
 import type { Citation, StudyGoal } from "../types/paper";
 import { ChatBox } from "./ChatBox";
 import { StudyGoals } from "./StudyGoals";
+import { ReferencesPanel } from "./ReferencesPanel";
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
 const providerStorageKey = "scholar-ai-provider-v2";
@@ -80,6 +81,13 @@ export function StudyPanel({ paperId, onCitationClick }: StudyPanelProps) {
   const [provider, setProvider] = useState<"local" | "groq">("groq");
   const [providerNotice, setProviderNotice] = useState("");
   const [chatActive, setChatActive] = useState(false);
+
+  // Multi-document mode: set of active secondary paper local_ids
+  const [secondaryPaperIds, setSecondaryPaperIds] = useState<Set<string>>(new Set());
+
+  function handleSecondaryPaperIngested(secId: string) {
+    setSecondaryPaperIds((prev) => new Set([...prev, secId]));
+  }
 
   useEffect(() => {
     const saved = window.localStorage.getItem(providerStorageKey);
@@ -170,7 +178,6 @@ export function StudyPanel({ paperId, onCitationClick }: StudyPanelProps) {
           <h1 className="mt-2 text-2xl font-semibold text-white">Let&apos;s study research!</h1>
           {providerNotice ? <p className="mt-2 text-xs text-amber-300">{providerNotice}</p> : null}
         </div>
-
         <StudyGoals goals={goals} loading={loadingGoals} onGoalClick={explainGoal} />
       </div>
       ) : (
@@ -187,6 +194,14 @@ export function StudyPanel({ paperId, onCitationClick }: StudyPanelProps) {
         onCitationClick={onCitationClick}
         expanded={chatActive}
         onChatActivity={() => setChatActive(true)}
+        secondaryPaperIds={[...secondaryPaperIds]}
+      />
+
+      {/* References panel — collapsible, always at the bottom of the sidebar */}
+      <ReferencesPanel
+        paperId={paperId}
+        onSecondaryPaperIngested={handleSecondaryPaperIngested}
+        activeSecondaryIds={secondaryPaperIds}
       />
     </aside>
   );

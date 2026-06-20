@@ -39,6 +39,8 @@ export type Citation = {
   section_title?: string;
   chunk_type?: string;
   quote: string;
+  /** For multi-document mode: the local_id of the paper this chunk came from */
+  source_paper_id?: string;
 };
 
 export type WebResult = {

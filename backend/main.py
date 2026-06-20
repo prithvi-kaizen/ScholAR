@@ -33,6 +33,11 @@ from backend.services.pdf_service import (
     safe_paper_id,
     write_json,
 )
+from backend.services.reference_service import (
+    load_references,
+    mark_reference_ingested,
+    resolve_references,
+)
 from backend.services.retrieval_service import extract_page_hints, retrieve_chunks, short_quote, tokenize
 from backend.services.web_search_service import search_web, web_search_enabled
 
@@ -65,6 +70,8 @@ class ChatInput(BaseModel):
     history: list[dict[str, Any]] = Field(default_factory=list)
     provider: Literal["local", "groq"] = "local"
     web_search: bool = True
+    # Multi-document mode: local_ids of secondary papers already ingested
+    secondary_paper_ids: list[str] = Field(default_factory=list)
 
 
 class StudyGoalsInput(BaseModel):
@@ -297,13 +304,30 @@ def _build_evidence_items(question: str, chunks: list[dict[str, Any]], limit: in
     return evidence
 
 
-def _format_evidence_context(evidence_items: list[dict[str, Any]]) -> str:
+def _format_evidence_context(
+    evidence_items: list[dict[str, Any]],
+    secondary_meta: dict[str, dict[str, Any]] | None = None,
+) -> str:
+    """Format evidence items into a prompt block.
+
+    For cross-paper evidence the source label is shown so the LLM can
+    distinguish anchor-paper evidence from secondary-paper evidence.
+    """
     if not evidence_items:
         return "No relevant paper evidence was retrieved."
-    return "\n\n".join(
-        f"[{item['evidence_id']} | p. {item.get('page')} | {item.get('chunk_id')}]\n{item.get('quote')}"
-        for item in evidence_items
-    )
+
+    lines: list[str] = []
+    for item in evidence_items:
+        src_id = item.get("source_paper_id")
+        if src_id and secondary_meta and src_id in secondary_meta:
+            short_title = (secondary_meta[src_id].get("title") or src_id)[:40]
+            src_label = f"ref:{short_title}"
+        else:
+            src_label = "anchor"
+        lines.append(
+            f"[{item['evidence_id']} | {src_label} | p. {item.get('page')} | {item.get('chunk_id')}]\n{item.get('quote')}"
+        )
+    return "\n\n".join(lines)
 
 
 def _normalize_evidence_citations(answer: str, evidence_items: list[dict[str, Any]]) -> tuple[str, list[dict[str, Any]]]:
@@ -334,12 +358,13 @@ def _normalize_evidence_citations(answer: str, evidence_items: list[dict[str, An
     normalized = re.sub(r"[ \t]{2,}", " ", normalized)
     citations = [
         {
-            "ref_id": index,
-            "page": evidence_by_id[evidence_id].get("page"),
-            "chunk_id": evidence_by_id[evidence_id].get("chunk_id"),
-            "section_title": evidence_by_id[evidence_id].get("section_title"),
-            "chunk_type": evidence_by_id[evidence_id].get("chunk_type"),
-            "quote": evidence_by_id[evidence_id].get("quote"),
+            "ref_id":          index,
+            "page":            evidence_by_id[evidence_id].get("page"),
+            "chunk_id":        evidence_by_id[evidence_id].get("chunk_id"),
+            "section_title":   evidence_by_id[evidence_id].get("section_title"),
+            "chunk_type":      evidence_by_id[evidence_id].get("chunk_type"),
+            "quote":           evidence_by_id[evidence_id].get("quote"),
+            "source_paper_id": evidence_by_id[evidence_id].get("source_paper_id"),
         }
         for index, evidence_id in enumerate(used_ids[:5], start=1)
         if evidence_id in evidence_by_id
@@ -544,6 +569,138 @@ async def get_paper(paper_id: str) -> dict[str, Any]:
     return metadata
 
 
+# ---------------------------------------------------------------------------
+# Reference endpoints (Step 1 & 2 — multi-document mode)
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/papers/{paper_id}/references")
+async def get_references(paper_id: str, force: bool = False) -> dict[str, Any]:
+    """Return the resolved bibliography for a paper.
+
+    Triggers resolution on first call (or when force=True).
+    For uploaded PDFs the quality may be lower (arXiv title-search fallback).
+    """
+    metadata_path, pages_path, _, _ = _paths_or_404(paper_id)
+    metadata = read_json(metadata_path)
+    pages = read_json(pages_path) if pages_path.exists() else []
+    is_upload = metadata.get("source") == "upload"
+
+    refs = await resolve_references(paper_id, metadata, pages, force=force)
+    return {
+        "paper_id": paper_id,
+        "references": refs,
+        "count": len(refs),
+        "upload_warning": is_upload,
+    }
+
+
+@app.post("/api/papers/{paper_id}/references/resolve")
+async def resolve_references_endpoint(paper_id: str) -> dict[str, Any]:
+    """Force-refresh the bibliography from Semantic Scholar / arXiv."""
+    return await get_references(paper_id, force=True)
+
+
+@app.post("/api/papers/{paper_id}/references/{ref_index}/ingest")
+async def ingest_reference(paper_id: str, ref_index: int) -> dict[str, Any]:
+    """Download and chunk a cited paper, tagging its chunks with source_paper_id.
+
+    ref_index is the 0-based position in the references.json array.
+    Returns the new secondary paper's local_id and chunk count.
+    """
+    _paths_or_404(paper_id)
+    refs = load_references(paper_id)
+    if not refs or not (0 <= ref_index < len(refs)):
+        raise HTTPException(status_code=404, detail="Reference index out of range")
+
+    ref = refs[ref_index]
+    if ref.get("ingested") and ref.get("secondary_local_id"):
+        sec_id = ref["secondary_local_id"]
+        sec_dir = paper_dir(sec_id)
+        chunks = read_json(sec_dir / "chunks.json") if (sec_dir / "chunks.json").exists() else []
+        return {
+            "secondary_paper_id": sec_id,
+            "chunks": len(chunks),
+            "cached": True,
+        }
+
+    arxiv_id = ref.get("arxiv_id")
+    pdf_url   = ref.get("pdf_url", "")
+    title     = ref.get("title") or "Reference Paper"
+
+    if not pdf_url:
+        raise HTTPException(
+            status_code=422,
+            detail="This reference has no downloadable PDF (not on arXiv and not open-access).",
+        )
+
+    # Derive a stable local_id for the secondary paper
+    if arxiv_id:
+        sec_local_id = safe_paper_id(arxiv_id)
+    else:
+        import hashlib
+        sec_local_id = safe_paper_id("ref_" + hashlib.sha1(pdf_url.encode()).hexdigest()[:10])
+
+    sec_dir        = paper_dir(sec_local_id)
+    sec_pdf        = sec_dir / "paper.pdf"
+    sec_pages_path = sec_dir / "pages.json"
+    sec_chunks_path= sec_dir / "chunks.json"
+    sec_meta_path  = sec_dir / "metadata.json"
+
+    try:
+        sec_dir.mkdir(parents=True, exist_ok=True)
+
+        if not sec_pdf.exists():
+            await download_pdf(pdf_url, sec_pdf)
+
+        if not sec_pages_path.exists():
+            sec_pages = extract_pages(sec_pdf)
+            write_json(sec_pages_path, sec_pages)
+        else:
+            sec_pages = read_json(sec_pages_path)
+
+        if not sec_chunks_path.exists():
+            # Tag every chunk with the secondary paper's id for provenance
+            sec_chunks = chunk_pages(sec_pages, source_paper_id=sec_local_id)
+            write_json(sec_chunks_path, sec_chunks)
+        else:
+            sec_chunks = read_json(sec_chunks_path)
+            # Back-fill source_paper_id if missing (re-ingestion of older cache)
+            if sec_chunks and "source_paper_id" not in sec_chunks[0]:
+                sec_chunks = chunk_pages(sec_pages, source_paper_id=sec_local_id)
+                write_json(sec_chunks_path, sec_chunks)
+
+        # Write secondary metadata
+        if not sec_meta_path.exists():
+            sec_meta = {
+                "id":           arxiv_id or sec_local_id,
+                "local_id":     sec_local_id,
+                "title":        title,
+                "authors":      ref.get("authors", []),
+                "year":         ref.get("year", ""),
+                "summary":      ref.get("abstract", ""),
+                "categories":   [],
+                "pdf_url":      pdf_url,
+                "abs_url":      ref.get("abs_url", ""),
+                "published":    "",
+                "source":       "reference",
+                "anchor_paper": paper_id,
+            }
+            write_json(sec_meta_path, sec_meta)
+
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    mark_reference_ingested(paper_id, ref_index, sec_local_id)
+
+    return {
+        "secondary_paper_id": sec_local_id,
+        "title":              title,
+        "chunks":             len(sec_chunks),
+        "cached":             False,
+    }
+
+
 @app.get("/api/papers/{paper_id}/pdf")
 async def get_pdf(paper_id: str) -> FileResponse:
     _, _, _, pdf_path = _paths_or_404(paper_id)
@@ -670,8 +827,34 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
             metadata["title"] = inferred["title"]
             metadata["summary"] = inferred["summary"]
             write_json(metadata_path, metadata)
+
+    # --- Multi-document: merge secondary-paper chunks into the search pool ---
+    # Anchor chunks are tagged with paper_id; secondary chunks carry their own
+    # source_paper_id. retrieve_chunks() is unchanged — it operates on any list.
+    anchor_chunks = [
+        {**c, "source_paper_id": paper_id} if "source_paper_id" not in c else c
+        for c in chunks
+    ]
+    secondary_meta: dict[str, dict[str, Any]] = {}  # local_id -> metadata
+    all_chunks = list(anchor_chunks)
+    for sec_id in payload.secondary_paper_ids:
+        sec_id = safe_paper_id(sec_id)
+        sec_dir = paper_dir(sec_id)
+        sec_chunks_path = sec_dir / "chunks.json"
+        sec_meta_path   = sec_dir / "metadata.json"
+        if sec_chunks_path.exists():
+            sec_chunks = read_json(sec_chunks_path)
+            # Back-fill source_paper_id if an older cache lacks it
+            sec_chunks = [
+                {**c, "source_paper_id": sec_id} if "source_paper_id" not in c else c
+                for c in sec_chunks
+            ]
+            all_chunks.extend(sec_chunks)
+        if sec_meta_path.exists():
+            secondary_meta[sec_id] = read_json(sec_meta_path)
+
     page_hints = extract_page_hints(payload.message)
-    selected = retrieve_chunks(payload.message, chunks, limit=6, preferred_pages=page_hints)
+    selected = retrieve_chunks(payload.message, all_chunks, limit=6, preferred_pages=page_hints)
     web_results: list[dict[str, Any]] = []
     used_web_search = False
 
@@ -704,7 +887,7 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
     question_text = payload.message[:900] if effective_provider == "local" else payload.message
 
     evidence_items = _build_evidence_items(question_text, prompt_chunks, limit=7 if effective_provider == "local" else 10)
-    paper_context = _format_evidence_context(evidence_items)
+    paper_context = _format_evidence_context(evidence_items, secondary_meta=secondary_meta)
     web_context = _format_web_context(web_results)
     recent_history = "\n".join(
         f"{item.get('role', 'user')}: {str(item.get('content', ''))[:history_char_limit]}"

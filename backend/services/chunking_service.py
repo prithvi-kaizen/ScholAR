@@ -49,8 +49,18 @@ def chunk_pages(
     pages: list[dict[str, Any]],
     target_words: int = 1400,
     overlap_words: int = 120,
+    source_paper_id: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Create simple page-preserving chunks suitable for transparent MVP retrieval."""
+    """Create simple page-preserving chunks suitable for transparent MVP retrieval.
+
+    Args:
+        pages: List of {page, text} dicts from pdf_service.extract_pages().
+        target_words: Target chunk size in words.
+        overlap_words: Overlap between consecutive chunks on the same page.
+        source_paper_id: When set, every chunk gets a ``source_paper_id`` field
+            so cross-paper provenance is unambiguous in multi-document sessions.
+            The single-paper flow passes ``None`` and no field is added.
+    """
     chunks: list[dict[str, Any]] = []
     chunk_number = 1
 
@@ -69,18 +79,20 @@ def chunk_pages(
             char_start = len(" ".join(words[:start_word]))
             char_end = char_start + len(chunk_text)
 
-            chunks.append(
-                {
-                    "chunk_id": f"chunk_{chunk_number:03d}",
-                    "page": page_number,
-                    "text": chunk_text,
-                    "paragraph_text": _paragraph_text(chunk_text),
-                    "section_title": section_title,
-                    "chunk_type": _chunk_type(chunk_text, section_title, page_number),
-                    "char_start": char_start,
-                    "char_end": char_end,
-                }
-            )
+            chunk: dict[str, Any] = {
+                "chunk_id": f"chunk_{chunk_number:03d}",
+                "page": page_number,
+                "text": chunk_text,
+                "paragraph_text": _paragraph_text(chunk_text),
+                "section_title": section_title,
+                "chunk_type": _chunk_type(chunk_text, section_title, page_number),
+                "char_start": char_start,
+                "char_end": char_end,
+            }
+            if source_paper_id is not None:
+                chunk["source_paper_id"] = source_paper_id
+
+            chunks.append(chunk)
             chunk_number += 1
 
             if end_word >= len(words):
