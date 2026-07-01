@@ -1,91 +1,85 @@
 # ScholAR — Smart Companion for Holistic Organization, Literature Analysis & Research
 
-ScholAR is a local-first, privacy-preserving **Retrieval-Augmented Generation (RAG)** system for scientific document comprehension. It is built as a research tool for deep reading and Q&A over academic PDFs, with a focus on faithful, page-grounded citations, visual figure understanding, and multi-document reasoning.
+ScholAR is a **local-first, privacy-preserving RAG system** for deep reading and Q&A over scientific PDFs. It combines page-grounded citation retrieval, multi-modal visual grounding, and multi-document reasoning into a unified research assistant.
 
-This project is being developed as a thesis-track submission to **AAAI-27** (The Forty-First AAAI Conference on Artificial Intelligence).
+> **Thesis-track submission to AAAI-27** (The Forty-First AAAI Conference on Artificial Intelligence, August 2026).
+
+---
+
+## What ScholAR Does
+
+- **Upload or search any arXiv paper** → instant ingestion, chunking, and indexing
+- **Ask questions in natural language** → page-grounded answers with source citations
+- **Visual grounding** → queries about figures/tables route to a vision-LLM that reads the actual image
+- **Multi-document mode** → load cited references and ask cross-paper questions
+- **Local or cloud inference** → Ollama (offline) or Groq (fast cloud), switchable mid-session
 
 ---
 
 ## Key Technical Contributions
 
 ### 1. Page-Preserving Chunking
-ScholAR segments PDFs by enforcing strict page boundaries. Every text chunk maps exactly to a single PDF page, enabling reliable visual citations. Implemented as a sliding window over per-page tokens (`target_words=1400`, `overlap=120`) with section title detection via regex.
+Every text chunk maps to a **single PDF page** — no cross-page merging. Implemented as a sliding window over per-page tokens (`target_words=1400`, `overlap=120`) with regex-based section title detection. This is the prerequisite for faithful, pinpoint citations.
 
 ### 2. BM25-Primary Retrieval with Heuristic Reranking
-The retrieval layer uses BM25 as the primary lexical signal, supplemented by lightweight heuristic boosts:
-- **Query Expansion:** Research-specific term expansion (e.g., `result` → `accuracy, table, score, BLEU`).
-- **Page Hints:** +1.25 score boost when the query references a specific page number.
-- **Section Hints:** Boosts for chunks whose `section_title` matches the semantic category inferred from the query (Abstract, Method, Results, Limitation).
-- **Visual Cue Boosting:** Queries containing figure/table keywords boost figure chunks by +1.5.
+The production retrieval layer uses BM25 as the primary lexical signal:
 
-### 3. Hybrid BM25 + Dense + RRF Retrieval
-ScholAR implements a full hybrid retrieval pipeline for evaluation:
-- **Dense Ranking:** `all-MiniLM-L6-v2` embeddings (pure PyTorch + safetensors, no `sentence-transformers` required).
-- **Reciprocal Rank Fusion (RRF, k=60):** Combines BM25 and dense ranks (Cormack et al., SIGIR 2009).
-- **Post-Fusion Page Boost:** +0.05 applied to chunks matching user-specified page hints.
+| Boost | Trigger | Magnitude |
+|---|---|---|
+| Query expansion | Research-specific synonyms (e.g., `result → accuracy, BLEU, score`) | vocabulary |
+| Page hint | User query mentions a page number | +1.25 |
+| Section hint | Query implies Abstract / Method / Results / Limitation | +0.5–1.0 |
+| Visual cue | Query mentions figure, table, chart, plot | +1.5 |
+| Phrase boost | `"we introduce"`, `"we present"`, `"outperforms"` | +0.3–0.5 |
 
-### 4. Visual Grounding — Figure & Table QA
-ScholAR extracts and indexes figures and tables directly from PDFs and answers figure-specific questions using a vision-language model:
-- **Figure extraction:** Caption-anchor heuristic (regex `Figure|Table|Fig\.`) detects figures from text; page-region rendering clips the surrounding image area.
-- **Visual-aware retrieval:** Figure chunks are stored with `is_figure=True`, `caption`, `label`, and `image_file` metadata. Visual-cue queries (containing "figure", "show", "plot", etc.) apply a +1.5 retrieval boost.
-- **Vision-LLM answer path:** Detected figure queries are routed to `meta-llama/llama-4-scout-17b-16e-instruct` (Groq) via multimodal base64 image input. A caption-fallback path handles cases where image rendering fails.
-- **Frontend:** Figure thumbnails rendered inline in the citation panel with teal-bordered cards; clicking jumps to the source page.
+### 3. Hybrid BM25 + Dense + RRF Retrieval (Research Evaluation)
+For the faithfulness evaluation pipeline:
+- **Dense ranking:** `all-MiniLM-L6-v2` embeddings (pure PyTorch, no sentence-transformers required)
+- **Reciprocal Rank Fusion (RRF, k=60):** Cormack et al. SIGIR 2009 formula
+- **Post-fusion page boost:** +0.05 for page-hinted chunks
 
-**Visual Grounding Evaluation (18 benchmark cases, 4 papers):**
+### 4. Visual Grounding (Figure & Table QA)
+When a query targets a figure, table, or chart:
+1. Visual-cue retrieval boosts figure chunks (+1.5) to rank them first
+2. The figure image (rendered page region) is base64-encoded and sent to **Groq Llama 4 Scout** (vision-capable) with the question
+3. Caption-only fallback if the image is unavailable or too small
+4. The frontend renders a teal-bordered thumbnail of the cited figure inline in the answer
 
-| Question Type | R@5 | Pass@1 (vision) |
-|---|---:|---:|
-| Figure description | 1.000 | — |
-| Table lookup | 1.000 | — |
-| Cross-figure comparison | 1.000 | — |
-| Architecture diagram | 1.000 | — |
-| **Overall** | **1.000** | — |
+### 5. Multi-Document Extension
+- **arXiv papers:** References resolved via Semantic Scholar API by arXiv ID (full bibliography, up to 500 refs)
+- **Uploaded PDFs:** References resolved via **S2 title search** (new) — finds the paper on S2 by title, then fetches its reference list, enabling multi-doc mode for any PDF
+- **Regex coverage:** Handles both numbered `[N]` and author-year `(Vaswani et al., 2017)` reference styles; scans last 6 pages
+- **Reference ingestion:** Each cited paper can be individually downloaded, chunked, and added to the session — answers then draw from both the anchor paper and loaded references
 
-### 5. Multi-Document Extension (Anchor Paper + Bibliography)
-ScholAR supports multi-document QA over an anchor paper and its cited references:
-- **Reference resolution:** For arXiv papers, resolved via Semantic Scholar API by arXiv ID. For **uploaded PDFs**, resolved via S2 title-search (`/paper/search?query=<title>`) — the first system to support S2 resolution for non-arXiv uploads.
-- **Reference ingestion:** Users can load individual cited papers (PDF download + chunking + indexing) or batch-ingest all available references with a single click.
-- **Cross-paper retrieval:** During chat, all ingested secondary paper chunks are included in retrieval; citations are tagged with `source_paper_id` and a `ref` badge in the UI.
-- **Reference section parsing:** Supports both numbered (`[1] Vaswani...`) and author-year (`Vaswani et al. (2017)...`) bibliography formats; scans last 6 pages.
-
-**Multi-Document Evaluation (locality benchmark, 51 questions, 8 paper clusters):**
-
-| System | Locality R@5 | MRR |
-|---|---:|---:|
-| ScholAR multi-doc | 0.80 | 0.338 |
-
-### 6. Indirect Citation Grounding
-The backend assigns evidence IDs (`E1`, `E2`, ...) to retrieved chunks and prompts the LLM to cite only these IDs. The frontend resolves IDs back to PDF page coordinates and highlights the exact source text.
-
-### 7. NLI-Based Citation Faithfulness Evaluation (NLI-CFS)
-A three-tier faithfulness metric aligned with 2024–2026 SOTA practices:
+### 6. NLI-Based Citation Faithfulness Metric (NLI-CFS)
+Three-tier faithfulness scorer aligned with 2024–2026 SOTA practices:
 
 | Tier | Method | Weight |
 |---|---|---|
-| Tier 1: SummaC-ZS | Sentence-level cosine entailment via MiniLM embeddings | 50% |
-| Tier 2: SCR | Whole-claim vs. best-chunk cosine similarity | 30% |
-| Tier 3: KFP | Exact recall of numbers and technical terms | 20% |
+| SummaC-ZS | Sentence-level cosine entailment via MiniLM embeddings | 50% |
+| SCR | Whole-claim vs. best-chunk cosine similarity | 30% |
+| KFP | Exact recall of numbers and technical terms | 20% |
 
-**Combined CFS = 0.50 × SummaC-ZS + 0.30 × SCR + 0.20 × KFP**
+**CFS = 0.50 × SummaC-ZS + 0.30 × SCR + 0.20 × KFP**
 
 Claims are labeled FAITHFUL (CFS ≥ 0.55), PARTIAL (≥ 0.35), or UNFAITHFUL.
 
-### 8. Hybrid Cloud-Local Inference
-- **Local:** Ollama with `qwen3:8b` for offline, private analysis.
-- **Cloud:** Groq API with `llama-3.3-70b-versatile` for fast text inference; `llama-4-scout-17b-16e-instruct` for vision (figure QA).
-- **Graceful Fallback:** If Groq is unavailable, falls back to local Ollama without interruption.
+### 7. Hybrid Cloud-Local Inference
+- **Local:** Ollama with `qwen3:9b` — fully offline, private
+- **Cloud:** Groq API with `llama-3.3-70b-versatile` — fast cloud inference
+- **Vision:** Groq `meta-llama/llama-4-scout-17b-16e-instruct` — for figure/table QA
+- **Graceful fallback:** Groq unavailable → automatic switch to local Ollama
 
 ---
 
 ## Evaluation Results
 
-### Retrieval Benchmark (14 manually annotated cases, 3 papers)
+### Retrieval Benchmark (14 annotated cases, 3 papers)
 
 | System | Recall@1 | Recall@3 | Recall@5 | MRR |
 |---|---:|---:|---:|---:|
 | `keyword_overlap` | 0.571 | 0.786 | 0.929 | 0.687 |
 | `bm25_only` | 0.714 | 0.929 | 1.000 | 0.812 |
-| `bm25_primary_no_page_hints` | 0.714 | 0.929 | 1.000 | 0.812 |
 | `bm25_primary_with_page_hints` | 0.714 | 0.929 | 1.000 | 0.812 |
 
 ### Faithfulness Benchmark (51 oracle-claim cases, 3 papers, 8 claim types)
@@ -97,12 +91,19 @@ Claims are labeled FAITHFUL (CFS ≥ 0.55), PARTIAL (≥ 0.35), or UNFAITHFUL.
 
 Spans *Attention Is All You Need*, *RAG*, and *LLaMA* across 8 claim types: `result_number` (13), `technical_claim` (11), `architecture_detail` (10), `training_detail` (8), `conceptual_claim` (5), `human_eval` (2), `formula` (1), `environmental_claim` (1).
 
-### Visual Grounding Benchmark (18 cases, 4 papers)
+### Visual Grounding Benchmark (18 figure-grounded cases, 4 reasoning types)
 
 | Metric | Score |
 |---|---:|
-| Retrieval R@5 | **18/18 = 1.000** |
-| Question types covered | Figure description, table lookup, architecture diagram, cross-figure comparison |
+| Retrieval R@5 | **18 / 18 = 1.000** |
+| Caption fallback rate | 2 / 18 (11%) |
+
+### Multi-Document Locality Benchmark (10 paper clusters, M3SciQA-style)
+
+| Metric | Score |
+|---|---:|
+| Locality R@5 | 0.80 |
+| MRR | 0.338 |
 
 ---
 
@@ -110,45 +111,50 @@ Spans *Attention Is All You Need*, *RAG*, and *LLaMA* across 8 claim types: `res
 
 ```text
 ScholAR/
-├── backend/                        # Python/FastAPI backend
-│   ├── data/                       # Extracted papers, page images, metadata
+├── backend/
+│   ├── main.py                     # FastAPI entry point + all API routes
 │   ├── services/
-│   │   ├── chunking_service.py     # Page-preserving chunking + figure chunking
-│   │   ├── retrieval_service.py    # BM25 + visual-cue boosting + hybrid RRF
-│   │   ├── reference_service.py    # Multi-doc reference resolution (S2 + arXiv)
-│   │   ├── vision_service.py       # Visual grounding orchestration
-│   │   ├── groq_service.py         # Groq text + vision inference
-│   │   ├── pdf_service.py          # PDF parsing, page rendering, figure extraction
-│   │   └── arxiv_service.py        # arXiv search and metadata fetch
-│   └── main.py                     # FastAPI entry point and all API routes
-├── frontend/                       # Next.js 15 / TypeScript / Tailwind CSS
-│   ├── app/                        # Application routing and layout
+│   │   ├── pdf_service.py          # PDF ingestion, page image rendering
+│   │   ├── chunking_service.py     # Page-preserving chunking + figure chunks
+│   │   ├── retrieval_service.py    # BM25 + visual-cue boosting
+│   │   ├── llm_service.py          # Groq / Ollama LLM routing
+│   │   ├── vision_service.py       # Figure QA via Groq Llama 4 Scout vision
+│   │   ├── reference_service.py    # Multi-doc: S2 API + title-search for uploads
+│   │   └── arxiv_service.py        # arXiv search and paper metadata
+│   ├── data/                       # Per-paper extracted data (gitignored)
+│   └── .env                        # API keys (not committed)
+├── frontend/
+│   ├── app/
+│   │   ├── page.tsx                # Home: paper search + upload
+│   │   └── paper/[id]/page.tsx     # Study workspace
 │   └── components/
-│       ├── StudyWorkspace.tsx      # Resizable split-panel layout (drag handle)
-│       ├── StudyPanel.tsx          # Tabbed right panel (Chat / Goals / References)
-│       ├── ChatBox.tsx             # Chat UI with typing animation, model badge, suggestions
-│       ├── PdfViewer.tsx           # PDF page viewer with citation highlight
-│       ├── ReferencesPanel.tsx     # Multi-doc reference browser with ingest progress
-│       └── StudyGoals.tsx          # AI-generated study goals
-├── evaluation/                     # Research evaluation suite
-│   ├── embedder.py                 # Local MiniLM-L6-v2 embedder (pure PyTorch)
-│   ├── hybrid_retrieval.py         # Hybrid BM25 + Dense + RRF retrieval
+│       ├── StudyWorkspace.tsx      # Resizable split layout (drag handle)
+│       ├── StudyPanel.tsx          # Tabbed panel: Chat / Study Goals / References
+│       ├── ChatBox.tsx             # Chat UI: typing dots, model badge, suggestions
+│       ├── PdfViewer.tsx           # PDF renderer with page navigation + zoom
+│       ├── ReferencesPanel.tsx     # Multi-doc: reference cards + batch ingest
+│       └── StudyGoals.tsx          # AI-generated study goal cards
+├── evaluation/
+│   ├── embedder.py                 # Local MiniLM-L6-v2 (pure PyTorch)
+│   ├── hybrid_retrieval.py         # BM25 + Dense + RRF pipeline
 │   ├── nli_faithfulness.py         # SummaC-ZS faithfulness scorer
-│   ├── run_faithfulness_eval.py    # 51-case faithfulness evaluation runner
-│   ├── run_visual_eval.py          # 18-case visual grounding evaluation runner
-│   ├── visual_benchmark.json       # Visual grounding benchmark cases
-│   ├── benchmark_cases.json        # Retrieval benchmark (14 annotated cases)
-│   ├── faithfulness_cases.json     # Faithfulness benchmark (51 oracle-claim cases)
-│   └── results/                    # Evaluation reports and JSON outputs
-├── paper/                          # AAAI-27 LaTeX manuscript
-│   ├── scholar_aaai27.tex          # Main paper source
+│   ├── run_retrieval_eval.py       # 14-case retrieval benchmark
+│   ├── run_faithfulness_eval.py    # 51-case faithfulness benchmark
+│   ├── run_visual_eval.py          # 18-case visual grounding benchmark
+│   ├── run_multidoc_eval.py        # Multi-doc locality benchmark
+│   ├── benchmark_cases.json        # Retrieval ground truth
+│   ├── faithfulness_cases.json     # Faithfulness oracle claims
+│   ├── visual_benchmark.json       # Figure-grounded QA cases
+│   └── results/                    # Evaluation reports
+├── docs/
+│   ├── reference_papers/           # M3SciQA, PaperQA, SciDQA, ScholarlyQA PDFs
+│   └── architecture/               # System diagrams
+├── paper/
+│   ├── scholar_aaai27.tex          # AAAI-27 manuscript source
+│   ├── scholar_aaai27.pdf          # Compiled draft
 │   └── scholar_references.bib      # Bibliography
-├── docs/                           # Documentation and research references
-│   ├── reference_papers/           # Related papers (PaperQA, SCIDQA, M3SciQA, etc.)
-│   └── domain_note.md              # Domain problem analysis
-├── RESEARCH_ROADMAP.md             # Thesis checklist and future directions
-├── Makefile                        # `make backend` shortcut
-└── requirements.txt                # Python dependencies
+├── Makefile                        # `make backend` / `make frontend`
+└── requirements.txt
 ```
 
 ---
@@ -158,64 +164,89 @@ ScholAR/
 ### Prerequisites
 - Python 3.11 or 3.12
 - Node.js v18+
-- Ollama running locally with `qwen3:8b` loaded
-- Groq API key (optional, for cloud inference and vision QA)
+- [Ollama](https://ollama.ai) running locally with `qwen3:9b` pulled
+- Groq API key (optional, but recommended for speed)
 
-### 1. Backend
+### 1. Clone & configure
+
 ```bash
-# Always run from ScholAR/ root, never from inside backend/
-make backend
+git clone https://github.com/prithvi-kaizen/ScholAR.git
+cd ScholAR
+cp backend/.env.example backend/.env   # then fill in your keys
 ```
 
-Or manually:
+`backend/.env`:
+```
+GROQ_API_KEY=gsk_...
+GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_VISION_MODEL=meta-llama/llama-4-scout-17b-16e-instruct
+OLLAMA_MODEL=qwen3:9b
+OLLAMA_BASE_URL=http://localhost:11434
+```
+
+### 2. Backend
+
 ```bash
+# Always run from the ScholAR/ root
+make backend
+# or manually:
 source .venv312/bin/activate
 uvicorn backend.main:app --reload --reload-dir backend
 ```
 
-Configure in `backend/.env`:
-```env
-GROQ_API_KEY=your_key_here
-GROQ_MODEL=llama-3.3-70b-versatile
-GROQ_VISION_MODEL=meta-llama/llama-4-scout-17b-16e-instruct
-OLLAMA_MODEL=qwen3:8b
-```
+API runs at **http://localhost:8000**
 
-### 2. Frontend
+### 3. Frontend
+
 ```bash
-cd frontend
-npm install
-npm run dev
+make frontend
+# or manually:
+cd frontend && npm install && npm run dev
 ```
 
-The interface runs at **http://localhost:3000** and the API at **http://127.0.0.1:8000**.
+UI runs at **http://localhost:3000**
 
 ---
 
-## Running Evaluations
+## Running the Evaluation Suite
 
 ```bash
-# Retrieval benchmark (14 cases)
+# Retrieval benchmark (14 cases, ~5 sec)
 python3 evaluation/run_retrieval_eval.py
 
-# Faithfulness benchmark (51 cases — ~2 min)
+# Faithfulness benchmark (51 oracle claims, ~2 min)
 python3 evaluation/run_faithfulness_eval.py
 
-# Visual grounding benchmark (18 cases)
+# Visual grounding benchmark (18 figure cases)
 python3 evaluation/run_visual_eval.py
+
+# Multi-doc locality benchmark (10 clusters)
+python3 evaluation/run_multidoc_eval.py
 ```
 
-Results are written to `evaluation/results/`.
+All results are written to `evaluation/results/`.
 
 ---
 
 ## Research Paper
 
-The AAAI-27 manuscript is in `paper/scholar_aaai27.tex`. It covers:
-- Page-preserving chunking design
-- Indirect citation grounding
-- Visual figure grounding pipeline
-- Multi-document reference extension
-- NLI-CFS faithfulness metric and ablation studies
+The AAAI-27 draft is in [`paper/scholar_aaai27.pdf`](paper/scholar_aaai27.pdf). It covers:
+- Page-preserving chunking design and motivation
+- Indirect citation grounding (evidence ID system)
+- NLI-CFS faithfulness pipeline and ablation
+- Visual grounding architecture
+- Multi-document extension and M3SciQA-style evaluation
 
 **Target submission window:** AAAI-27, August 2026.
+
+---
+
+## Comparison to Related Work
+
+| System | Multi-modal | Multi-doc | Local inference | Page-grounded citations |
+|---|:---:|:---:|:---:|:---:|
+| PaperQA2 | ❌ | ✅ | ❌ | ❌ |
+| SciDQA | ❌ | ❌ | ❌ | ❌ |
+| ScholarlyQA | ❌ | ✅ | ❌ | ❌ |
+| M3SciQA (benchmark) | ✅ | ✅ | ❌ | ❌ |
+| **ScholAR (ours)** | ✅ | ✅ | ✅ | ✅ |
