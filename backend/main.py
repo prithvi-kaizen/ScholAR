@@ -13,8 +13,8 @@ from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
 from backend.services.arxiv_service import search_arxiv
-from backend.services.chunking_service import chunk_pages
-from backend.services.groq_service import GROQ_MODEL, generate_with_groq, groq_available, groq_configured
+from backend.services.chunking_service import chunk_figures, chunk_pages
+from backend.services.groq_service import GROQ_MODEL, GROQ_VISION_MODEL, generate_with_groq, groq_available, groq_configured
 from backend.services.ollama_service import (
     OLLAMA_MODEL,
     fallback_goals,
@@ -25,6 +25,7 @@ from backend.services.ollama_service import (
 )
 from backend.services.pdf_service import (
     download_pdf,
+    extract_figures,
     extract_pages,
     infer_uploaded_metadata,
     paper_dir,
@@ -39,6 +40,7 @@ from backend.services.reference_service import (
     resolve_references,
 )
 from backend.services.retrieval_service import extract_page_hints, retrieve_chunks, short_quote, tokenize
+from backend.services.vision_service import answer_with_figure
 from backend.services.web_search_service import search_web, web_search_enabled
 
 
@@ -455,6 +457,8 @@ async def prepare_paper(paper: PaperInput) -> dict[str, Any]:
     metadata_path = directory / "metadata.json"
     pages_path = directory / "pages.json"
     chunks_path = directory / "chunks.json"
+    figures_path = directory / "figures.json"
+    figures_dir = directory / "figures"
 
     metadata = paper.model_dump()
     metadata["local_id"] = local_id
@@ -477,6 +481,14 @@ async def prepare_paper(paper: PaperInput) -> dict[str, Any]:
             write_json(chunks_path, chunks)
         else:
             chunks = _ensure_chunk_metadata(chunks_path, pages_path)
+
+        # Extract figures/tables (idempotent — skipped if figures.json exists)
+        if not figures_path.exists():
+            figures = extract_figures(pdf_path, figures_dir)
+            write_json(figures_path, figures)
+        else:
+            figures = read_json(figures_path)
+
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -485,6 +497,7 @@ async def prepare_paper(paper: PaperInput) -> dict[str, Any]:
         "metadata": metadata,
         "pages": len(pages),
         "chunks": len(chunks),
+        "figures": len(figures),
     }
 
 
@@ -505,6 +518,8 @@ async def upload_paper(file: UploadFile = File(...), title: str = Form("")) -> d
     metadata_path = directory / "metadata.json"
     pages_path = directory / "pages.json"
     chunks_path = directory / "chunks.json"
+    figures_path = directory / "figures.json"
+    figures_dir = directory / "figures"
 
     clean_title = title.strip() or Path(filename).stem.replace("_", " ").replace("-", " ").strip() or "Uploaded PDF"
     try:
@@ -532,6 +547,14 @@ async def upload_paper(file: UploadFile = File(...), title: str = Form("")) -> d
         write_json(metadata_path, metadata)
         write_json(pages_path, pages)
         write_json(chunks_path, chunks)
+
+        # Extract figures/tables
+        if not figures_path.exists():
+            figures = extract_figures(pdf_path, figures_dir)
+            write_json(figures_path, figures)
+        else:
+            figures = read_json(figures_path)
+
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -540,6 +563,7 @@ async def upload_paper(file: UploadFile = File(...), title: str = Form("")) -> d
         "metadata": metadata,
         "pages": len(pages),
         "chunks": len(chunks),
+        "figures": len(figures),
     }
 
 
@@ -552,6 +576,29 @@ def _paths_or_404(paper_id: str) -> tuple[Path, Path, Path, Path]:
     if not metadata_path.exists():
         raise HTTPException(status_code=404, detail="Paper has not been prepared")
     return metadata_path, pages_path, chunks_path, pdf_path
+
+
+# ---------------------------------------------------------------------------
+# Figure endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/papers/{paper_id}/figures")
+async def get_figures(paper_id: str) -> dict[str, Any]:
+    """Return the list of extracted figures/tables for a paper."""
+    _paths_or_404(paper_id)
+    figures_path = paper_dir(paper_id) / "figures.json"
+    figures: list[dict[str, Any]] = read_json(figures_path) if figures_path.exists() else []
+    return {"paper_id": paper_id, "figures": figures, "count": len(figures)}
+
+
+@app.get("/api/papers/{paper_id}/figures/{figure_id}.png")
+async def get_figure_image(paper_id: str, figure_id: str) -> Response:
+    """Serve the PNG image chip for a specific figure."""
+    _paths_or_404(paper_id)
+    img_path = paper_dir(paper_id) / "figures" / f"{figure_id}.png"
+    if not img_path.exists():
+        raise HTTPException(status_code=404, detail="Figure image not found")
+    return Response(content=img_path.read_bytes(), media_type="image/png")
 
 
 @app.get("/api/papers/{paper_id}")
@@ -853,6 +900,15 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
         if sec_meta_path.exists():
             secondary_meta[sec_id] = read_json(sec_meta_path)
 
+    # Merge figure chunks into the retrieval pool so captions can match queries
+    figures_path = paper_dir(paper_id) / "figures.json"
+    if figures_path.exists():
+        figure_records = read_json(figures_path)
+        figure_chunks = chunk_figures(figure_records, source_paper_id=paper_id)
+        # Tag anchor figure chunks with paper_id (same convention as text chunks)
+        figure_chunks = [{**c, "source_paper_id": paper_id} for c in figure_chunks]
+        all_chunks = all_chunks + figure_chunks
+
     page_hints = extract_page_hints(payload.message)
     selected = retrieve_chunks(payload.message, all_chunks, limit=6, preferred_pages=page_hints)
     web_results: list[dict[str, Any]] = []
@@ -868,6 +924,41 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
             "citations": [],
             "web_results": [],
             "used_web_search": used_web_search,
+        }
+
+    # ── Vision routing ────────────────────────────────────────────────────────
+    # When the top-1 retrieved chunk is a figure/table chunk AND Groq is
+    # available, delegate to the vision path instead of the text-only path.
+    top_chunk = selected[0] if selected else None
+    if (
+        top_chunk is not None
+        and top_chunk.get("is_figure_chunk")
+        and groq_configured()
+    ):
+        text_support = [c for c in selected[1:] if not c.get("is_figure_chunk")]
+        vision_result = await answer_with_figure(
+            question=payload.message,
+            figure_chunk=top_chunk,
+            context_chunks=text_support,
+            paper_id=paper_id,
+            paper_metadata=metadata,
+        )
+        fig_label = vision_result.get("label", "Figure")
+        model_label = "Groq Vision" if not vision_result.get("fallback") else "caption fallback"
+        return {
+            "answer":            vision_result["answer"],
+            "citations":         vision_result["citations"],
+            "web_results":       [],
+            "used_web_search":   False,
+            "provider":          "groq",
+            "requested_provider": payload.provider,
+            "model":             model_label,
+            "vision":            True,
+            "vision_fallback":   vision_result.get("fallback", False),
+            "figure_id":         vision_result.get("figure_id"),
+            "figure_label":      fig_label,
+            "figure_image_url":  f"/api/papers/{paper_id}/figures/{vision_result.get('figure_id')}.png"
+                                  if vision_result.get("figure_id") else None,
         }
 
     effective_provider = await _effective_provider(payload.provider)

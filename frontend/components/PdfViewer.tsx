@@ -78,7 +78,7 @@ export function PdfViewer({ paperId, activeCitation }: PdfViewerProps) {
   }
 
   return (
-    <section className="grid min-h-0 grid-cols-[54px_minmax(0,1fr)] border-r border-line bg-panelSoft">
+    <section className="grid min-h-0 h-full grid-cols-[54px_minmax(0,1fr)] border-r border-line bg-panelSoft">
       <aside className="flex flex-col items-center gap-3 border-r border-line bg-panel py-3">
         <button className="grid h-10 w-10 place-items-center rounded-md border border-blue-400 bg-blue-500/20 text-blue-100" aria-label="Pages">
           <FileText size={18} />

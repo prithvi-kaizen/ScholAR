@@ -1,0 +1,235 @@
+[
+  {
+    "case_id": "vis_001",
+    "reasoning_type": "visual_understanding",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Figure 1",
+      "Table 3"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  },
+  {
+    "case_id": "vis_002",
+    "reasoning_type": "visual_understanding",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Figure 4",
+      "Figure 2",
+      "Figure 3",
+      "Figure 5",
+      "Figure 1"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  },
+  {
+    "case_id": "vis_003",
+    "reasoning_type": "data_extraction",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Table 2",
+      "Table 2",
+      "Table 4"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  },
+  {
+    "case_id": "vis_004",
+    "reasoning_type": "comparison",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Table 2",
+      "Table 3",
+      "Table 4"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  },
+  {
+    "case_id": "vis_005",
+    "reasoning_type": "data_extraction",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Table 1",
+      "Table 3"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  },
+  {
+    "case_id": "vis_006",
+    "reasoning_type": "comparison",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Table 4",
+      "Table 3",
+      "Table 2"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  },
+  {
+    "case_id": "vis_007",
+    "reasoning_type": "visual_understanding",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Figure 3",
+      "Figure 1",
+      "Figure 5",
+      "Figure 2"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  },
+  {
+    "case_id": "vis_008",
+    "reasoning_type": "location",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Figure 1",
+      "Table 3",
+      "Figure 3"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  },
+  {
+    "case_id": "vis_009",
+    "reasoning_type": "data_extraction",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Table 4",
+      "Table 3",
+      "Table 2"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  },
+  {
+    "case_id": "vis_010",
+    "reasoning_type": "comparison",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Table 3",
+      "Table 4",
+      "Table 1"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  },
+  {
+    "case_id": "vis_011",
+    "reasoning_type": "visual_understanding",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Figure 1",
+      "Figure 4",
+      "Figure 2"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  },
+  {
+    "case_id": "vis_012",
+    "reasoning_type": "data_extraction",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Table 7"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  },
+  {
+    "case_id": "vis_013",
+    "reasoning_type": "comparison",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Table 2"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  },
+  {
+    "case_id": "vis_014",
+    "reasoning_type": "location",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Figure 5",
+      "Figure 1"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  },
+  {
+    "case_id": "vis_015",
+    "reasoning_type": "visual_understanding",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Figure 5",
+      "Figure 4",
+      "Figure 2"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  },
+  {
+    "case_id": "vis_016",
+    "reasoning_type": "location",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Table 2",
+      "Table 3",
+      "Table 2",
+      "Figure 1"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  },
+  {
+    "case_id": "vis_017",
+    "reasoning_type": "data_extraction",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Table 2",
+      "Table 3",
+      "Table 4",
+      "Table 2"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  },
+  {
+    "case_id": "vis_018",
+    "reasoning_type": "visual_understanding",
+    "failure_mode": "correct",
+    "retrieved_correct": true,
+    "answer_score": null,
+    "top_retrieved": [
+      "Figure 5",
+      "Figure 4",
+      "Figure 2",
+      "Figure 3"
+    ],
+    "note": "LLM call skipped (--no-llm)"
+  }
+]

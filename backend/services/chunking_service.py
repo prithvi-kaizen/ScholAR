@@ -100,3 +100,50 @@ def chunk_pages(
             start_word = max(end_word - overlap_words, start_word + 1)
 
     return chunks
+
+
+def chunk_figures(
+    figures: list[dict],
+    source_paper_id: str | None = None,
+) -> list[dict]:
+    """Convert figure/table metadata records into retrieval-compatible chunks.
+
+    Each figure chunk has:
+    - ``chunk_type``: "figure" or "table"
+    - ``text``: the caption text (used for BM25 matching and visual-cue boosting)
+    - ``figure_id``, ``label``, ``image_file``, ``bbox``, ``page``: figure metadata
+    - ``is_figure_chunk``: True — used by retrieval and vision path to identify
+      these chunks without string-matching chunk_type
+
+    Figure chunks are appended to the normal text chunk pool so they participate
+    in a single unified BM25 ranking pass.
+    """
+    chunks: list[dict] = []
+    for fig in figures:
+        caption = fig.get("caption", "").strip()
+        label = fig.get("label", "")
+        # BM25 text = label + caption — richer signal than caption alone
+        text = f"{label}: {caption}" if caption else label
+
+        chunk: dict = {
+            "chunk_id":       f"fig_{fig.get('figure_id')}",
+            "page":           fig.get("page", 1),
+            "text":           text,
+            "paragraph_text": text[:300],
+            "section_title":  "Figure" if fig.get("figure_type") == "figure" else "Table",
+            "chunk_type":     fig.get("figure_type", "figure"),  # "figure" | "table"
+            "char_start":     0,
+            "char_end":       len(text),
+            "is_figure_chunk": True,
+            "figure_id":      fig.get("figure_id"),
+            "label":          label,
+            "image_file":     fig.get("image_file"),
+            "bbox":           fig.get("bbox"),
+            "caption":        caption,
+        }
+        if source_paper_id is not None:
+            chunk["source_paper_id"] = source_paper_id
+
+        chunks.append(chunk)
+    return chunks
+

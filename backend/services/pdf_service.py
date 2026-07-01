@@ -128,6 +128,125 @@ def extract_pages(pdf_path: Path) -> list[dict[str, Any]]:
     return pages
 
 
+# ---------------------------------------------------------------------------
+# Figure / Table extraction
+# ---------------------------------------------------------------------------
+
+_CAPTION_RE = re.compile(
+    r"(?:^|\n)\s*((?:Figure|Fig\.|Table)\s+\d+(?:\.\d+)?)\s*[:.)]?\s*(.{0,300})",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+# Fraction of page height to capture above/below the caption block
+_FIG_ABOVE_FRAC = 0.38
+_FIG_BELOW_FRAC = 0.12
+_FIG_RENDER_ZOOM = 2.0  # 2× for readable detail
+
+
+def _caption_bbox(page: "fitz.Page", caption_label: str) -> "fitz.Rect | None":
+    """Find the bounding box of the caption label text block on a PDF page."""
+    blocks = page.get_text("dict", flags=fitz.TEXT_PRESERVE_WHITESPACE).get("blocks", [])
+    label_lower = caption_label.lower().replace(".", "").strip()
+    best: "fitz.Rect | None" = None
+    for block in blocks:
+        if block.get("type") != 0:
+            continue
+        block_text = " ".join(
+            span.get("text", "")
+            for line in block.get("lines", [])
+            for span in line.get("spans", [])
+        ).lower().replace(".", "")
+        if label_lower in block_text:
+            best = fitz.Rect(block["bbox"])
+            break
+    return best
+
+
+def extract_figures(
+    pdf_path: Path,
+    figures_dir: Path,
+) -> list[dict[str, Any]]:
+    """Extract figure/table image chips and metadata from a PDF.
+
+    For each detected Figure N / Table N caption:
+    - Finds the caption bounding box on the page.
+    - Renders a clip region that captures the image region *above* the caption
+      (plus a small strip below it) at 2× zoom.
+    - Saves the clip as a PNG file under ``figures_dir``.
+    - Returns a list of figure metadata dicts suitable for ``figures.json``.
+
+    Uses page-region clip rendering as primary strategy so vector figures
+    (charts, diagrams, tables drawn with lines) are captured correctly.
+    ``get_images()`` only returns embedded bitmaps (photos), so vector figures
+    would be missed if that were the only approach.
+    """
+    if not pdf_path.exists():
+        raise RuntimeError("Local PDF does not exist")
+
+    figures_dir.mkdir(parents=True, exist_ok=True)
+    records: list[dict[str, Any]] = []
+    fig_counter = 0
+
+    with fitz.open(pdf_path) as doc:
+        for page_idx, page in enumerate(doc):
+            page_num = page_idx + 1
+            page_text = page.get_text("text")
+            page_rect = page.rect  # (x0=0, y0=0, x1=width, y1=height)
+
+            for match in _CAPTION_RE.finditer(page_text):
+                label_raw = match.group(1).strip()   # e.g. "Figure 1"
+                caption_text = re.sub(r"\s+", " ", match.group(2)).strip()
+
+                # Determine type: figure vs table
+                figure_type = "table" if label_raw.lower().startswith("table") else "figure"
+
+                # Normalise label for display ("Fig. 3" → "Figure 3")
+                label_norm = re.sub(r"^Fig\.", "Figure", label_raw, flags=re.IGNORECASE).strip()
+
+                # Locate caption bbox on the page so we know where to clip
+                cap_bbox = _caption_bbox(page, label_raw)
+
+                if cap_bbox:
+                    # Clip: from (above_frac × page height) above caption top
+                    #        to (below_frac × page height) below caption bottom
+                    clip_y0 = max(0.0, cap_bbox.y0 - _FIG_ABOVE_FRAC * page_rect.height)
+                    clip_y1 = min(page_rect.height, cap_bbox.y1 + _FIG_BELOW_FRAC * page_rect.height)
+                    clip = fitz.Rect(0, clip_y0, page_rect.width, clip_y1)
+                else:
+                    # Fallback: render the whole page
+                    clip = page_rect
+
+                mat = fitz.Matrix(_FIG_RENDER_ZOOM, _FIG_RENDER_ZOOM)
+                pix = page.get_pixmap(matrix=mat, clip=clip, alpha=False)
+                png_bytes = pix.tobytes("png")
+
+                fig_counter += 1
+                fig_id = f"fig_{page_num:02d}_{fig_counter:03d}"
+                rel_filename = f"{fig_id}.png"
+                (figures_dir / rel_filename).write_bytes(png_bytes)
+
+                bbox_dict = {
+                    "x0": round(clip.x0, 1),
+                    "y0": round(clip.y0, 1),
+                    "x1": round(clip.x1, 1),
+                    "y1": round(clip.y1, 1),
+                } if cap_bbox else None
+
+                records.append({
+                    "figure_id":   fig_id,
+                    "figure_type": figure_type,   # "figure" | "table"
+                    "label":       label_norm,     # "Figure 1", "Table 2", …
+                    "caption":     caption_text,
+                    "page":        page_num,
+                    "bbox":        bbox_dict,
+                    "image_file":  rel_filename,
+                    "width_px":    pix.width,
+                    "height_px":   pix.height,
+                })
+
+    return records
+
+
 def infer_uploaded_metadata(pages: list[dict[str, Any]], fallback_title: str) -> dict[str, Any]:
     first_page = pages[0].get("text", "") if pages else ""
     first_page = re.sub(r"\s+", " ", first_page).strip()

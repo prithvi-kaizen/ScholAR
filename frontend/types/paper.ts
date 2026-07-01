@@ -41,6 +41,12 @@ export type Citation = {
   quote: string;
   /** For multi-document mode: the local_id of the paper this chunk came from */
   source_paper_id?: string;
+  /** Figure/table grounding fields */
+  is_figure?: boolean;
+  figure_id?: string;
+  image_file?: string;
+  label?: string;
+  caption?: string;
 };
 
 export type WebResult = {
@@ -58,4 +64,13 @@ export type ChatMessage = {
   used_web_search?: boolean;
   provider_error?: "groq_rate_limit" | string;
   retry_text?: string;
+  /** Vision grounding fields — set when the answer was generated from a figure */
+  vision?: boolean;
+  vision_fallback?: boolean;
+  figure_id?: string;
+  figure_label?: string;
+  figure_image_url?: string;
+  /** Which model produced the response, e.g. "llama-3.3-70b-versatile" */
+  model?: string;
 };
+

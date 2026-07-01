@@ -1,0 +1,164 @@
+[
+  {
+    "case_id": "vis_001",
+    "anchor_paper": "1706.03762",
+    "question": "What does Figure 1 show about the Transformer model architecture?",
+    "expected_figure_label": "Figure 1",
+    "expected_figure_id_prefix": "fig_03",
+    "reasoning_type": "visual_understanding",
+    "sub_type": "architecture"
+  },
+  {
+    "case_id": "vis_002",
+    "anchor_paper": "1706.03762",
+    "question": "What are the two attention mechanisms shown in Figure 2?",
+    "expected_figure_label": "Figure 2",
+    "expected_figure_id_prefix": "fig_04",
+    "reasoning_type": "visual_understanding",
+    "sub_type": "component_identification"
+  },
+  {
+    "case_id": "vis_003",
+    "anchor_paper": "1706.03762",
+    "question": "According to Table 2, what BLEU score does the Transformer (big) model achieve on English-to-German translation?",
+    "expected_figure_label": "Table 2",
+    "expected_figure_id_prefix": "fig_08",
+    "reasoning_type": "data_extraction",
+    "sub_type": "numeric_value"
+  },
+  {
+    "case_id": "vis_004",
+    "anchor_paper": "1706.03762",
+    "question": "How does the Transformer compare to ByteNet and Deep-Att models in Table 2 on English-to-French?",
+    "expected_figure_label": "Table 2",
+    "expected_figure_id_prefix": "fig_08",
+    "reasoning_type": "comparison",
+    "sub_type": "model_comparison"
+  },
+  {
+    "case_id": "vis_005",
+    "anchor_paper": "1706.03762",
+    "question": "What does Table 1 show about the maximum path length for self-attention vs recurrent layers?",
+    "expected_figure_label": "Table 1",
+    "expected_figure_id_prefix": "fig_06",
+    "reasoning_type": "data_extraction",
+    "sub_type": "complexity_comparison"
+  },
+  {
+    "case_id": "vis_006",
+    "anchor_paper": "1706.03762",
+    "question": "Based on Table 3, which Transformer variant has the best performance when using 16 attention heads?",
+    "expected_figure_label": "Table 3",
+    "expected_figure_id_prefix": "fig_09",
+    "reasoning_type": "comparison",
+    "sub_type": "ablation"
+  },
+  {
+    "case_id": "vis_007",
+    "anchor_paper": "1706.03762",
+    "question": "What long-distance dependency is illustrated in Figure 3?",
+    "expected_figure_label": "Figure 3",
+    "expected_figure_id_prefix": "fig_13",
+    "reasoning_type": "visual_understanding",
+    "sub_type": "attention_pattern"
+  },
+  {
+    "case_id": "vis_008",
+    "anchor_paper": "1706.03762",
+    "question": "On which page does Figure 1 appear showing the Transformer architecture?",
+    "expected_figure_label": "Figure 1",
+    "expected_figure_id_prefix": "fig_03",
+    "reasoning_type": "location",
+    "sub_type": "page_number"
+  },
+  {
+    "case_id": "vis_009",
+    "anchor_paper": "1706.03762",
+    "question": "What does Table 4 show about the Transformer's performance on English constituency parsing?",
+    "expected_figure_label": "Table 4",
+    "expected_figure_id_prefix": "fig_10",
+    "reasoning_type": "data_extraction",
+    "sub_type": "task_performance"
+  },
+  {
+    "case_id": "vis_010",
+    "anchor_paper": "1706.03762",
+    "question": "According to Table 3, what happens to performance when attention key size dk is reduced to 16?",
+    "expected_figure_label": "Table 3",
+    "expected_figure_id_prefix": "fig_09",
+    "reasoning_type": "comparison",
+    "sub_type": "ablation"
+  },
+  {
+    "case_id": "vis_011",
+    "anchor_paper": "2005.11401",
+    "question": "What does Figure 1 in the RAG paper illustrate about the retrieval-augmented generation approach?",
+    "expected_figure_label": "Figure 1",
+    "expected_figure_id_prefix": "fig_01",
+    "reasoning_type": "visual_understanding",
+    "sub_type": "architecture"
+  },
+  {
+    "case_id": "vis_012",
+    "anchor_paper": "2005.11401",
+    "question": "Which datasets and metrics are summarised in the result tables of the RAG paper?",
+    "expected_figure_label": "Table",
+    "expected_figure_id_prefix": "fig_",
+    "reasoning_type": "data_extraction",
+    "sub_type": "benchmark_overview"
+  },
+  {
+    "case_id": "vis_013",
+    "anchor_paper": "2005.11401",
+    "question": "How does RAG-Token compare to RAG-Sequence in the tables shown in the RAG paper?",
+    "expected_figure_label": "Table",
+    "expected_figure_id_prefix": "fig_",
+    "reasoning_type": "comparison",
+    "sub_type": "variant_comparison"
+  },
+  {
+    "case_id": "vis_014",
+    "anchor_paper": "1706.03762",
+    "question": "Show me the diagram that illustrates the encoder-decoder structure in the Transformer paper.",
+    "expected_figure_label": "Figure 1",
+    "expected_figure_id_prefix": "fig_03",
+    "reasoning_type": "location",
+    "sub_type": "figure_identification"
+  },
+  {
+    "case_id": "vis_015",
+    "anchor_paper": "1706.03762",
+    "question": "What does Figure 4 show about attention head behaviour related to anaphora resolution?",
+    "expected_figure_label": "Figure 4",
+    "expected_figure_id_prefix": "fig_14",
+    "reasoning_type": "visual_understanding",
+    "sub_type": "attention_pattern"
+  },
+  {
+    "case_id": "vis_016",
+    "anchor_paper": "1706.03762",
+    "question": "Which figure or table shows where the Transformer base model training cost compares to other models?",
+    "expected_figure_label": "Table 2",
+    "expected_figure_id_prefix": "fig_08",
+    "reasoning_type": "location",
+    "sub_type": "figure_identification"
+  },
+  {
+    "case_id": "vis_017",
+    "anchor_paper": "1706.03762",
+    "question": "Looking at the chart or table, what training cost in FLOPs does the Transformer big model require?",
+    "expected_figure_label": "Table 2",
+    "expected_figure_id_prefix": "fig_08",
+    "reasoning_type": "data_extraction",
+    "sub_type": "numeric_value"
+  },
+  {
+    "case_id": "vis_018",
+    "anchor_paper": "1706.03762",
+    "question": "What pattern do the attention heads in Figure 5 exhibit according to the visualisation?",
+    "expected_figure_label": "Figure 5",
+    "expected_figure_id_prefix": "fig_15",
+    "reasoning_type": "visual_understanding",
+    "sub_type": "attention_pattern"
+  }
+]

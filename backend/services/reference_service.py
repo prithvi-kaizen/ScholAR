@@ -2,8 +2,9 @@
 reference_service.py
 --------------------
 Resolves a paper's bibliography using:
-  1. Semantic Scholar API (primary, keyless, rate-limited)
-  2. arXiv title-search fallback (for papers not indexed by S2, or uploads)
+  1. Semantic Scholar API by arXiv ID (primary, for arXiv papers)
+  2. Semantic Scholar API by title search (for uploaded PDFs)
+  3. arXiv title-search fallback (when S2 is unavailable)
 
 Caches results to backend/data/papers/<local_id>/references.json.
 """
@@ -124,31 +125,52 @@ def _build_ref_entry(
 
 
 # ---------------------------------------------------------------------------
-# Raw-reference text extraction (heuristic, for arXiv papers)
-# Used as an ordering signal and ref-number source, not for title matching.
+# Raw-reference text extraction (heuristic)
+# Supports both numbered [N] and author-year styles.
 # ---------------------------------------------------------------------------
 
-_REF_LINE_RE = re.compile(
-    r"^\s*\[?(\d{1,3})\]?\s+([A-Z].{10,})",
+# Numbered style: [1] Vaswani...  or  1. Vaswani...
+_REF_NUMBERED_RE = re.compile(
+    r"^\s*\[?(\d{1,3})\]?[.\s]+([A-Z].{8,})",
+    re.MULTILINE,
+)
+
+# Author-year style: Vaswani, A., ... (2017). Attention is all...
+_REF_AUTHOR_YEAR_RE = re.compile(
+    r"([A-Z][a-z]+(?:,\s+[A-Z]\.?)+.*?\(\d{4}\)[.,]\s+)([A-Z][^.]{10,}\.)",
     re.MULTILINE,
 )
 
 
 def _extract_raw_ref_numbers(pages: list[dict[str, Any]]) -> dict[int, str]:
-    """Return {number: raw_title_snippet} from the last 4 pages of the paper."""
-    last_pages = pages[-4:] if len(pages) >= 4 else pages
+    """Return {number: raw_title_snippet} from the last 6 pages of the paper.
+
+    Handles both numbered [N] and author-year reference styles.
+    """
+    last_pages = pages[-6:] if len(pages) >= 6 else pages
     text = " ".join(p.get("text", "") for p in last_pages)
     found: dict[int, str] = {}
-    for match in _REF_LINE_RE.finditer(text):
-        num  = int(match.group(1))
+
+    # Try numbered style first
+    for match in _REF_NUMBERED_RE.finditer(text):
+        num = int(match.group(1))
         snippet = match.group(2)[:120]
         if num not in found:
             found[num] = snippet
+
+    # If numbered style found very little, also try author-year
+    if len(found) < 5:
+        for i, match in enumerate(_REF_AUTHOR_YEAR_RE.finditer(text), start=1):
+            title_snippet = match.group(2)[:120]
+            key = len(found) + i
+            if key not in found:
+                found[key] = title_snippet
+
     return found
 
 
 # ---------------------------------------------------------------------------
-# Semantic Scholar primary resolution
+# Semantic Scholar primary resolution (by arXiv ID)
 # ---------------------------------------------------------------------------
 
 async def _resolve_via_s2(arxiv_id: str) -> list[dict[str, Any]]:
@@ -186,6 +208,65 @@ async def _resolve_via_s2(arxiv_id: str) -> list[dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
+# Semantic Scholar resolution by title (for uploaded PDFs)
+# ---------------------------------------------------------------------------
+
+async def _resolve_via_s2_title(title: str) -> list[dict[str, Any]]:
+    """Search S2 for a paper by title, then fetch its references.
+
+    This enables multi-doc mode for uploaded PDFs that are indexed by S2
+    (most NLP papers published after ~2010 are).
+    """
+    if not title or len(title.strip()) < 10:
+        return []
+
+    # Step 1: find the paper on S2 by title
+    search_url = f"{S2_BASE}/paper/search"
+    search_params = {
+        "query": title.strip()[:200],
+        "fields": "paperId,title,externalIds",
+        "limit": 5,
+    }
+    search_data = await _s2_get(search_url, search_params)
+    if not search_data or not search_data.get("data"):
+        return []
+
+    # Pick the best match: first result whose title is a close substring match
+    s2_paper_id: str | None = None
+    title_lower = title.lower().strip()
+    for candidate in search_data["data"]:
+        cand_title = (candidate.get("title") or "").lower().strip()
+        # Accept if ≥60% of the query title's words appear in the candidate
+        query_words = set(re.findall(r"[a-z]{4,}", title_lower))
+        cand_words  = set(re.findall(r"[a-z]{4,}", cand_title))
+        if query_words and len(query_words & cand_words) / len(query_words) >= 0.6:
+            s2_paper_id = candidate.get("paperId")
+            break
+
+    if not s2_paper_id:
+        # Fall back to first result
+        s2_paper_id = search_data["data"][0].get("paperId")
+
+    if not s2_paper_id:
+        return []
+
+    # Step 2: fetch references for this paper
+    ref_url    = f"{S2_BASE}/paper/{s2_paper_id}/references"
+    ref_params = {"fields": S2_REF_FIELDS, "limit": 100}
+    data = await _s2_get(ref_url, ref_params)
+    if not data or not data.get("data"):
+        return []
+
+    refs: list[dict[str, Any]] = []
+    for index, item in enumerate(data["data"], start=1):
+        entry = _build_ref_entry(item, ref_number=index)
+        if entry["title"]:
+            refs.append(entry)
+
+    return refs
+
+
+# ---------------------------------------------------------------------------
 # arXiv title-search fallback
 # ---------------------------------------------------------------------------
 
@@ -194,7 +275,7 @@ async def _resolve_via_arxiv_fallback(
 ) -> list[dict[str, Any]]:
     """
     For each raw reference text snippet, try an arXiv title search.
-    Used when S2 is unavailable or the paper is an uploaded PDF.
+    Used when S2 is completely unavailable.
     Intentionally limited to the first 20 references to stay within
     rate limits without a key.
     """
@@ -243,8 +324,9 @@ async def resolve_references(
 
     Priority:
       1. Return cached references if present and `force` is False.
-      2. Use Semantic Scholar (primary) for arXiv papers.
-      3. Fall back to arXiv title-search on heuristic raw-reference snippets.
+      2. arXiv papers: use Semantic Scholar by arXiv ID (fastest, most complete).
+      3. Uploaded PDFs: use Semantic Scholar by title search.
+      4. Fall back to arXiv title-search on heuristic raw-reference snippets.
 
     Always saves result to disk before returning.
     """
@@ -255,17 +337,22 @@ async def resolve_references(
 
     arxiv_id = metadata.get("id", "")
     is_upload = metadata.get("source") == "upload"
+    paper_title = metadata.get("title", "")
 
     # Extract raw reference snippets for ordering + fallback
     raw_snippets = _extract_raw_ref_numbers(pages)
 
     refs: list[dict[str, Any]] = []
 
-    # --- Primary: Semantic Scholar ---
+    # --- Primary: Semantic Scholar by arXiv ID (arXiv papers) ---
     if arxiv_id and not is_upload:
         refs = await _resolve_via_s2(arxiv_id)
 
-    # --- Fallback: arXiv title search ---
+    # --- Secondary: Semantic Scholar by title (uploaded PDFs) ---
+    if not refs and paper_title:
+        refs = await _resolve_via_s2_title(paper_title)
+
+    # --- Fallback: arXiv title search on raw text snippets ---
     if not refs and raw_snippets:
         refs = await _resolve_via_arxiv_fallback(raw_snippets)
 
