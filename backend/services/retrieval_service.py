@@ -63,12 +63,25 @@ QUERY_EXPANSIONS = {
 }
 
 
+_CAMEL_BOUNDARY_RE = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
+
+
 def tokenize(text: str) -> list[str]:
-    return [
-        token
-        for token in re.findall(r"[A-Za-z][A-Za-z0-9_-]+", text.lower())
-        if token not in STOP_WORDS and len(token) > 2
-    ]
+    # Run on the original (mixed-case) text so camelCase boundaries are still
+    # visible, e.g. "FlashAttention" -> also yields "flash" and "attention" as
+    # separate tokens, not just the fused "flashattention". Without this, a
+    # query like "flash attention" has zero token overlap with a paper whose
+    # own text never writes the name with a space.
+    tokens: list[str] = []
+    for raw in re.findall(r"[A-Za-z][A-Za-z0-9_-]+", text):
+        lowered = raw.lower()
+        if lowered not in STOP_WORDS and len(lowered) > 2:
+            tokens.append(lowered)
+        for part in _CAMEL_BOUNDARY_RE.split(raw):
+            part_lower = part.lower()
+            if part_lower != lowered and part_lower not in STOP_WORDS and len(part_lower) > 2:
+                tokens.append(part_lower)
+    return tokens
 
 
 def expand_query_terms(tokens: list[str]) -> list[str]:
