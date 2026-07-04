@@ -26,6 +26,39 @@ const editorPicks: Paper[] = [
     abs_url: "https://arxiv.org/abs/1706.03762"
   },
   {
+    id: "1810.04805",
+    title: "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+    authors: ["Jacob Devlin", "Ming-Wei Chang", "Kenton Lee"],
+    year: "2018",
+    summary:
+      "BERT pre-trains deep bidirectional representations from unlabeled text via masked language modeling, setting new state-of-the-art results across NLP tasks.",
+    categories: ["cs.CL"],
+    pdf_url: "https://arxiv.org/pdf/1810.04805",
+    abs_url: "https://arxiv.org/abs/1810.04805"
+  },
+  {
+    id: "1512.03385",
+    title: "Deep Residual Learning for Image Recognition",
+    authors: ["Kaiming He", "Xiangyu Zhang", "Shaoqing Ren"],
+    year: "2015",
+    summary:
+      "ResNet introduces residual connections that make it possible to train dramatically deeper convolutional networks, becoming a backbone for modern vision models.",
+    categories: ["cs.CV"],
+    pdf_url: "https://arxiv.org/pdf/1512.03385",
+    abs_url: "https://arxiv.org/abs/1512.03385"
+  },
+  {
+    id: "2005.14165",
+    title: "Language Models are Few-Shot Learners",
+    authors: ["Tom B. Brown", "Benjamin Mann", "Nick Ryder"],
+    year: "2020",
+    summary:
+      "GPT-3 shows that scaling autoregressive language models to 175B parameters enables strong few-shot performance across tasks without gradient updates.",
+    categories: ["cs.CL"],
+    pdf_url: "https://arxiv.org/pdf/2005.14165",
+    abs_url: "https://arxiv.org/abs/2005.14165"
+  },
+  {
     id: "2005.11401",
     title: "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
     authors: ["Patrick Lewis", "Ethan Perez", "Aleksandra Piktus"],
@@ -35,6 +68,50 @@ const editorPicks: Paper[] = [
     categories: ["cs.CL", "cs.AI"],
     pdf_url: "https://arxiv.org/pdf/2005.11401",
     abs_url: "https://arxiv.org/abs/2005.11401"
+  },
+  {
+    id: "2006.11239",
+    title: "Denoising Diffusion Probabilistic Models",
+    authors: ["Jonathan Ho", "Ajay Jain", "Pieter Abbeel"],
+    year: "2020",
+    summary:
+      "DDPMs generate high-quality images by learning to reverse a gradual noising process, laying the groundwork for modern diffusion-based generative models.",
+    categories: ["cs.LG", "cs.CV"],
+    pdf_url: "https://arxiv.org/pdf/2006.11239",
+    abs_url: "https://arxiv.org/abs/2006.11239"
+  },
+  {
+    id: "2010.11929",
+    title: "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale",
+    authors: ["Alexey Dosovitskiy", "Lucas Beyer", "Alexander Kolesnikov"],
+    year: "2020",
+    summary:
+      "The Vision Transformer (ViT) applies a pure Transformer directly to sequences of image patches, matching or beating CNNs on image classification at scale.",
+    categories: ["cs.CV", "cs.LG"],
+    pdf_url: "https://arxiv.org/pdf/2010.11929",
+    abs_url: "https://arxiv.org/abs/2010.11929"
+  },
+  {
+    id: "2201.11903",
+    title: "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+    authors: ["Jason Wei", "Xuezhi Wang", "Dale Schuurmans"],
+    year: "2022",
+    summary:
+      "Prompting large language models with intermediate reasoning steps substantially improves performance on arithmetic, commonsense, and symbolic reasoning tasks.",
+    categories: ["cs.CL", "cs.AI"],
+    pdf_url: "https://arxiv.org/pdf/2201.11903",
+    abs_url: "https://arxiv.org/abs/2201.11903"
+  },
+  {
+    id: "2203.02155",
+    title: "Training Language Models to Follow Instructions with Human Feedback",
+    authors: ["Long Ouyang", "Jeff Wu", "Xu Jiang"],
+    year: "2022",
+    summary:
+      "InstructGPT fine-tunes language models with human feedback (RLHF) to better follow user instructions, improving helpfulness and truthfulness over raw scaling.",
+    categories: ["cs.CL", "cs.LG"],
+    pdf_url: "https://arxiv.org/pdf/2203.02155",
+    abs_url: "https://arxiv.org/abs/2203.02155"
   },
   {
     id: "2302.13971",
@@ -80,7 +157,7 @@ export default function HomePage() {
     "Uploading PDF",
     "Extracting pages",
     "Building study chunks",
-    "Creating Groq study plan",
+    "Creating study plan",
     "Opening workspace"
   ];
 
@@ -152,7 +229,7 @@ export default function HomePage() {
       await fetch(`${backendUrl}/api/papers/${encodeURIComponent(payload.paper_id)}/study-goals`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: "groq", force: true })
+        body: JSON.stringify({ force: true })
       }).catch(() => null);
       setUploadStep(4);
       router.push(`/paper/${encodeURIComponent(payload.paper_id)}`);
@@ -231,7 +308,7 @@ export default function HomePage() {
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-acid">Preparing study workspace</p>
                   <h2 className="mt-1 text-xl font-semibold text-white">{uploadSteps[uploadStep]}</h2>
-                  <p className="mt-1 text-sm text-zinc-400">Extracting the paper and creating one canonical study plan for both Local and Groq.</p>
+                  <p className="mt-1 text-sm text-zinc-400">Extracting the paper and creating one canonical study plan.</p>
                 </div>
               </div>
               <div className="mb-4 h-2 overflow-hidden rounded-full bg-white/10">
