@@ -8,7 +8,6 @@ import { StudyGoals } from "./StudyGoals";
 import { ReferencesPanel } from "./ReferencesPanel";
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
-const providerStorageKey = "scholar-ai-provider-v2";
 
 type Tab = "chat" | "goals" | "references";
 
@@ -33,20 +32,7 @@ export function StudyPanel({ paperId, onCitationClick }: StudyPanelProps) {
   const [goals,       setGoals]       = useState<StudyGoal[]>(defaultGoals);
   const [loadingGoals, setLoadingGoals] = useState(false);
   const [queuedPrompt, setQueuedPrompt] = useState<{ id: number; text: string } | null>(null);
-  const [provider,    setProvider]    = useState<"local" | "groq">("groq");
-  const [providerNotice, setProviderNotice] = useState("");
   const [secondaryPaperIds, setSecondaryPaperIds] = useState<Set<string>>(new Set());
-
-  // ---------- provider persistence ----------
-  useEffect(() => {
-    const saved = window.localStorage.getItem(providerStorageKey);
-    if (saved === "groq" || saved === "local") setProvider(saved);
-  }, []);
-
-  function changeProvider(next: "local" | "groq") {
-    setProvider(next);
-    window.localStorage.setItem(providerStorageKey, next);
-  }
 
   // ---------- study goals ----------
   useEffect(() => {
@@ -57,25 +43,18 @@ export function StudyPanel({ paperId, onCitationClick }: StudyPanelProps) {
       try {
         const res = await fetch(
           `${backendUrl}/api/papers/${encodeURIComponent(paperId)}/study-goals`,
-          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ provider }) }
+          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }
         );
         if (!res.ok) throw new Error("Could not load study goals");
         const payload = await res.json();
         if (!cancelled && payload.goals?.length) setGoals(payload.goals);
-        if (!cancelled) {
-          setProviderNotice(
-            payload.requested_provider && payload.provider && payload.requested_provider !== payload.provider
-              ? "Groq API key not configured — using local Qwen."
-              : ""
-          );
-        }
       } finally {
         if (!cancelled) setLoadingGoals(false);
       }
     }
     void loadGoals();
     return () => { cancelled = true; };
-  }, [paperId, provider]);
+  }, [paperId]);
 
   function explainGoal(goal: StudyGoal) {
     const subqs = goal.subquestions?.length
@@ -118,29 +97,8 @@ export function StudyPanel({ paperId, onCitationClick }: StudyPanelProps) {
   return (
     <aside className="flex min-h-0 h-full flex-col bg-ink border-l border-line">
 
-      {/* ── Top bar: provider selector + tabs ── */}
+      {/* ── Top bar: tabs ── */}
       <div className="shrink-0 border-b border-line bg-panel">
-
-        {/* Provider row */}
-        <div className="flex items-center justify-between px-4 pt-3 pb-2">
-          <div className="grid grid-cols-2 rounded-lg border border-line bg-ink p-1 text-xs">
-            <button
-              onClick={() => changeProvider("local")}
-              className={`rounded-md px-3 py-1.5 transition ${provider === "local" ? "bg-white text-black font-semibold" : "text-zinc-400 hover:text-white"}`}
-            >
-              Local
-            </button>
-            <button
-              onClick={() => changeProvider("groq")}
-              className={`rounded-md px-3 py-1.5 transition ${provider === "groq" ? "bg-acid text-black font-semibold" : "text-zinc-400 hover:text-white"}`}
-            >
-              Groq
-            </button>
-          </div>
-          {providerNotice && (
-            <span className="text-[11px] text-amber-400">{providerNotice}</span>
-          )}
-        </div>
 
         {/* Tab row */}
         <div className="flex border-t border-line">
@@ -175,8 +133,6 @@ export function StudyPanel({ paperId, onCitationClick }: StudyPanelProps) {
         <ChatBox
           paperId={paperId}
           queuedPrompt={queuedPrompt}
-          provider={provider}
-          onProviderChange={changeProvider}
           onCitationClick={onCitationClick}
           expanded={true}
           onChatActivity={() => setActiveTab("chat")}

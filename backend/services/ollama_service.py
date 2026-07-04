@@ -14,7 +14,7 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(BACKEND_DIR / ".env")
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:9b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3.5:9b")
 STUDY_GOAL_PROMPT_VERSION = "study-goals-v8-recursive"
 
 
@@ -29,22 +29,24 @@ def _ollama_options(temperature: float) -> dict[str, Any]:
 
 async def ollama_available() -> bool:
     try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
+        async with httpx.AsyncClient(timeout=3.0, trust_env=False) as client:
             response = await client.get(f"{OLLAMA_BASE_URL}/api/tags")
             return response.status_code == 200
     except httpx.HTTPError:
         return False
 
 
-async def generate(prompt: str, temperature: float = 0.2) -> str:
-    payload = {
+async def generate(prompt: str, temperature: float = 0.2, images: list[str] | None = None) -> str:
+    payload: dict[str, Any] = {
         "model": OLLAMA_MODEL,
         "prompt": prompt,
         "stream": False,
         "think": False,
         "options": _ollama_options(temperature),
     }
-    async with httpx.AsyncClient(timeout=float(os.getenv("OLLAMA_TIMEOUT", "240"))) as client:
+    if images:
+        payload["images"] = images
+    async with httpx.AsyncClient(timeout=float(os.getenv("OLLAMA_TIMEOUT", "240")), trust_env=False) as client:
         response = await client.post(f"{OLLAMA_BASE_URL}/api/generate", json=payload)
         response.raise_for_status()
     data = response.json()

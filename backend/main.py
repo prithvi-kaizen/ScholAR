@@ -4,7 +4,7 @@ import asyncio
 import hashlib
 import re
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
@@ -14,7 +14,6 @@ from pydantic import BaseModel, Field
 
 from backend.services.arxiv_service import search_arxiv
 from backend.services.chunking_service import chunk_figures, chunk_pages
-from backend.services.groq_service import GROQ_MODEL, GROQ_VISION_MODEL, generate_with_groq, groq_available, groq_configured
 from backend.services.ollama_service import (
     OLLAMA_MODEL,
     fallback_goals,
@@ -70,14 +69,12 @@ class PaperInput(BaseModel):
 class ChatInput(BaseModel):
     message: str
     history: list[dict[str, Any]] = Field(default_factory=list)
-    provider: Literal["local", "groq"] = "local"
     web_search: bool = True
     # Multi-document mode: local_ids of secondary papers already ingested
     secondary_paper_ids: list[str] = Field(default_factory=list)
 
 
 class StudyGoalsInput(BaseModel):
-    provider: Literal["local", "groq"] = "local"
     force: bool = False
 
 
@@ -143,41 +140,22 @@ def _extractive_tutor_answer(question: str, selected: list[dict[str, Any]]) -> s
     return "\n".join(lines)
 
 
-def _provider_error_payload(error_code: str, message: str, payload: ChatInput, effective_provider: str | None) -> dict[str, Any]:
+def _error_payload(message: str) -> dict[str, Any]:
     return {
         "answer": "",
         "citations": [],
         "web_results": [],
         "used_web_search": False,
-        "provider": effective_provider or payload.provider,
-        "requested_provider": payload.provider,
-        "model": _provider_label(effective_provider or payload.provider),
-        "provider_error": error_code,
+        "model": OLLAMA_MODEL,
+        "error": True,
         "message": message,
     }
 
 
-def _model_failure_payload(payload: ChatInput, effective_provider: str, exc: Exception | None = None) -> dict[str, Any]:
-    if effective_provider == "local":
-        if isinstance(exc, (httpx.ReadTimeout, httpx.TimeoutException)):
-            return _provider_error_payload(
-                "local_timeout",
-                "Local Qwen took too long to answer. Try again with a shorter question, or switch back to Groq when limits reset.",
-                payload,
-                effective_provider,
-            )
-        return _provider_error_payload(
-            "local_error",
-            "Local Qwen could not complete this answer. Make sure Ollama is running and the selected model is loaded.",
-            payload,
-            effective_provider,
-        )
-    return _provider_error_payload(
-        "provider_error",
-        "The selected model could not complete this answer.",
-        payload,
-        effective_provider,
-    )
+def _model_failure_payload(exc: Exception | None = None) -> dict[str, Any]:
+    if isinstance(exc, (httpx.ReadTimeout, httpx.TimeoutException)):
+        return _error_payload("Local model took too long to answer. Try again with a shorter question.")
+    return _error_payload("Local model could not complete this answer. Make sure Ollama is running and the selected model is loaded.")
 
 
 def _should_search_web(message: str, selected_chunks: list[dict[str, Any]]) -> bool:
@@ -429,13 +407,7 @@ async def health() -> dict[str, Any]:
     return {
         "status": "ok",
         "ollama_available": await ollama_available(),
-        "groq_configured": groq_configured(),
-        "groq_available": await groq_available(),
         "web_search_enabled": web_search_enabled(),
-        "models": {
-            "local": OLLAMA_MODEL,
-            "groq": GROQ_MODEL,
-        },
         "model": OLLAMA_MODEL,
     }
 
@@ -766,42 +738,6 @@ async def get_pdf_page(paper_id: str, page_number: int, zoom: float = 1.8, highl
     return Response(content=image_bytes, media_type="image/png")
 
 
-def _provider_label(provider: str) -> str:
-    return "Groq" if provider == "groq" else "local Qwen"
-
-
-async def _provider_available(provider: str) -> bool:
-    return await groq_available() if provider == "groq" else await ollama_available()
-
-
-async def _effective_provider(requested_provider: str) -> str | None:
-    if requested_provider == "groq":
-        if await groq_available():
-            return "groq"
-        if await ollama_available():
-            return "local"
-        return None
-    if await ollama_available():
-        return "local"
-    if await groq_available():
-        return "groq"
-    return None
-
-
-async def _generate_with_provider(provider: str, prompt: str, temperature: float = 0.2) -> str:
-    if provider == "groq":
-        return await generate_with_groq(prompt, temperature=temperature)
-    return await generate(prompt, temperature=temperature)
-
-
-async def _planning_provider() -> str | None:
-    if await groq_available():
-        return "groq"
-    if await ollama_available():
-        return "local"
-    return None
-
-
 @app.post("/api/papers/{paper_id}/study-goals")
 async def study_goals(
     paper_id: str,
@@ -818,13 +754,11 @@ async def study_goals(
             metadata["title"] = inferred["title"]
             metadata["summary"] = inferred["summary"]
             write_json(metadata_path, metadata)
-    effective_provider = await _planning_provider()
 
-    if not effective_provider:
+    if not await ollama_available():
         return {
             "goals": fallback_goals(metadata, chunks),
-            "provider": payload.provider,
-            "planning_provider": payload.provider,
+            "model": OLLAMA_MODEL,
             "fallback": True,
         }
 
@@ -833,29 +767,17 @@ async def study_goals(
     if goals_path.exists() and not payload.force:
         return {
             "goals": read_json(goals_path),
-            "provider": payload.provider,
-            "requested_provider": payload.provider,
-            "planning_provider": effective_provider,
+            "model": OLLAMA_MODEL,
         }
 
     try:
-        goals = await asyncio.wait_for(
-            generate_study_goals(
-                metadata,
-                chunks,
-                generate_func=lambda prompt, temperature=0.2: _generate_with_provider(effective_provider, prompt, temperature),
-                provider=effective_provider,
-            ),
-            timeout=45.0 if effective_provider == "groq" else 120.0,
-        )
+        goals = await asyncio.wait_for(generate_study_goals(metadata, chunks), timeout=120.0)
         write_json(goals_path, goals)
     except Exception:
         goals = fallback_goals(metadata, chunks)
     return {
         "goals": goals,
-        "provider": payload.provider,
-        "requested_provider": payload.provider,
-        "planning_provider": effective_provider,
+        "model": OLLAMA_MODEL,
     }
 
 
@@ -927,14 +849,11 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
         }
 
     # ── Vision routing ────────────────────────────────────────────────────────
-    # When the top-1 retrieved chunk is a figure/table chunk AND Groq is
-    # available, delegate to the vision path instead of the text-only path.
+    # When the top-1 retrieved chunk is a figure/table chunk, delegate to the
+    # vision path instead of the text-only path. answer_with_figure() itself
+    # falls back to a caption-only answer if Ollama is unavailable.
     top_chunk = selected[0] if selected else None
-    if (
-        top_chunk is not None
-        and top_chunk.get("is_figure_chunk")
-        and groq_configured()
-    ):
+    if top_chunk is not None and top_chunk.get("is_figure_chunk"):
         text_support = [c for c in selected[1:] if not c.get("is_figure_chunk")]
         vision_result = await answer_with_figure(
             question=payload.message,
@@ -944,15 +863,12 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
             paper_metadata=metadata,
         )
         fig_label = vision_result.get("label", "Figure")
-        model_label = "Groq Vision" if not vision_result.get("fallback") else "caption fallback"
         return {
             "answer":            vision_result["answer"],
             "citations":         vision_result["citations"],
             "web_results":       [],
             "used_web_search":   False,
-            "provider":          "groq",
-            "requested_provider": payload.provider,
-            "model":             model_label,
+            "model":             vision_result.get("model_used", OLLAMA_MODEL),
             "vision":            True,
             "vision_fallback":   vision_result.get("fallback", False),
             "figure_id":         vision_result.get("figure_id"),
@@ -961,7 +877,7 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
                                   if vision_result.get("figure_id") else None,
         }
 
-    effective_provider = await _effective_provider(payload.provider)
+    ollama_up = await ollama_available()
     context_chunks: list[dict[str, Any]] = []
     seen_chunk_ids: set[str] = set()
     for chunk in chunks[:2] + selected:
@@ -970,14 +886,12 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
             continue
         seen_chunk_ids.add(chunk_id)
         context_chunks.append(chunk)
-    prompt_chunks = context_chunks[:4] if effective_provider == "local" else context_chunks[:10]
-    history_char_limit = 180 if effective_provider == "local" else 700
-    abstract = str(metadata.get("summary") or "")
-    if effective_provider == "local":
-        abstract = abstract[:350]
-    question_text = payload.message[:900] if effective_provider == "local" else payload.message
+    prompt_chunks = context_chunks[:4]
+    history_char_limit = 180
+    abstract = str(metadata.get("summary") or "")[:350]
+    question_text = payload.message[:900]
 
-    evidence_items = _build_evidence_items(question_text, prompt_chunks, limit=7 if effective_provider == "local" else 10)
+    evidence_items = _build_evidence_items(question_text, prompt_chunks, limit=7)
     paper_context = _format_evidence_context(evidence_items, secondary_meta=secondary_meta)
     web_context = _format_web_context(web_results)
     recent_history = "\n".join(
@@ -1020,8 +934,8 @@ Response requirements:
 - If web search was unavailable or empty, do not pretend you searched.
 - For methods/results questions, include the specific mechanism, dataset, metric, number, or comparison when the evidence provides it.
 - Use concise sections: "Answer", "Evidence", "What this means", and "Limits / what to verify" when helpful.
-- If the active model is local Qwen, answer directly in 180 to 320 words. Do not include hidden reasoning or long deliberation.
-- If the active model is local Qwen, use only the strongest 2 to 4 evidence points and keep citations close to the claims they support.
+- Answer directly in 180 to 320 words. Do not include hidden reasoning or long deliberation.
+- Use only the strongest 2 to 4 evidence points and keep citations close to the claims they support.
 
 Paper evidence:
 {paper_context}
@@ -1032,29 +946,12 @@ Web context:
 Question: {question_text}
 """.strip()
 
-    if effective_provider:
+    if ollama_up:
         try:
-            answer = await _generate_with_provider(effective_provider, prompt, temperature=0.1)
-        except httpx.HTTPStatusError as exc:
-            if effective_provider == "groq" and exc.response.status_code == 429:
-                return {
-                    **_provider_error_payload(
-                        "groq_rate_limit",
-                        "Groq rate limit reached. Switch to Local Qwen to continue studying this paper.",
-                        payload,
-                        effective_provider,
-                    ),
-                    "used_web_search": used_web_search,
-                    "web_results": web_results,
-                }
-            return {
-                **_model_failure_payload(payload, effective_provider, exc),
-                "used_web_search": used_web_search,
-                "web_results": web_results,
-            }
+            answer = await generate(prompt, temperature=0.1)
         except Exception as exc:
             return {
-                **_model_failure_payload(payload, effective_provider, exc),
+                **_model_failure_payload(exc),
                 "used_web_search": used_web_search,
                 "web_results": web_results,
             }
@@ -1062,14 +959,9 @@ Question: {question_text}
         answer = ""
 
     if not answer:
-        if effective_provider:
+        if ollama_up:
             return {
-                **_provider_error_payload(
-                    "empty_model_response",
-                    "The selected model returned an empty answer. Try again, or switch providers.",
-                    payload,
-                    effective_provider,
-                ),
+                **_error_payload("The local model returned an empty answer. Try again."),
                 "used_web_search": used_web_search,
                 "web_results": web_results,
             }
@@ -1097,7 +989,5 @@ Question: {question_text}
         "citations": citations,
         "web_results": web_results,
         "used_web_search": used_web_search,
-        "provider": effective_provider or payload.provider,
-        "requested_provider": payload.provider,
-        "model": _provider_label(effective_provider or payload.provider),
+        "model": OLLAMA_MODEL,
     }

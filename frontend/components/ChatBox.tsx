@@ -17,8 +17,6 @@ interface QueuedPrompt {
 interface ChatBoxProps {
   paperId: string;
   queuedPrompt: QueuedPrompt | null;
-  provider: "local" | "groq";
-  onProviderChange: (provider: "local" | "groq") => void;
   onCitationClick: (citation: Citation) => void;
   expanded: boolean;
   onChatActivity: () => void;
@@ -127,13 +125,9 @@ function ModelBadge({ model, vision }: { model?: string; vision?: boolean }) {
   if (!model && !vision) return null;
   return (
     <span className={`ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-      vision
-        ? "bg-teal-500/15 text-teal-400"
-        : model?.includes("groq") || model?.includes("llama") || model?.includes("scout")
-          ? "bg-violet-500/15 text-violet-400"
-          : "bg-zinc-700 text-zinc-400"
+      vision ? "bg-teal-500/15 text-teal-400" : "bg-zinc-700 text-zinc-400"
     }`}>
-      {vision ? <><Camera size={9} />Vision</> : <><Zap size={9} />{model?.includes("groq") || model?.includes("llama") ? "Groq" : "Local"}</>}
+      {vision ? <><Camera size={9} />Vision</> : <><Zap size={9} />{model}</>}
     </span>
   );
 }
@@ -202,8 +196,6 @@ function WebResultCard({ result, index }: { result: { url: string; title: string
 export function ChatBox({
   paperId,
   queuedPrompt,
-  provider,
-  onProviderChange,
   onCitationClick,
   expanded,
   onChatActivity,
@@ -216,11 +208,10 @@ export function ChatBox({
   const messagesRef   = useRef<HTMLDivElement | null>(null);
   const inputRef      = useRef<HTMLInputElement | null>(null);
 
-  const sendMessage = useCallback(async (text: string, providerOverride?: "local" | "groq") => {
+  const sendMessage = useCallback(async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
 
-    const activeProvider = providerOverride ?? provider;
     const userMsg: ChatMessage = { role: "user", content: trimmed };
     onChatActivity();
     const history = [...messages, userMsg].map((m) => ({ role: m.role, content: m.content }));
@@ -235,7 +226,6 @@ export function ChatBox({
         body: JSON.stringify({
           message: trimmed,
           history,
-          provider: activeProvider,
           web_search: true,
           secondary_paper_ids: secondaryPaperIds,
         }),
@@ -246,14 +236,13 @@ export function ChatBox({
       }
       const payload = await res.json();
 
-      if (payload.provider_error) {
+      if (payload.error) {
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
-            content: payload.message ?? "The selected provider is unavailable.",
-            provider_error: payload.provider_error,
-            retry_text: trimmed,
+            content: payload.message ?? "The local model is unavailable.",
+            error: true,
             web_results: payload.web_results ?? [],
             used_web_search: Boolean(payload.used_web_search),
           },
@@ -261,18 +250,11 @@ export function ChatBox({
         return;
       }
 
-      const note =
-        payload.requested_provider &&
-        payload.provider &&
-        payload.requested_provider !== payload.provider
-          ? `Using ${payload.model} because ${payload.requested_provider === "groq" ? "Groq API is not configured" : "the requested provider is unavailable"}.\n\n`
-          : "";
-
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: `${note}${payload.answer}`,
+          content: payload.answer,
           citations: payload.citations ?? [],
           web_results: payload.web_results ?? [],
           used_web_search: Boolean(payload.used_web_search),
@@ -295,7 +277,7 @@ export function ChatBox({
     } finally {
       setLoading(false);
     }
-  }, [loading, messages, paperId, provider, secondaryPaperIds, onChatActivity]);
+  }, [loading, messages, paperId, secondaryPaperIds, onChatActivity]);
 
   useEffect(() => {
     if (!queuedPrompt || handledPrompt.current === queuedPrompt.id) return;
@@ -374,27 +356,14 @@ export function ChatBox({
                   : "rounded-bl-sm border-line bg-panel text-zinc-200"
               }`}
             >
-              {/* Provider error */}
-              {msg.provider_error ? (
-                <div className="space-y-3">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle size={17} className="mt-1 shrink-0 text-amber-300" />
-                    <div>
-                      <div className="font-semibold text-white">
-                        {msg.provider_error === "groq_rate_limit" ? "Groq limit reached" : "Model response failed"}
-                      </div>
-                      <p className="mt-1 text-zinc-300">{msg.content}</p>
-                    </div>
+              {/* Error */}
+              {msg.error ? (
+                <div className="flex items-start gap-2">
+                  <AlertTriangle size={17} className="mt-1 shrink-0 text-amber-300" />
+                  <div>
+                    <div className="font-semibold text-white">Model response failed</div>
+                    <p className="mt-1 text-zinc-300">{msg.content}</p>
                   </div>
-                  {msg.provider_error === "groq_rate_limit" && msg.retry_text && (
-                    <button
-                      type="button"
-                      onClick={() => { onProviderChange("local"); void sendMessage(msg.retry_text ?? "", "local"); }}
-                      className="rounded-lg border border-acid/40 bg-acid/15 px-3 py-2 text-xs font-semibold text-acid transition hover:bg-acid hover:text-black"
-                    >
-                      Retry with local Qwen
-                    </button>
-                  )}
                 </div>
               ) : msg.role === "assistant" ? (
                 <>
@@ -482,9 +451,7 @@ export function ChatBox({
         {loading && (
           <div className="flex justify-start">
             <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm border border-line bg-panel px-4 py-3 text-sm text-zinc-400">
-              <span>
-                {provider === "groq" ? "Groq is thinking" : "Thinking locally"}
-              </span>
+              <span>Thinking locally</span>
               <TypingDots />
             </div>
           </div>
@@ -505,7 +472,7 @@ export function ChatBox({
           className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-zinc-500"
         />
         <span className="hidden rounded-md border border-line px-2 py-1 text-[11px] text-zinc-600 sm:inline">
-          {provider === "groq" ? "Groq" : "Local"} · ⌘↵
+          Local · ⌘↵
         </span>
         <button
           disabled={loading || !input.trim()}

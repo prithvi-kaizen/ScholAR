@@ -12,7 +12,7 @@ ScholAR is a **local-first, privacy-preserving RAG system** for deep reading and
 - **Ask questions in natural language** → page-grounded answers with source citations
 - **Visual grounding** → queries about figures/tables route to a vision-LLM that reads the actual image
 - **Multi-document mode** → load cited references and ask cross-paper questions
-- **Local or cloud inference** → Ollama (offline) or Groq (fast cloud), switchable mid-session
+- **100% local inference** → runs entirely on-device via Ollama, no cloud API required
 
 ---
 
@@ -41,8 +41,8 @@ For the faithfulness evaluation pipeline:
 ### 4. Visual Grounding (Figure & Table QA)
 When a query targets a figure, table, or chart:
 1. Visual-cue retrieval boosts figure chunks (+1.5) to rank them first
-2. The figure image (rendered page region) is base64-encoded and sent to **Groq Llama 4 Scout** (vision-capable) with the question
-3. Caption-only fallback if the image is unavailable or too small
+2. The figure image (rendered page region) is base64-encoded and sent to the local **Ollama `qwen3.5:9b`** model (natively multimodal) with the question
+3. Caption-only fallback if the image is unavailable, too small, or Ollama is unreachable
 4. The frontend renders a teal-bordered thumbnail of the cited figure inline in the answer
 
 ### 5. Multi-Document Extension
@@ -64,11 +64,9 @@ Three-tier faithfulness scorer aligned with 2024–2026 SOTA practices:
 
 Claims are labeled FAITHFUL (CFS ≥ 0.55), PARTIAL (≥ 0.35), or UNFAITHFUL.
 
-### 7. Hybrid Cloud-Local Inference
-- **Local:** Ollama with `qwen3:9b` — fully offline, private
-- **Cloud:** Groq API with `llama-3.3-70b-versatile` — fast cloud inference
-- **Vision:** Groq `meta-llama/llama-4-scout-17b-16e-instruct` — for figure/table QA
-- **Graceful fallback:** Groq unavailable → automatic switch to local Ollama
+### 7. Fully Local Inference
+- **Text and vision, one model:** Ollama with `qwen3.5:9b` — natively multimodal, fully offline, private
+- **No cloud dependency:** every answer, study goal, and figure/table QA call runs on-device
 
 ---
 
@@ -117,12 +115,12 @@ ScholAR/
 │   │   ├── pdf_service.py          # PDF ingestion, page image rendering
 │   │   ├── chunking_service.py     # Page-preserving chunking + figure chunks
 │   │   ├── retrieval_service.py    # BM25 + visual-cue boosting
-│   │   ├── llm_service.py          # Groq / Ollama LLM routing
-│   │   ├── vision_service.py       # Figure QA via Groq Llama 4 Scout vision
+│   │   ├── ollama_service.py       # Local Ollama LLM routing (text + vision)
+│   │   ├── vision_service.py       # Figure QA via local Ollama vision model
 │   │   ├── reference_service.py    # Multi-doc: S2 API + title-search for uploads
 │   │   └── arxiv_service.py        # arXiv search and paper metadata
 │   ├── data/                       # Per-paper extracted data (gitignored)
-│   └── .env                        # API keys (not committed)
+│   └── .env                        # Local config (not committed)
 ├── frontend/
 │   ├── app/
 │   │   ├── page.tsx                # Home: paper search + upload
@@ -164,23 +162,18 @@ ScholAR/
 ### Prerequisites
 - Python 3.11 or 3.12
 - Node.js v18+
-- [Ollama](https://ollama.ai) running locally with `qwen3:9b` pulled
-- Groq API key (optional, but recommended for speed)
+- [Ollama](https://ollama.ai) running locally with `qwen3.5:9b` pulled (`ollama pull qwen3.5:9b`) — text and vision both use this one model
 
 ### 1. Clone & configure
 
 ```bash
 git clone https://github.com/prithvi-kaizen/ScholAR.git
 cd ScholAR
-cp backend/.env.example backend/.env   # then fill in your keys
 ```
 
 `backend/.env`:
 ```
-GROQ_API_KEY=gsk_...
-GROQ_MODEL=llama-3.3-70b-versatile
-GROQ_VISION_MODEL=meta-llama/llama-4-scout-17b-16e-instruct
-OLLAMA_MODEL=qwen3:9b
+OLLAMA_MODEL=qwen3.5:9b
 OLLAMA_BASE_URL=http://localhost:11434
 ```
 

@@ -44,7 +44,7 @@
 
 ### 1.2 LLM-as-Judge Answer Evaluation
 - [ ] Build a prompt template for LLM-as-judge scoring (factuality, grounding, completeness) 
-      using Groq `llama-3.3-70b` as the judge
+      using local Ollama `qwen3.5:9b` as the judge
 - [ ] Evaluate judge agreement with NLI-based CFS scores on a 20-sample overlap
 - [ ] Write `evaluation/run_answer_eval.py` to handle both NLI and LLM-judge modes
 - [ ] Document evaluation framework in `evaluation/README.md`

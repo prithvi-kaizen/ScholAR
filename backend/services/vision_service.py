@@ -6,10 +6,10 @@ It:
   1. Loads the PNG file for the figure from disk.
   2. Base64-encodes it.
   3. Builds a prompt that includes the caption, relevant text context, and question.
-  4. Sends everything to the Groq vision model (Llama 4 Scout by default).
+  4. Sends everything to the local Ollama vision model (qwen3.5:9b, natively multimodal).
   5. Returns a structured VisionAnswer.
 
-If Groq is unavailable or the image is missing the function degrades gracefully:
+If Ollama is unavailable or the image is missing the function degrades gracefully:
 it returns a caption-only answer with a ``fallback=True`` flag so the caller
 can decide how to present it.
 """
@@ -20,16 +20,12 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from backend.services.groq_service import (
-    GROQ_VISION_MODEL,
-    generate_with_groq_vision,
-    groq_configured,
-)
+from backend.services.ollama_service import OLLAMA_MODEL, generate, ollama_available
 from backend.services.pdf_service import paper_dir
 
 logger = logging.getLogger(__name__)
 
-# Maximum PNG file size to forward to the vision model (20 MB Groq limit)
+# Maximum PNG file size to forward to the vision model
 _MAX_IMAGE_BYTES = 18 * 1024 * 1024
 
 # Number of supporting text chunks to include alongside the image
@@ -60,6 +56,11 @@ def _build_vision_prompt(
     paper_title: str,
 ) -> str:
     parts = [
+        "You are a rigorous research paper tutor with vision capabilities. "
+        "Answer questions by reading the provided figure or table image carefully. "
+        "Be precise, extract exact numbers and labels, and ground every claim in "
+        "what is visually shown. Do not invent data.",
+        "",
         "Paper: " + paper_title if paper_title else "",
         "You are looking at " + figure_label + "." if figure_label else "",
         "Caption: " + caption if caption else "",
@@ -162,9 +163,9 @@ async def answer_with_figure(
             "citations":  [figure_citation],
         }
 
-    # -- Guard: vision requires Groq with an API key --------------------------
-    if not groq_configured():
-        return _caption_fallback("Groq API key not configured")
+    # -- Guard: vision requires a running local Ollama ------------------------
+    if not await ollama_available():
+        return _caption_fallback("Ollama is not running")
 
     # -- Load and encode the PNG ----------------------------------------------
     if not image_file:
@@ -179,11 +180,7 @@ async def answer_with_figure(
     # -- Call vision model ----------------------------------------------------
     prompt = _build_vision_prompt(question, label, caption, text_context, paper_title)
     try:
-        answer_text = await generate_with_groq_vision(
-            prompt=prompt,
-            image_b64=image_b64,
-            temperature=0.1,
-        )
+        answer_text = await generate(prompt, temperature=0.1, images=[image_b64])
     except Exception as exc:
         logger.warning("Vision model call failed: %s", exc)
         return _caption_fallback("vision model error: " + type(exc).__name__)
@@ -198,7 +195,7 @@ async def answer_with_figure(
         "caption":    caption,
         "image_file": image_file,
         "page":       page,
-        "model_used": GROQ_VISION_MODEL,
+        "model_used": OLLAMA_MODEL,
         "fallback":   False,
         "citations":  [figure_citation],
     }

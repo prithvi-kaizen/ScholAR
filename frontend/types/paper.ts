@@ -62,15 +62,14 @@ export type ChatMessage = {
   citations?: Citation[];
   web_results?: WebResult[];
   used_web_search?: boolean;
-  provider_error?: "groq_rate_limit" | string;
-  retry_text?: string;
+  error?: boolean;
   /** Vision grounding fields — set when the answer was generated from a figure */
   vision?: boolean;
   vision_fallback?: boolean;
   figure_id?: string;
   figure_label?: string;
   figure_image_url?: string;
-  /** Which model produced the response, e.g. "llama-3.3-70b-versatile" */
+  /** Which model produced the response, e.g. "qwen3.5:9b" */
   model?: string;
 };
 
