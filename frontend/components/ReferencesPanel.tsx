@@ -122,7 +122,7 @@ export function ReferencesPanel({
       clearTimeout(timer);
       setIngestState((prev) => ({ ...prev, [refIndex]: "error" }));
       setIngestMessage((prev) => ({ ...prev, [refIndex]: "" }));
-      console.error("Ingest error:", err);
+      console.warn("Ingest error:", err);
     }
   }
 
