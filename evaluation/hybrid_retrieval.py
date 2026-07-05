@@ -164,3 +164,19 @@ def retrieve_hybrid(query: str,
     boosted.sort(key=lambda x: -x[0])
 
     return [chunks[i] for _, i in boosted[:limit]]
+
+
+def retrieve_dense_only(query: str,
+                        chunks: list[dict[str, Any]],
+                        limit: int = 5,
+                        preferred_pages: Optional[list[int]] = None) -> list[dict[str, Any]]:
+    """
+    Naive single-pass dense retrieval: MiniLM cosine similarity only.
+    No BM25, no RRF fusion, no page-hint boost. Returns [] if the
+    embedder is unavailable.
+    """
+    embedder = _get_embedder()
+    if embedder is None:
+        return []
+    dense_results = _dense_ranked(query, chunks, embedder)
+    return [chunks[i] for _, i in dense_results[:limit]]

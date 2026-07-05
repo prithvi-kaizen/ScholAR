@@ -15,6 +15,12 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from backend.services.retrieval_service import extract_page_hints, retrieve_chunks, tokenize
 
+EVAL_DIR = Path(__file__).resolve().parent
+if str(EVAL_DIR) not in sys.path:
+    sys.path.insert(0, str(EVAL_DIR))
+
+from hybrid_retrieval import retrieve_dense_only
+
 
 DATA_DIR = PROJECT_ROOT / "backend" / "data" / "papers"
 CASES_PATH = PROJECT_ROOT / "evaluation" / "benchmark_cases.json"
@@ -94,11 +100,16 @@ def bm25_primary_with_page_hints(query: str, chunks: list[dict[str, Any]], limit
     return retrieve_chunks(query, chunks, limit=limit, preferred_pages=preferred_pages or [])
 
 
+def dense_only_retriever(query: str, chunks: list[dict[str, Any]], limit: int = 5, preferred_pages: list[int] | None = None) -> list[dict[str, Any]]:
+    return retrieve_dense_only(query, chunks, limit=limit, preferred_pages=None)
+
+
 RETRIEVERS: dict[str, Callable[[str, list[dict[str, Any]], int, list[int] | None], list[dict[str, Any]]]] = {
     "keyword_overlap": keyword_overlap_retriever,
     "bm25_only": bm25_only_retriever,
     "bm25_primary_no_page_hints": bm25_primary_no_page_hints,
     "bm25_primary_with_page_hints": bm25_primary_with_page_hints,
+    "dense_only": dense_only_retriever,
 }
 
 

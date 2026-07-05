@@ -1,6 +1,6 @@
 # ScholAR Quantitative Evaluation Report
 
-Generated on: 2026-06-20 21:56:52
+Generated on: 2026-07-05 08:59:58
 
 ## What was tested
 
@@ -42,16 +42,17 @@ The benchmark covers these query types:
 | System | Cases | Recall@1 | Recall@3 | Recall@5 | MRR |
 |---|---:|---:|---:|---:|---:|
 | `keyword_overlap` | 14 | 0.571 | 0.786 | 0.929 | 0.687 |
-| `bm25_only` | 14 | 0.714 | 0.929 | 1.0 | 0.812 |
-| `bm25_primary_no_page_hints` | 14 | 0.714 | 0.929 | 1.0 | 0.812 |
-| `bm25_primary_with_page_hints` | 14 | 0.714 | 0.929 | 1.0 | 0.812 |
+| `bm25_only` | 14 | 0.714 | 0.857 | 0.929 | 0.788 |
+| `bm25_primary_no_page_hints` | 14 | 0.714 | 0.857 | 0.929 | 0.788 |
+| `bm25_primary_with_page_hints` | 14 | 0.714 | 0.857 | 0.929 | 0.788 |
+| `dense_only` | 14 | 0.786 | 1.0 | 1.0 | 0.881 |
 
 ## What this means
 
-- The current BM25-primary retrieval reached Recall@5 of 1.0 and MRR of 0.812 on this small benchmark.
+- The current BM25-primary retrieval reached Recall@5 of 0.929 and MRR of 0.788 on this small benchmark.
 - The keyword baseline reached Recall@5 of 0.929 and MRR of 0.687.
-- The BM25 baseline reached Recall@5 of 1.0 and MRR of 0.812.
-- The page-hint ablation compares `bm25_primary_with_page_hints` against `bm25_primary_no_page_hints`. In this run, page hints changed MRR from 0.812 to 0.812, so there was no measurable aggregate gain on this small benchmark.
+- The BM25 baseline reached Recall@5 of 0.929 and MRR of 0.788.
+- The page-hint ablation compares `bm25_primary_with_page_hints` against `bm25_primary_no_page_hints`. In this run, page hints changed MRR from 0.788 to 0.788, so there was no measurable aggregate gain on this small benchmark.
 
 The important honest finding from the earlier run was that BM25 was more reliable than the older hybrid-primary scoring. Based on that result, ScholAR now uses BM25 as the primary retriever and keeps semantic, section, phrase, and page signals as small reranking boosts. In this run, the current system matches BM25-only on the measured metrics while still keeping room for careful page-aware reranking.
 
@@ -66,7 +67,7 @@ This satisfies the requirement for at least one comparison or ablation:
 
 ## Failure cases for the current BM25-primary retrieval
 
-- No Recall@5 failures for `bm25_primary_with_page_hints` in this benchmark.
+- `rag_qa_results`: expected ['chunk_006'], retrieved ['chunk_018', 'chunk_019', 'chunk_004', 'chunk_002', 'chunk_005'] on pages [18, 19, 4, 2, 5].
 
 ## Per-case results for the current system
 
@@ -78,12 +79,12 @@ This satisfies the requirement for at least one comparison or ablation:
 | `attn_training_details` | `1706.03762` | chunk_007, chunk_008 | chunk_007, chunk_008, chunk_010, chunk_009, chunk_002 | 1 |
 | `rag_core_idea` | `2005.11401` | chunk_001, chunk_002, chunk_003 | chunk_002, chunk_019, chunk_009, chunk_001, chunk_006 | 1 |
 | `rag_training_objective` | `2005.11401` | chunk_003, chunk_004 | chunk_003, chunk_004, chunk_002, chunk_019, chunk_005 | 1 |
-| `rag_qa_results` | `2005.11401` | chunk_006 | chunk_004, chunk_019, chunk_018, chunk_002, chunk_006 | 5 |
+| `rag_qa_results` | `2005.11401` | chunk_006 | chunk_018, chunk_019, chunk_004, chunk_002, chunk_005 | miss |
 | `rag_human_eval` | `2005.11401` | chunk_008 | chunk_017, chunk_005, chunk_008, chunk_006, chunk_018 | 3 |
-| `llama_training_data` | `2302.13971` | chunk_001, chunk_002 | chunk_006, chunk_003, chunk_002, chunk_011, chunk_010 | 3 |
+| `llama_training_data` | `2302.13971` | chunk_001, chunk_002 | chunk_006, chunk_003, chunk_011, chunk_010, chunk_002 | 5 |
 | `llama_model_sizes` | `2302.13971` | chunk_003 | chunk_003, chunk_008, chunk_001, chunk_011, chunk_007 | 1 |
 | `llama_commonsense_results` | `2302.13971` | chunk_004, chunk_005 | chunk_004, chunk_005, chunk_008, chunk_006, chunk_007 | 1 |
-| `llama_bias_toxicity_carbon` | `2302.13971` | chunk_010, chunk_011 | chunk_011, chunk_010, chunk_007, chunk_009, chunk_008 | 1 |
+| `llama_bias_toxicity_carbon` | `2302.13971` | chunk_010, chunk_011 | chunk_011, chunk_010, chunk_009, chunk_007, chunk_008 | 1 |
 | `rag_page_hint_ablation` | `2005.11401` | chunk_006, chunk_007 | chunk_019, chunk_006, chunk_009, chunk_015, chunk_010 | 2 |
 | `attn_page_hint_ablation` | `1706.03762` | chunk_008, chunk_009 | chunk_008, chunk_009, chunk_001, chunk_010, chunk_012 | 1 |
 

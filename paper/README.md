@@ -1,7 +1,8 @@
 # paper/ — ScholAR AAAI-27 Paper Folder
 
 This directory contains the LaTeX source for the ScholAR research paper targeting
-**AAAI-27** (The Forty-First AAAI Conference on Artificial Intelligence).
+**AAAI-27** (The Forty-First AAAI Conference on Artificial Intelligence), formatted
+against the **official AAAI-27 Author Kit** (`AuthorKit27/` at the repo root).
 
 ---
 
@@ -9,12 +10,16 @@ This directory contains the LaTeX source for the ScholAR research paper targetin
 
 | File | Description |
 |------|-------------|
-| `scholar_aaai27.tex` | **Main LaTeX source** — edit this file to write the paper |
+| `scholar_aaai27.tex` | **Main LaTeX source** — anonymous submission (`Anonymous Submission`, empty affiliations) |
 | `scholar_references.bib` | BibTeX bibliography — add all citations here |
-| `aaai27.sty` | Approximate AAAI formatting style (replace with official kit when released) |
+| `aaai2027.sty` | Official AAAI-27 style file (copied from `AuthorKit27/`) — **do not modify** |
+| `aaai2027.bst` | Official AAAI-27 BibTeX style (author-year via natbib) — **do not modify** |
 | `Makefile` | Build shortcuts (`make`, `make clean`, `make open`) |
 | `figures/` | Directory for all paper figures (PDF or PNG format) |
 | `scholar_aaai27.pdf` | **Compiled output** — viewable PDF |
+
+If either `.sty`/`.bst` file changes upstream, re-copy from `AuthorKit27/` rather than
+editing the copies here — the author kit explicitly forbids modifying the style file.
 
 ---
 
@@ -45,46 +50,74 @@ open scholar_aaai27.pdf
 |-----------|------|
 | Abstract deadline | **July 21, 2026** |
 | Full paper deadline | **July 28, 2026** |
-| Official AAAI-27 author kit release | Expected ~June/July 2026 |
 
-> [!IMPORTANT]
-> When the **official AAAI-27 author kit** is released at https://aaai.org/conference/aaai/aaai-27/,
-> replace `aaai27.sty` with the official `aaai27.sty` from the author kit ZIP. The formatting
-> template and section structure in `scholar_aaai27.tex` will remain valid.
+The official author kit is already in use (`AuthorKit27/`, copied into this folder
+as `aaai2027.sty`/`aaai2027.bst`) — no placeholder style file remains.
 
 ---
 
-## Paper Section Guide
+## Format Notes (Official Kit Specifics)
 
-The `.tex` file has detailed comment blocks in every section guiding what to write.
-Each section comment includes:
-- **Target word count / column length**
-- **Paragraph structure guide** (what each paragraph should cover)
-- **What figures/tables belong** in that section
+- **Two-column, letter-size**, enforced automatically by `aaai2027.sty`. Do not load
+  `geometry`, `fullpage`, or any package that alters margins/columns.
+- **`hyperref` is explicitly forbidden** by the author kit — do not add it back.
+  `times`, `helvet`, `courier` are loaded automatically by the style; do not
+  `\usepackage` them directly.
+- **Citations are author-year via `natbib` + `aaai2027.bst`** (e.g. "(Lewis et al. 2020)"),
+  not numbered brackets. Existing `\cite{key}` calls render correctly as-is.
+- **Section numbering is on** (`\setcounter{secnumdepth}{1}`) because the paper uses
+  `Section~\ref{...}` cross-references throughout. The kit's own default is `0`
+  (no numbers) — don't reset this to 0 without first removing/rewriting every
+  `Section~\ref{...}` reference in the text.
+- **Anonymous submission**: `\usepackage[submission]{aaai2027}` + `\author{Anonymous Submission}`
+  + empty `\affiliations{}`. Before uploading, also strip the PDF's metadata with a
+  metadata-cleaning tool (the author kit requires this for blind review).
+- 7 pages of main content max, up to 2 additional pages reserved *only* for references
+  (9 pages total max). Verify main content doesn't spill past page 7 before submitting —
+  check where the bibliography actually starts in the compiled PDF, not just the total
+  page count.
 
-### Section Outline
+---
+
+## Current Section Outline
 
 ```
-1. Abstract          (150–200 words, 4 things: problem/gap/method/result)
-2. Introduction      (~450 words, contributions as itemized list)
-3. Related Work      (RAG, Scientific Doc Understanding, DocQA, Faithfulness)
-4. Problem Formulation (formal task definition with notation)
-5. Method
-   5.1 Document Processing Pipeline
-   5.2 Page-Preserving Chunking          ← Algorithm 1
-   5.3 BM25-Primary Retrieval
-   5.4 Indirect Citation Grounding
-   5.5 Study Goal Generation
-   5.6 System Architecture
-6. Evaluation
-   6.1 Retrieval Benchmark
-   6.2 Baseline Systems
-   6.3 Results                           ← Table 1
-   6.4 Ablation Study                    ← Table 2 (to fill)
-   6.5 Generation Evaluation (Planned)
-7. Discussion
-8. Future Work
-9. Conclusion
+Abstract
+1  Introduction                          (contributions as itemized list)
+2  Related Work
+   2.1  Retrieval-Augmented Generation
+   2.2  Scientific Literature RAG Systems
+   2.3  Scientific Document Understanding
+   2.4  Visual Document Retrieval
+   2.5  Multi-Modal and Multi-Document Scientific QA
+   2.6  Question Answering over Documents
+   2.7  Citation Grounding and Faithfulness
+3  Problem Formulation
+4  Method
+   4.1  Document Processing Pipeline
+   4.2  Page-Preserving Chunking          ← Algorithm 1
+   4.3  BM25-Primary Retrieval with Heuristic Reranking
+   4.4  Indirect Citation Grounding
+   4.5  Visual Grounding
+   4.6  Multi-Document Extension
+   4.7  Study Goal Generation
+   4.8  Faithfulness Evaluation: SummaC-ZS + Semantic Coverage
+   4.9  System Architecture
+5  Evaluation
+   5.1  Retrieval Benchmark
+   5.2  Faithfulness Benchmark
+   5.3  Visual Grounding Benchmark
+   5.4  Multi-Document Locality Benchmark
+   5.5  Local Model Comparison
+   5.6  Does Reading the Image Help? A Caption-Only Ablation
+   5.7  Baseline Systems
+   5.8  Retrieval Results
+   5.9  Faithfulness Results
+   5.10 Ablation: CFS vs. Retrieval Depth
+   5.11 Ablation: CFS by Claim Type
+6  Discussion
+7  Future Work
+8  Conclusion
 References
 ```
 
@@ -100,10 +133,22 @@ References
    ```
    (no extension needed if you use `\graphicspath{{figures/}}` which is already set)
 
+Note: `fig:pipeline` (Figure 1, Method section) currently has a caption but no
+actual image — the `\includegraphics` line is commented out. Add a real pipeline
+diagram before final submission, or remove the empty figure.
+
 ---
 
 ## Adding References
 
 Add new BibTeX entries to `scholar_references.bib`, then cite them with `\cite{key}`.
-The bibliography style is currently set to `plain` (clean numbered references).
-It will be switched to `aaai-named` when the official AAAI author kit is available.
+Bibliography style is `aaai2027.bst` (set automatically by the style file — do not
+add a `\bibliographystyle` command), producing author-year citations via `natbib`.
+
+---
+
+## Reproducibility Checklist
+
+AAAI-27 requires a separate Reproducibility Checklist submission (not embedded in
+the main paper — check the conference's submission form for where to upload it).
+See `AuthorKit27/ReproducibilityChecklist.tex` for the template.

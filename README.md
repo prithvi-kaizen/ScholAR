@@ -2,7 +2,7 @@
 
 ScholAR is a **local-first, privacy-preserving RAG system** for deep reading and Q&A over scientific PDFs. It combines page-grounded citation retrieval, multi-modal visual grounding, and multi-document reasoning into a unified research assistant.
 
-> **Thesis-track submission to AAAI-27** (The Forty-First AAAI Conference on Artificial Intelligence, August 2026).
+> **Thesis-track submission to AAAI-27** (The Forty-First AAAI Conference on Artificial Intelligence). Abstract due July 21, 2026; full paper due July 28, 2026.
 
 ---
 
@@ -77,15 +77,23 @@ Claims are labeled FAITHFUL (CFS ≥ 0.55), PARTIAL (≥ 0.35), or UNFAITHFUL.
 | System | Recall@1 | Recall@3 | Recall@5 | MRR |
 |---|---:|---:|---:|---:|
 | `keyword_overlap` | 0.571 | 0.786 | 0.929 | 0.687 |
-| `bm25_only` | 0.714 | 0.929 | 1.000 | 0.812 |
-| `bm25_primary_with_page_hints` | 0.714 | 0.929 | 1.000 | 0.812 |
+| `bm25_only` | 0.714 | 0.857 | 0.929 | 0.788 |
+| `bm25_primary_no_page_hints` | 0.714 | 0.857 | 0.929 | 0.788 |
+| `bm25_primary_with_page_hints` | 0.714 | 0.857 | 0.929 | 0.788 |
+| `dense_only` (single-pass MiniLM cosine, no BM25/rerank/page-hints) | **0.786** | **1.000** | **1.000** | **0.881** |
+
+Dense-only beats every lexical config on this 14-case benchmark — a genuine, small-N finding (see the paper's Discussion). It doesn't change the production choice: on the larger 51-case faithfulness benchmark below, hybrid (not dense-only) wins.
 
 ### Faithfulness Benchmark (51 oracle-claim cases, 3 papers, 8 claim types)
 
 | System | Combined CFS | SCHR@5 | Faithful |
 |---|---:|---:|---:|
-| BM25-primary | 0.820 | 0.863 | 49 / 51 |
+| BM25-primary | 0.809 | 0.824 | 48 / 51 |
 | Hybrid BM25 + Dense + RRF | 0.829 | 0.922 | 49 / 51 |
+
+### Baseline Scope
+
+Retrieval/faithfulness baselines above are internal ablations (lexical → dense → hybrid), matching the BEIR-standard comparison framework. We do **not** benchmark against OpenScholar, PaperQA2, or SciRAG head-to-head: all three depend on cloud-hosted frontier LLM backends (and, for OpenScholar, a tens-of-millions-of-papers datastore), incompatible with ScholAR's local-only, single-laptop design constraint. See the paper's Discussion section for the full reasoning.
 
 Spans *Attention Is All You Need*, *RAG*, and *LLaMA* across 8 claim types: `result_number` (13), `technical_claim` (11), `architecture_detail` (10), `training_detail` (8), `conceptual_claim` (5), `human_eval` (2), `formula` (1), `environmental_claim` (1).
 
@@ -230,7 +238,7 @@ The AAAI-27 draft is in [`paper/scholar_aaai27.pdf`](paper/scholar_aaai27.pdf). 
 - Visual grounding architecture
 - Multi-document extension and M3SciQA-style evaluation
 
-**Target submission window:** AAAI-27, August 2026.
+**Target submission window:** AAAI-27 — abstract due July 21, 2026; full paper due July 28, 2026.
 
 ---
 
