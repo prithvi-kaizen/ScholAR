@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState, useCallback } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
-  AlertTriangle, BookOpen, Camera, ExternalLink, Loader2,
+  AlertTriangle, BookOpen, Camera, ExternalLink,
   Send, Sparkles, Zap, FileText, GitCompare, BarChart2
 } from "lucide-react";
+import katex from "katex";
 import type { ChatMessage, Citation } from "../types/paper";
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
@@ -44,6 +45,18 @@ function TypingDots() {
   );
 }
 
+function InlineMath({ expr }: { expr: string }) {
+  const html = useMemo(() => {
+    try {
+      return katex.renderToString(expr, { throwOnError: false, output: "html", trust: false });
+    } catch {
+      return null;
+    }
+  }, [expr]);
+  if (!html) return <span>${expr}$</span>;
+  return <span dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
 function renderInline(
   text: string,
   citations: Citation[] = [],
@@ -52,10 +65,16 @@ function renderInline(
   const citByRef = new Map(
     citations.map((c, i) => [String(c.ref_id ?? i + 1), c])
   );
-  const parts = text.split(/(\*\*[^*]+\*\*|\[\d+\])/g);
+  const parts = text.split(/(\*\*[^*]+\*\*|\[\d+\]|\$\$[^$\n]+\$\$|\$[^$\n]+\$)/g);
   return parts.map((part, i) => {
     if (part.startsWith("**") && part.endsWith("**")) {
       return <strong key={i} className="font-semibold text-white">{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("$$") && part.endsWith("$$") && part.length > 4) {
+      return <InlineMath key={i} expr={part.slice(2, -2)} />;
+    }
+    if (part.startsWith("$") && part.endsWith("$") && part.length > 2) {
+      return <InlineMath key={i} expr={part.slice(1, -1)} />;
     }
     const m = part.match(/^\[(\d+)\]$/);
     if (m) {
@@ -280,10 +299,10 @@ export function ChatBox({
   }, [loading, messages, paperId, secondaryPaperIds, onChatActivity]);
 
   useEffect(() => {
-    if (!queuedPrompt || handledPrompt.current === queuedPrompt.id) return;
+    if (!queuedPrompt || handledPrompt.current === queuedPrompt.id || loading) return;
     handledPrompt.current = queuedPrompt.id;
     void sendMessage(queuedPrompt.text);
-  }, [queuedPrompt, sendMessage]);
+  }, [queuedPrompt, sendMessage, loading]);
 
   useEffect(() => {
     const node = messagesRef.current;

@@ -16,7 +16,7 @@ export function PdfViewer({ paperId, activeCitation }: PdfViewerProps) {
   const [totalPages, setTotalPages] = useState(1);
   const [zoom, setZoom] = useState(1.65);
   const [title, setTitle] = useState("Research Paper");
-  const [imageError, setImageError] = useState("");
+  const [erroredPages, setErroredPages] = useState<Set<number>>(new Set());
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -58,7 +58,7 @@ export function PdfViewer({ paperId, activeCitation }: PdfViewerProps) {
   function scrollToPage(pageNumber: number) {
     const safePage = Math.min(Math.max(pageNumber, 1), totalPages);
     setPage(safePage);
-    setImageError("");
+    setErroredPages(new Set());
     document.getElementById(`pdf-page-${safePage}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -115,38 +115,38 @@ export function PdfViewer({ paperId, activeCitation }: PdfViewerProps) {
 
         <div ref={scrollRef} onScroll={handleScroll} className="min-h-0 flex-1 overflow-auto bg-[rgb(var(--color-paper-bg))]">
           <div className="mx-auto flex min-h-full w-full flex-col items-center gap-6 px-4 py-6">
-            {imageError ? (
-              <div className="mt-16 max-w-md rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100">
-                {imageError}
-              </div>
-            ) : (
-              pages.map((pageNumber) => (
-                <div
-                  id={`pdf-page-${pageNumber}`}
-                  key={`${pageNumber}-${zoom}`}
-                  data-page-number={pageNumber}
-                  className="w-full scroll-mt-6"
-                >
-                  <div className="mb-2 text-center text-xs font-medium text-zinc-500">
-                    Page {pageNumber}
-                    {activeCitation?.page === pageNumber ? (
-                      <span className="ml-2 rounded-md border border-blue-400/40 bg-blue-500/15 px-2 py-0.5 text-blue-200">
-                        highlighted citation
-                      </span>
-                    ) : null}
+            {pages.map((pageNumber) => (
+              <div
+                id={`pdf-page-${pageNumber}`}
+                key={`${pageNumber}-${zoom}`}
+                data-page-number={pageNumber}
+                className="w-full scroll-mt-6"
+              >
+                <div className="mb-2 text-center text-xs font-medium text-zinc-500">
+                  Page {pageNumber}
+                  {activeCitation?.page === pageNumber ? (
+                    <span className="ml-2 rounded-md border border-blue-400/40 bg-blue-500/15 px-2 py-0.5 text-blue-200">
+                      highlighted citation
+                    </span>
+                  ) : null}
+                </div>
+                {erroredPages.has(pageNumber) ? (
+                  <div className="mx-auto max-w-md rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100">
+                    Could not render page {pageNumber}. Try preparing the paper again.
                   </div>
+                ) : (
                   <img
                     src={pageImageUrl(pageNumber)}
                     alt={`Page ${pageNumber} of ${title}`}
                     loading={pageNumber <= 2 ? "eager" : "lazy"}
-                    onError={() => setImageError("Could not render this PDF page. Try preparing the paper again.")}
+                    onError={() => setErroredPages((prev) => new Set(prev).add(pageNumber))}
                     className={`mx-auto h-auto max-w-full bg-white shadow-2xl shadow-black/60 ${
                       activeCitation?.page === pageNumber ? "ring-2 ring-blue-400" : ""
                     }`}
                   />
-                </div>
-              ))
-            )}
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>

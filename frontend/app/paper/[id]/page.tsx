@@ -17,7 +17,7 @@ export default async function PaperStudyPage({ params }: PaperStudyPageProps) {
         </Link>
         <ThemeToggle />
       </header>
-      <StudyWorkspace paperId={id} />
+      <StudyWorkspace key={id} paperId={id} />
     </main>
   );
 }

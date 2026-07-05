@@ -8,6 +8,13 @@ import { Badge } from "./Badge";
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
 
+const prepareSteps = [
+  "Preparing paper",
+  "Extracting pages",
+  "Personalizing study goals",
+  "Opening workspace",
+];
+
 interface PaperModalProps {
   paper: Paper | null;
   onClose: () => void;
@@ -19,6 +26,7 @@ interface PaperModalProps {
 export function PaperModal({ paper, onClose, onBookmark, isBookmarked, onViewed }: PaperModalProps) {
   const router = useRouter();
   const [preparing, setPreparing] = useState(false);
+  const [prepareStep, setPrepareStep] = useState(0);
   const [error, setError] = useState("");
 
   if (!paper) return null;
@@ -26,25 +34,76 @@ export function PaperModal({ paper, onClose, onBookmark, isBookmarked, onViewed 
 
   async function preparePaper() {
     setPreparing(true);
+    setPrepareStep(0);
     setError("");
     onViewed(currentPaper);
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort(), 90_000);
     try {
       const response = await fetch(`${backendUrl}/api/papers/prepare`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(currentPaper)
+        body: JSON.stringify(currentPaper),
+        signal: timeoutController.signal
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
         throw new Error(payload.detail ?? "Could not prepare paper");
       }
+      setPrepareStep(1);
       const payload = (await response.json()) as { paper_id: string };
+      setPrepareStep(2);
+      // Pre-warm study goals so the workspace opens with real, paper-specific
+      // goals already cached instead of generic placeholders.
+      await fetch(`${backendUrl}/api/papers/${encodeURIComponent(payload.paper_id)}/study-goals`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }).catch(() => null);
+      setPrepareStep(3);
       router.push(`/paper/${encodeURIComponent(payload.paper_id)}`);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not prepare paper");
-    } finally {
+      if (caught instanceof DOMException && caught.name === "AbortError") {
+        setError("Preparing the paper timed out. Please try again.");
+      } else {
+        setError(caught instanceof Error ? caught.message : "Could not prepare paper");
+      }
       setPreparing(false);
+    } finally {
+      clearTimeout(timeoutId);
     }
+  }
+
+  if (preparing) {
+    return (
+      <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 px-4 backdrop-blur-sm">
+        <div className="w-full max-w-lg rounded-lg border border-line bg-panel p-6 shadow-glow">
+          <div className="mb-5 flex items-center gap-4">
+            <div className="relative h-14 w-14 shrink-0">
+              <div className="absolute inset-0 rounded-full border-2 border-acid/20" />
+              <div className="absolute inset-0 animate-spin rounded-full border-2 border-acid border-t-transparent" />
+              <div className="absolute inset-3 rounded-full bg-acid/15" />
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-acid">Preparing study workspace</p>
+              <h2 className="mt-1 text-xl font-semibold text-white">{prepareSteps[prepareStep]}</h2>
+              <p className="mt-1 text-sm text-zinc-400">Reading the paper and generating study goals tailored to it.</p>
+            </div>
+          </div>
+          <div className="mb-4 h-2 overflow-hidden rounded-full bg-white/10">
+            <div className="h-full rounded-full bg-acid transition-all duration-500" style={{ width: `${((prepareStep + 1) / prepareSteps.length) * 100}%` }} />
+          </div>
+          <div className="space-y-2">
+            {prepareSteps.map((step, index) => (
+              <div key={step} className={`flex items-center gap-2 text-sm ${index <= prepareStep ? "text-zinc-100" : "text-zinc-600"}`}>
+                <span className={`h-2 w-2 rounded-full ${index <= prepareStep ? "bg-acid" : "bg-zinc-700"}`} />
+                {step}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -93,11 +152,10 @@ export function PaperModal({ paper, onClose, onBookmark, isBookmarked, onViewed 
             ) : null}
             <button
               onClick={preparePaper}
-              disabled={preparing}
-              className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-black hover:bg-acid disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-black hover:bg-acid"
             >
               <Sparkles size={16} />
-              {preparing ? "Preparing paper..." : "Study with AI"}
+              Study with AI
             </button>
           </div>
         </div>

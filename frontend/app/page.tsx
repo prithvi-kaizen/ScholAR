@@ -211,11 +211,14 @@ export default function HomePage() {
     setUploading(true);
     setUploadStep(0);
     setError("");
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort(), 90_000);
     try {
       setUploadStep(0);
       const response = await fetch(`${backendUrl}/api/papers/upload`, {
         method: "POST",
-        body: formData
+        body: formData,
+        signal: timeoutController.signal
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
@@ -234,8 +237,13 @@ export default function HomePage() {
       setUploadStep(4);
       router.push(`/paper/${encodeURIComponent(payload.paper_id)}`);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Upload failed");
+      if (caught instanceof DOMException && caught.name === "AbortError") {
+        setError("Upload timed out. Please try again.");
+      } else {
+        setError(caught instanceof Error ? caught.message : "Upload failed");
+      }
     } finally {
+      clearTimeout(timeoutId);
       setUploading(false);
     }
   }
