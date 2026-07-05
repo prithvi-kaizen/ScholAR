@@ -102,14 +102,18 @@ Spans *Attention Is All You Need*, *RAG*, and *LLaMA* across 8 claim types: `res
 | Metric | Score |
 |---|---:|
 | Retrieval R@5 | **18 / 18 = 1.000** |
-| Caption fallback rate | 2 / 18 (11%) |
+| Caption fallback rate | 0 / 18 (0%) |
 
-### Multi-Document Locality Benchmark (10 paper clusters, M3SciQA-style)
+### Multi-Document Locality Benchmark (10 `locality_arxiv` cases, M3SciQA-style)
 
 | Metric | Score |
 |---|---:|
-| Locality R@5 | 0.80 |
-| MRR | 0.338 |
+| Locality R@1 | 0.00 |
+| Locality R@5 | 0.50 |
+| MRR | 0.183 |
+| Random-guess floor (R@5) | 0.625 |
+
+A chunk-ID collision bug (fixed) had inflated an earlier version of these numbers (R@5 0.80, MRR 0.356) — the corrected result is at or below the random-guessing floor on this small benchmark. See the paper's Discussion for the full writeup and the oracle-bound analysis.
 
 ---
 
