@@ -84,45 +84,51 @@ pairs across 3 landmark NLP papers, evaluated using Recall@$K$ and
 Mean Reciprocal Rank (MRR).
 Our BM25-primary retrieval system achieves Recall@5 of 0.929 and MRR of 0.788,
 outperforming keyword-overlap baselines by 10.1 percentage points in MRR.
+An NLI-based faithfulness metric (Combined Faithfulness Score, CFS) evaluated on
+a 51-case oracle-claim benchmark shows hybrid BM25+Dense+RRF retrieval reaching
+Combined CFS of 0.829 and 96.1\% of claims judged faithful.
 On an 18-case visual-grounding pilot benchmark spanning four reasoning types,
 retrieval correctly routes to the target figure or table in 18/18 cases.
-On a 10-cluster multi-document locality benchmark, ScholAR retrieves the correct
-cited paper within the top 5 results 80\% of the time (MRR 0.356), though
-top-1 precision (10\%) remains a clear open challenge, consistent with prior
-findings that even large foundation models struggle at cross-paper localization.
+On a 10-case multi-document locality benchmark, ScholAR retrieves the correct
+cited paper within the top 5 results half of the time (Recall@5 0.50, MRR 0.183),
+below a random-guessing floor computed over the same candidate pool (Recall@5
+0.625) --- a clear open challenge, consistent with prior findings that even
+large foundation models struggle at cross-paper localization.
 \end{abstract}
 
 % -----------------------------------------------------------------------
 \section{Introduction}
 % -----------------------------------------------------------------------
-% Target length: ~0.75 columns (approx. 350--450 words)
-%
-% Paragraph structure:
-%   P1: Hook -- why reading research papers is hard; the trust problem with
-%       general-purpose LLMs that summarize without grounding.
-%   P2: Existing solutions and their limitations.
-%       (Generic PDF chat tools, hallucinated citations, no structured retrieval)
-%   P3: The specific problem this paper addresses.
-%       (Page-preserving chunking + lexical grounding + indirect citation)
-%   P4: Our contributions (bulleted list below).
-%   P5: Paper outline.
-%
-% Contributions:
+Reading unfamiliar scientific papers is slow precisely where it matters
+most: verifying that a claimed number or method detail says what a reader
+(or an assistant) thinks it says. General-purpose LLM chat over an uploaded
+PDF makes this worse before it helps --- it summarizes fluently but readily
+invents page numbers, since nothing constrains a citation to text the model
+actually saw. Existing scientific-RAG systems close part of this gap but
+assume resources most readers lack locally: cloud backends, multi-million-paper
+datastores, or both (Section~\ref{sec:related-sciRAG}). We instead ask what
+grounded, citable QA looks like under a hard local-only constraint: a
+single sub-15B model, no cloud API. ScholAR combines page-preserving
+chunking (every chunk maps to one PDF page) with an indirect citation
+mechanism (the model cites evidence IDs it actually retrieved, not
+free-form page numbers), extended to figures/tables and a paper's own
+cited references. Concretely, we contribute:
 \begin{itemize}
-  \item We propose \textbf{ScholAR}, an end-to-end, \textbf{fully local} RAG framework
-        for scientific document comprehension that enforces strict page-boundary-preserving
-        text segmentation and performs both text and vision inference on-device.
-  \item We introduce an \textbf{indirect citation grounding} mechanism that decouples
-        LLM generation from page number prediction, reducing hallucinated citations.
-  \item We extend single-document grounding to \textbf{visual question answering} over
-        figures and tables and to \textbf{multi-document citation-chasing}, resolving
-        and ingesting a paper's own references so cross-paper questions can be answered.
-  \item We present quantitative benchmarks for all four capabilities
+  \item An end-to-end, \textbf{fully local} RAG framework for scientific document
+        comprehension enforcing strict page-boundary-preserving text segmentation,
+        with text and vision inference both on-device.
+  \item An \textbf{indirect citation grounding} mechanism: the model cites only
+        evidence IDs mapped to chunks it actually retrieved, preventing
+        page-number hallucination by construction.
+  \item Extensions to \textbf{visual question answering} over figures/tables and
+        \textbf{multi-document citation-chasing}, resolving and ingesting a
+        paper's own references for cross-paper questions.
+  \item Quantitative benchmarks for all four capabilities
         (retrieval, faithfulness, visual grounding, multi-document locality),
         each with manually annotated cases and Recall@$K$/MRR-style metrics.
-  \item We conduct controlled \textbf{ablation experiments} comparing keyword overlap,
+  \item Controlled \textbf{ablation experiments} comparing keyword overlap,
         BM25-only, and BM25-primary-with-reranking retrieval architectures, and
-        compare two local models (\texttt{qwen3.5:9b}, \texttt{gemma4:12b}) on
+        comparing two local models (\texttt{qwen3.5:9b}, \texttt{gemma4:12b}) on
         visual grounding to characterize model choice for a fully on-device system.
 \end{itemize}
 
@@ -135,57 +141,51 @@ findings that even large foundation models struggle at cross-paper localization.
 \subsection{Retrieval-Augmented Generation}
 % Cover: Lewis et al. (2020) RAG paper, ColBERT, BEIR benchmark,
 % standard RAG pipelines and their PDF-specific limitations.
-The standard RAG framework was introduced by Lewis et al.\ \cite{lewis2020rag}.
-BM25 probabilistic retrieval was formalised by Robertson and Zaragoza \cite{robertson2009bm25}.
+The standard RAG framework was introduced by \citet{lewis2020rag}.
+BM25 probabilistic retrieval was formalised by \citet{robertson2009bm25}.
 The BEIR benchmark \cite{thakur2021beir} provides a heterogeneous zero-shot evaluation suite for retrieval systems.
 
 \subsection{Scientific Literature RAG Systems}
 \label{sec:related-sciRAG}
-PaperQA \cite{lala2023paperqa} was an early high-accuracy RAG agent for scientific
-QA and literature synthesis, but relies on proprietary cloud LLMs for both
-retrieval agency and generation.
-OpenScholar \cite{asai2024openscholar} substantially outperforms PaperQA and
-GPT-4o on literature-synthesis quality using an open retrieval pipeline, though
-generation still runs through large hosted or self-hosted models rather than
-a single fully local system.
-SciRAG \cite{ding2025scirag} further improves over both OpenScholar and PaperQA
-via citation-graph-aware symbolic reasoning and outline-guided synthesis.
-None of these systems targets a fully on-device deployment: all either call a
-cloud API or assume access to large (multi-tens-of-billions-of-parameters)
-self-hosted models. ScholAR instead targets consumer hardware, running both
-text and vision inference through a single sub-15B-parameter local model,
-trading some raw capability for zero data exposure and zero API dependency.
+PaperQA \cite{lala2023paperqa} was an early high-accuracy RAG agent for
+scientific QA, relying on proprietary cloud LLMs throughout; its successor
+PaperQA2~\cite{lala2024paperqa2} reports superhuman literature-synthesis
+accuracy via an agentic, multi-backend (GPT-4-/Claude-class) design.
+OpenScholar \cite{asai2024openscholar} substantially outperforms PaperQA2
+and GPT-4o using an open retrieval pipeline, though generation still runs
+through large hosted or self-hosted models. SciRAG \cite{ding2025scirag}
+further improves over both via citation-graph-aware symbolic reasoning.
+None targets a fully on-device deployment: all call a cloud API or assume
+large self-hosted models. ScholAR instead targets consumer hardware,
+running both text and vision through a single sub-15B-parameter local
+model, trading some capability for zero data exposure and API dependency.
 
 \subsection{Scientific Document Understanding}
 % Cover: ScholarBERT, SciDuet, DOC2PPT, SlideTailor (AAAI-26),
 % S2ORC, ACL Anthology, Grobid, Nougat for structured parsing.
-GROBID \cite{lopez2009grobid} and Nougat \cite{blecher2023nougat} provide structured
-parsing of academic PDFs into machine-readable formats.
-SlideTailor \cite{zeng2026slidetailor} generates personalised slides from scientific papers
-but relies on raw PDF text extraction, the same bottleneck ScholAR addresses.
-The S2ORC corpus \cite{lo2020s2orc} provides a large-scale resource of parsed academic papers.
+GROBID \cite{lopez2009grobid} and Nougat \cite{blecher2023nougat} provide
+structured parsing of academic PDFs into machine-readable formats.
+SlideTailor \cite{zeng2026slidetailor} generates personalised slides from
+papers but relies on the same raw PDF text extraction bottleneck ScholAR
+addresses. The S2ORC corpus \cite{lo2020s2orc} provides a large-scale
+resource of parsed academic papers.
 
 \subsection{Visual Document Retrieval}
-ColPali \cite{faysse2024colpali} and its successors index each document page as
-a visual embedding, enabling page retrieval directly from image content without
-OCR or layout-aware text extraction. This is an architecturally different bet
-from ScholAR's approach: rather than embedding whole pages as images, ScholAR
-keeps BM25 text retrieval as the primary signal and routes only figure/table-targeted
-queries to a vision-capable model applied to a cropped region around the
-identified figure. This keeps the common text-QA path fast and fully lexical
-while still enabling grounded visual question answering when a query names or
-implies a specific figure or table.
+ColPali \cite{faysse2024colpali} and its successors index each document page
+as a visual embedding, retrieving pages directly from image content without
+OCR. ScholAR takes an architecturally different, cheaper bet: BM25 text
+retrieval stays the primary signal for the common text-QA path, and only
+figure/table-targeted queries route to a vision-capable model applied to a
+cropped region around the identified figure.
 
 \subsection{Multi-Modal and Multi-Document Scientific QA}
 M3SciQA \cite{li2024m3sciqa} is the closest existing benchmark to ScholAR's
-multi-document extension: it pairs each anchor paper with its cited references
-and requires both multi-modal and cross-document reasoning, evaluating 18
-foundation models and finding that all of them substantially underperform
-human experts at this task. ScholAR's multi-document locality benchmark
-(Section~\ref{sec:multidoc-bench}) is smaller in scope but directly comparable
-in spirit, and our results echo M3SciQA's central finding: cross-paper
-localization is hard even when the correct reference is already available in
-the retrieval pool.
+multi-document extension: it pairs each anchor paper with its cited
+references, requiring multi-modal and cross-document reasoning, and finds
+18 foundation models all substantially underperform humans at this task.
+ScholAR's smaller multi-document locality benchmark
+(Section~\ref{sec:multidoc-bench}) echoes this: cross-paper localization is
+hard even when the correct reference is already in the retrieval pool.
 
 \subsection{Question Answering over Documents}
 % Cover: SQuAD, Natural Questions, TriviaQA, SciFact (fact verification),
@@ -195,40 +195,52 @@ covering information-seeking QA over scientific papers.
 SciFact \cite{wadden2020scifact} evaluates fact verification over biomedical literature.
 
 \subsection{Citation Grounding and Faithfulness}
-Gao et al.\ \cite{gao2023attributing} study attribution in LLM generation;
+\label{sec:related-faithfulness}
+\citet{gao2023attributing} study attribution in LLM generation;
 their analysis shows that citation quality degrades sharply without retrieval grounding.
-Min et al.\ \cite{min2023factscore} propose FActScore, which decomposes generated text
+\citet{min2023factscore} propose FActScore, which decomposes generated text
 into atomic claims and verifies each claim against a knowledge source, adopting
 this decomposition strategy in our benchmark construction.
-Laban et al.\ \cite{laban2022summac} introduce SummaC for consistency detection
+\citet{laban2022summac} introduce SummaC for consistency detection
 in summarization, with two variants: SummaC-Conv (fine-tuned NLI) and SummaC-ZS
 (zero-shot via sentence embeddings).
 We implement SummaC-ZS because it does not require a fine-tuned NLI model
 (e.g., DeBERTa-MNLI), making it reproducible without GPU infrastructure or API access.
-Zha et al.\ \cite{zha2023alignscore} show that embedding-based alignment metrics
+\citet{zha2023alignscore} show that embedding-based alignment metrics
 substantially outperform ROUGE-family metrics for hallucination detection;
 this motivates our choice of SummaC-ZS over lexical alternatives.
+RAGAS~\cite{es2024ragas} is the closest existing automated RAG-faithfulness
+framework to our own CFS metric, but scores an answer against retrieved
+context directly rather than decomposing it into atomic claims verified
+against oracle evidence, which is the design choice we adopt from FActScore.
 
 
 % -----------------------------------------------------------------------
 \section{Problem Formulation}
 % -----------------------------------------------------------------------
-% Target length: ~0.25--0.50 columns
-%
-% Formally define the task:
-%   Given a scientific PDF D, a user question q, and a corpus of
-%   extracted chunks C = {c_1, ..., c_n}, the system must:
-%   (1) Retrieve a ranked subset C_q ⊆ C of relevant chunks.
-%   (2) Generate a grounded answer a using only evidence from C_q.
-%   (3) Associate each claim in a with a verifiable citation (chunk_id, page).
-%
-% Introduce notation used throughout the paper.
+Given a scientific PDF $D$, a user question $q$, and a corpus of extracted
+chunks $\mathcal{C} = \{c_1, \ldots, c_n\}$ derived from $D$ (and, in
+multi-document mode, from $D$'s cited references), the system must retrieve
+a ranked subset $\mathcal{C}_q \subseteq \mathcal{C}$ and generate an answer
+$\hat{a}$ grounded only in that evidence:
 
 \begin{equation}
   \hat{a} = \underset{a}{\arg\max}\; P(a \mid q,\, \mathcal{C}_q)
   \quad \text{where} \quad
   \mathcal{C}_q = \text{Retrieve}(q, \mathcal{C}, k)
 \end{equation}
+
+Each chunk $c_i$ carries a source page number and, in multi-document mode, a
+source paper identifier, so $\mathcal{C}_q$ always resolves back to a
+specific page of a specific document. Generation attaches each claim in
+$\hat{a}$ to an evidence identifier $e_j$ referencing a specific
+$c_i \in \mathcal{C}_q$ (Section~\ref{sec:cfs-method}) rather than a
+free-form page number, so citations are constrained to what was actually
+retrieved regardless of $\text{Retrieve}$'s own precision. Visual grounding
+(Section~\ref{sec:method-visual}) substitutes an image-conditioned
+generation step when $q$ names a figure or table; multi-document mode
+(Section~\ref{sec:method-multidoc}) enlarges $\mathcal{C}$ across papers
+before $\text{Retrieve}$ is applied, without changing this formulation.
 
 
 % -----------------------------------------------------------------------
@@ -237,20 +249,13 @@ this motivates our choice of SummaC-ZS over lexical alternatives.
 
 \subsection{Document Processing Pipeline}
 Given a paper (an arXiv identifier or an uploaded PDF), ScholAR downloads or
-accepts the file, extracts per-page text via PyMuPDF, applies page-preserving
-chunking (below) and figure/table extraction (Section~\ref{sec:method-visual}),
-and persists the results as \texttt{metadata.json}, \texttt{pages.json},
-\texttt{chunks.json}, and \texttt{figures.json}. Figure~\ref{fig:pipeline}
-summarises the flow from raw PDF to a grounded, citable answer.
-
-\begin{figure}[t]
-  \centering
-  % \includegraphics[width=\columnwidth]{pipeline}
-  \caption{ScholAR document processing and retrieval pipeline.
-           The system extracts page-level text, applies page-preserving chunking,
-           and serves grounded answers with indirect citation IDs.}
-  \label{fig:pipeline}
-\end{figure}
+accepts the file, extracts per-page text via PyMuPDF~\cite{pymupdf}, applies
+page-preserving chunking (below) and figure/table extraction
+(Section~\ref{sec:method-visual}), and persists the results as
+\texttt{metadata.json}, \texttt{pages.json}, \texttt{chunks.json}, and
+\texttt{figures.json}: raw PDF in, page-preserving chunks with source page
+numbers and (in multi-document mode) source paper identifiers out, ready for
+retrieval and citation-grounded generation.
 
 \subsection{Page-Preserving Chunking}
 Standard character- or token-window chunking routinely splits a chunk across
@@ -284,84 +289,73 @@ the top of the page; the retriever uses this as a section-hint signal below.
 \end{algorithm}
 
 \subsection{BM25-Primary Retrieval with Heuristic Reranking}
+\label{sec:method-retrieval}
 The production retriever ranks chunks with Okapi BM25~\cite{robertson2009bm25}
-($k_1{=}1.4$, $b{=}0.72$) as the primary signal, then applies a small set of
-additive heuristic boosts: a query-expansion dictionary maps research-specific
-terms to related vocabulary (e.g., \emph{result} $\to$ \emph{accuracy, BLEU,
-score}); an explicit page number in the query adds a page-hint boost; query
-language implying a paper section (e.g., \emph{limitation}, \emph{results})
-adds a section-hint boost when a candidate chunk's detected section matches;
-and rhetorical phrase cues (\emph{we propose}, \emph{we introduce},
-\emph{outperforms}) add a small boost, since claim-bearing sentences are more
-likely to satisfy an information-seeking query. Visual-cue boosting for
-figure/table chunks (Section~\ref{sec:method-visual}) uses the same additive
-mechanism. We initially explored a design in which a dense/semantic score
-dominated ranking; our own retrieval ablation (Table~\ref{tab:retrieval})
-showed BM25-primary was the more reliable choice on this benchmark, so
-semantic, section, and phrase signals are kept as light rerankers rather than
-a primary signal, while dense retrieval is used only in the separate Hybrid
+($k_1{=}1.4$, $b{=}0.72$) as the primary signal, then applies small additive
+heuristic boosts: a query-expansion dictionary maps research-specific terms
+to related vocabulary (e.g., \emph{result} $\to$ \emph{accuracy, BLEU,
+score}); an explicit page number adds a page-hint boost; query language
+implying a paper section (e.g., \emph{limitation}, \emph{results}) adds a
+section-hint boost on a matching chunk; and rhetorical phrase cues
+(\emph{we propose}, \emph{we introduce}, \emph{outperforms}) add a small
+boost, since claim-bearing sentences more often satisfy an
+information-seeking query. Visual-cue boosting for figure/table chunks
+(Section~\ref{sec:method-visual}) uses the same mechanism. We initially
+explored a design where a dense/semantic score dominated ranking; our own
+ablation (Table~\ref{tab:retrieval}) showed BM25-primary more reliable on
+this benchmark, so semantic, section, and phrase signals stay light
+rerankers, while dense retrieval is used only in the separate Hybrid
 BM25+Dense+RRF configuration evaluated for faithfulness
 (Section~\ref{sec:faith-bench}).
 
 \subsection{Indirect Citation Grounding}
 Free-form citation prompting --- asking the model to write, e.g., ``[p.\ 7]''
-directly in its answer --- is fragile: the model has no reliable way to know
-which page a claim actually came from and will readily hallucinate a
-plausible-looking page number. ScholAR instead assigns each piece of
-retrieved evidence a short-lived evidence identifier (\texttt{E1},
-\texttt{E2}, \ldots) for the current turn, and the generation prompt
-instructs the model to cite \emph{only} these evidence IDs, never a page
-number directly. After generation, ScholAR discards any page number the
-model wrote on its own (a direct violation of the instruction) and rewrites
-each valid evidence-ID citation into a compact numbered reference
-(\texttt{[1]}, \texttt{[2]}, \ldots) in citation order; the frontend resolves
-each numbered reference back to its source chunk's page and highlights the
-corresponding region of the rendered PDF. This decouples the model's
-citation behavior from page-number prediction entirely: the model only has
-to decide \emph{which} retrieved evidence supports a claim, while the
-mapping from evidence ID to actual page and highlight region is deterministic
-application logic rather than a model output.
+directly --- is fragile: the model has no reliable way to know which page a
+claim came from and will readily hallucinate a plausible-looking one.
+ScholAR instead assigns each piece of retrieved evidence a short-lived
+evidence identifier (\texttt{E1}, \texttt{E2}, \ldots) for the current turn,
+and the generation prompt instructs the model to cite \emph{only} these IDs,
+never a page number directly. After generation, ScholAR discards any page
+number the model wrote on its own and rewrites each valid evidence-ID
+citation into a compact numbered reference (\texttt{[1]}, \texttt{[2]},
+\ldots); the frontend resolves each reference back to its source chunk's
+page and highlights the corresponding PDF region. The model only decides
+\emph{which} evidence supports a claim; the mapping to actual page and
+highlight is deterministic application logic, not a model output.
 
 \subsection{Visual Grounding}
 \label{sec:method-visual}
 When a query is judged to reference visual content (via cue terms such as
 ``figure,'' ``table,'' or ``plot,'' or an explicit figure/table number),
-retrieval boosts figure and table chunks so they can compete against much
-longer text chunks in the BM25 ranking. Each figure and table caption on a
-page is detected via regex, and the region above the caption is rendered at
-$3\times$ zoom and cached as a standalone image alongside the caption text.
-A query naming an explicit figure or table number (e.g., ``explain figure 2'')
-is matched directly against that figure's own label rather than relying solely
-on lexical overlap: this matters because our tokenizer, like most BM25
-implementations, only begins a token on a letter, so ``Figure 2'' and
-``Figure 14'' both reduce to the token \texttt{figure} once digits are
-dropped, making them otherwise indistinguishable to the ranker. When the
-top-ranked chunk is a figure or table, ScholAR base64-encodes the cached image
-and sends it, together with the caption and supporting text context, to the
-same local Ollama model used for text generation (\texttt{qwen3.5:9b} and
-\texttt{gemma4:12b} are both natively multimodal), rather than to a separate
-vision-specific model or a cloud vision API. If the image is missing or the
-model call fails, the system degrades to a caption-only extractive answer
-rather than failing outright.
+retrieval boosts figure and table chunks so they can compete against longer
+text chunks in the BM25 ranking. Each figure/table caption on a page is
+detected via regex, and the region above it is rendered at $3\times$ zoom
+and cached alongside the caption text. A query naming an explicit figure or
+table number (e.g., ``explain figure 2'') is matched directly against that
+figure's own label rather than relying on lexical overlap alone: our
+tokenizer, like most BM25 implementations, only begins a token on a letter,
+so ``Figure 2'' and ``Figure 14'' both reduce to \texttt{figure} once digits
+are dropped, making them otherwise indistinguishable to the ranker. When the
+top-ranked chunk is a figure or table, ScholAR base64-encodes the cached
+image and sends it, with the caption and supporting text, to the same local
+Ollama model used for text generation (both models are natively
+multimodal) rather than a separate vision model or cloud API. If the image
+is missing or the model call fails, the system degrades to a caption-only
+extractive answer rather than failing outright.
 
 \subsection{Multi-Document Extension}
 \label{sec:method-multidoc}
 ScholAR resolves an anchor paper's own bibliography and lets the user ingest
-individual cited works into the same study session. For arXiv papers, the
-reference list is resolved via the Semantic Scholar API by arXiv ID; for
-uploaded PDFs without a known arXiv identifier, references are resolved via
-an S2 title search over the last several pages of the document, then
-regex-matched against both numbered (\texttt{[N]}) and author--year
-(\texttt{Vaswani et al., 2017}) in-text citation styles. Ingesting a reference
-downloads its PDF (when available), applies the same page-preserving
-chunking pipeline as the anchor paper, and tags every resulting chunk with a
-\texttt{source\_paper\_id}. At query time, chunks from all currently-loaded
-secondary papers are merged with the anchor paper's chunks into a single
-retrieval pool, and each returned citation is labeled with its source paper so
-answers can distinguish anchor-paper evidence from evidence drawn from a
-cited work.
+individual cited works into the same study session: for arXiv papers via the
+Semantic Scholar API by arXiv ID; for uploaded PDFs, via an S2 title search
+over the last several pages, regex-matched against numbered (\texttt{[N]})
+and author--year (\texttt{Vaswani et al., 2017}) citation styles. Ingesting
+a reference downloads its PDF, applies the same page-preserving chunking as
+the anchor paper, and tags every chunk with a \texttt{source\_paper\_id}. At
+query time, chunks from all loaded secondary papers merge with the anchor's
+into one retrieval pool, and each citation is labeled with its source paper.
 
-\subsection{Study Goal Generation}
+\subsection{Study Goal Generation (Product Feature, Not Independently Benchmarked)}
 ScholAR generates eight paper-specific study goals per document using a local
 Ollama model (\texttt{qwen3.5:9b} or \texttt{gemma4:12b}).
 Each goal has a title, a 2--4 sentence description grounded in paper text,
@@ -369,14 +363,17 @@ and 3--5 recursive subquestions whose evidence chunks are resolved by
 a second BM25 retrieval pass.
 When no LLM is available, a fully extractive fallback generates goals
 directly from sentence patterns in the abstract and introduction.
+We describe this feature for completeness, but --- unlike retrieval,
+faithfulness, visual grounding, and multi-document locality --- we do not
+report a dedicated benchmark for it in this paper; it is not one of this
+paper's evaluated contributions.
 
 \subsection{Faithfulness Evaluation: SummaC-ZS + Semantic Coverage}
 \label{sec:cfs-method}
-We evaluate citation faithfulness using the SummaC-ZS protocol~\cite{laban2022summac},
-the zero-shot variant of SummaC that does not require a fine-tuned NLI model.
-The key advantage of SummaC-ZS over ROUGE-family metrics is that it operates
-at the \emph{semantic} level via dense embeddings, not at the lexical level,
-making it robust to paraphrased hallucinations that ROUGE cannot detect.
+We evaluate citation faithfulness using the SummaC-ZS
+protocol~\cite{laban2022summac}, the zero-shot variant of SummaC that does
+not require a fine-tuned NLI model (Section~\ref{sec:related-faithfulness}
+motivates this choice over ROUGE-family metrics).
 
 \textbf{Tier 1: SummaC-ZS (Semantic Entailment).}
 Each ground-truth claim $c$ is first decomposed into atomic sub-claims
@@ -395,6 +392,10 @@ $\max_j s(a_i, \mathcal{C}_j) \geq \tau_e$ (threshold $\tau_e = 0.42$),
 \textsc{Neutral} if $\geq \tau_n = 0.25$, and \textsc{Contradiction} otherwise.
 Numeric claims containing values not present in any retrieved chunk are
 down-graded from \textsc{Entailment} to \textsc{Neutral}.
+$\tau_e$, $\tau_n$, and the Faithful cutoff (CFS $\geq 0.55$, below) were
+calibrated manually against a small pilot set of claims with obvious
+gold labels; we have not run a systematic sensitivity analysis over these
+thresholds, which we flag as necessary follow-up rather than treat as settled.
 \begin{equation}
   \mathrm{SummaC\text{-}ZS}(c, \mathcal{C}) =
   \frac{|\{a_i : \mathrm{label}(a_i) = E\}|}{m}
@@ -410,7 +411,7 @@ Fraction of numeric values and technical proper nouns from the claim
 found verbatim in the top-5 retrieved chunks (exact lexical recall for
 quantities and named entities, where semantics cannot substitute).
 
-The combined score is:
+The three tiers combine into a single Combined Faithfulness Score (CFS):
 \begin{equation}
   \mathrm{CFS} = 0.50 \times \mathrm{SummaC\text{-}ZS} + 0.30 \times \mathrm{SCR} + 0.20 \times \mathrm{KFP}
   \label{eq:cfs}
@@ -430,8 +431,9 @@ No user data ever leaves the local machine.
 All experiments in this paper were run on a consumer laptop (Apple Silicon,
 18\,GB unified memory) under Python 3.12, PyTorch, and Ollama, with
 \texttt{all-MiniLM-L6-v2}~\cite{reimers2019sbert} loaded from a local
-Hugging Face cache for the faithfulness pipeline; no GPU or cloud compute
-was used for any reported result.
+Hugging Face cache for the faithfulness pipeline; no discrete or cloud GPU
+was used for any reported result --- inference runs via Ollama's
+Metal-accelerated backend on the laptop's own integrated GPU.
 
 
 % -----------------------------------------------------------------------
@@ -469,21 +471,17 @@ All annotations were produced manually by the authors.
 \label{sec:visual-bench}
 We construct an 18-case pilot benchmark spanning four reasoning types:
 \texttt{visual\_understanding} (6), \texttt{data\_extraction} (5),
-\texttt{comparison} (4), and \texttt{location} (3). Each case specifies a
-figure- or table-targeted question and the expected figure/table label(s)
-that should be retrieved. We report two signals: \emph{retrieval grounding}
---- whether the correct figure or table is ranked first, isolating the
-visual-cue retrieval and figure-number matching mechanism
-(Section~\ref{sec:method-visual}) from the vision model's reading accuracy
---- and a lightweight \emph{answer-quality} proxy (the fraction of non-trivial
-content words from the question itself that reappear in the generated
-answer), which does depend on the vision model. Under \texttt{gemma4:12b}, retrieval grounding is 18/18
-and every case is answered directly by the vision model with mean answer
-score 0.731 (no case fell back to the caption-only degraded path).
-Table~\ref{tab:visual} reports retrieval results by reasoning type. We
-deliberately keep this benchmark small and frame it as a pilot study: it
-validates that the routing mechanism works and gives a first read on answer
-quality, not that visual question answering is solved.
+\texttt{comparison} (4), and \texttt{location} (3), each specifying a
+figure/table-targeted question and the expected label(s). We report two
+signals: \emph{retrieval grounding} --- whether the correct figure or table
+ranks first, isolating retrieval (Section~\ref{sec:method-visual}) from the
+vision model's reading accuracy --- and a lightweight \emph{answer-quality}
+proxy (fraction of non-trivial question content words that reappear in the
+answer). Under \texttt{gemma4:12b}, retrieval grounding is 18/18 with mean
+answer score 0.731 and no caption-only fallback. Table~\ref{tab:visual}
+reports retrieval by reasoning type. We deliberately keep this benchmark
+small and frame it as a pilot: it validates the routing mechanism and gives
+a first read on answer quality, not that visual QA is solved.
 
 \begin{table}[t]
   \centering
@@ -508,14 +506,13 @@ quality, not that visual question answering is solved.
 \subsection{Multi-Document Locality Benchmark}
 \label{sec:multidoc-bench}
 We construct an 18-case multi-document benchmark in the style of
-M3SciQA~\cite{li2024m3sciqa}: 15 \emph{locality} cases, each requiring the
-system to identify which cited reference (not the anchor paper) contains the
-answer, and 3 \emph{detail} cases answerable from the anchor paper alone as a
-sanity check. Of the 15 locality cases, 10 reference works with a resolvable
-arXiv identifier (\texttt{locality\_arxiv}, our primary metric); the remaining
-5 reference pre-arXiv works or datasets (e.g., WMT, Dropout, Wikipedia) that
-cannot currently be downloaded and always score zero. Table~\ref{tab:multidoc}
-reports Recall@$K$ and MRR for each subset.
+M3SciQA~\cite{li2024m3sciqa}: 15 \emph{locality} cases requiring the system
+to identify which cited reference (not the anchor paper) contains the
+answer, and 3 \emph{detail} cases answerable from the anchor alone as a
+sanity check. Of the locality cases, 10 reference arXiv-resolvable works
+(\texttt{locality\_arxiv}, our primary metric); the remaining 5 reference
+pre-arXiv works or datasets (e.g., WMT, Dropout) that cannot currently be
+downloaded and always score zero.
 
 \begin{table}[t]
   \centering
@@ -528,21 +525,33 @@ reports Recall@$K$ and MRR for each subset.
     \toprule
     \textbf{Subset} & \textbf{$N$} & \textbf{R@1} & \textbf{R@5} & \textbf{MRR} \\
     \midrule
-    All                & 18 & 0.222 & 0.611 & 0.364 \\
-    Locality (all)     & 15 & 0.067 & 0.533 & 0.237 \\
-    Locality (arXiv)   & 10 & 0.100 & \textbf{0.800} & 0.356 \\
+    All                & 18 & 0.167 & 0.444 & 0.269 \\
+    Locality (all)     & 15 & 0.000 & 0.333 & 0.122 \\
+    Locality (arXiv)   & 10 & 0.000 & 0.500 & 0.183 \\
     Detail (anchor)    & 3  & \textbf{1.000} & \textbf{1.000} & \textbf{1.000} \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-The correct cited paper is usually recoverable within the top 5 results
-(80\%) but rarely ranks first (10\%): with dozens of papers' chunks merged
-into a single flat retrieval pool, a niche secondary paper must win on lexical
-match alone against the anchor paper's typically larger, more topically
-central chunk set. Section~\ref{sec:discussion-multidoc} discusses this
-finding relative to M3SciQA's comparable observation that even large
-foundation models struggle at this exact task.
+The correct cited paper is recoverable within the top 5 results only half
+the time (50\%) and essentially never ranks first (0\%): with dozens of
+papers' chunks merged into a single flat retrieval pool, a niche secondary
+paper must win on lexical match alone against the anchor paper's typically
+larger, more topically central chunk set. Section~\ref{sec:discussion-multidoc}
+discusses this finding relative to M3SciQA's comparable observation that even
+large foundation models struggle at this exact task.
+
+\textbf{A chunk-ID collision bug inflated an earlier version of this
+result.} We initially measured Locality (arXiv) at R@5 0.800 / MRR 0.356.
+Per-paper chunk numbering restarts at \texttt{chunk\_001} for every paper,
+and the retrieval scorer keyed its BM25 score cache by this
+non-globally-unique ID rather than list position, so merged multi-document
+chunks with colliding IDs silently inherited each other's scores (verified:
+15 of 34 chunks collided when merging two representative papers). The
+numbers above and in Table~\ref{tab:multidoc-bounds} are corrected after the
+fix, reported the same way we reported the tokenizer-fix regression in
+Section~\ref{sec:discussion-multidoc}: as a genuine finding, not a number
+to quietly revise.
 
 To give this number honest context rather than leaving it unexplained, we
 compute two reference bounds on the 10 \texttt{locality\_arxiv} cases
@@ -564,49 +573,38 @@ Table~\ref{tab:multidoc-bounds} reports all three.
     \toprule
     \textbf{System} & \textbf{R@1} & \textbf{R@5} & \textbf{MRR} \\
     \midrule
-    Random floor (no signal)        & 0.125 & 0.625 & 0.340 \\
-    ScholAR (flat retrieval)        & 0.100 & \textbf{0.800} & 0.356 \\
-    Oracle (correct paper isolated) & \textbf{0.700} & \textbf{0.900} & \textbf{0.783} \\
+    Random floor (no signal)        & \textbf{0.125} & 0.625 & \textbf{0.340} \\
+    ScholAR (flat retrieval)        & 0.000 & 0.500 & 0.183 \\
+    Oracle (correct paper isolated) & 0.000 & \textbf{0.700} & 0.289 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-Two things stand out. First, ScholAR's actual R@1 (0.100) is \emph{below}
-the random-guess floor (0.125) --- at the single-guess precision level, flat
-retrieval across a large multi-paper pool is not just imperfect, it is
-slightly worse than chance, almost certainly because the anchor paper's
-larger, more BM25-friendly chunk set systematically wins the top rank
-regardless of which secondary paper is actually most relevant. At R@5
-(0.800 vs.\ a 0.625 floor), the same flat retrieval clearly does carry a real
-signal above chance once enough slots are available for it to surface.
-Second, the oracle bound (R@1 0.700, MRR 0.783) shows that most of the gap
-between ScholAR and a perfect system is a \emph{paper-selection} problem, not
-a chunk-level retrieval problem: once the correct paper is isolated,
-within-paper retrieval is nearly as strong as the single-document benchmark
-in Table~\ref{tab:retrieval}. This directly motivates the per-paper-aware
-retrieval and RLM directions discussed next, rather than further tuning of
-chunk-level ranking.
+Both bounds are, after the chunk-ID fix above, less favorable than we
+initially found: ScholAR's R@5 (0.500) sits \emph{below} the random-guess
+floor (0.625, average 8.0 candidate papers per case), and the oracle bound
+(correct paper isolated) still only reaches R@1 0.000 / MRR 0.289 ---
+meaning even with paper-selection assumed solved, chunk-level retrieval
+still fails to rank the right chunk first in any case. Section~\ref{sec:discussion-multidoc}
+discusses what this revises about our earlier interpretation.
 
 \subsection{Local Model Comparison}
 \label{sec:model-comparison}
-Retrieval and faithfulness scoring in ScholAR are model-independent (BM25 and
-a fixed local sentence encoder, with no LLM call in either path), so the only
-benchmark where the choice of local Ollama model is actually measurable is
-visual grounding, where the vision-capable model both reads the figure and
-writes the answer. We run the 18-case visual grounding benchmark
-(Section~\ref{sec:visual-bench}) under two natively multimodal local models,
-\texttt{gemma4:12b} and \texttt{qwen3.5:9b}, holding everything else fixed.
+Retrieval and faithfulness scoring in ScholAR are model-independent (BM25
+and a fixed local sentence encoder, no LLM call in either path), so the only
+benchmark where local-model choice is measurable is visual grounding, where
+the vision model both reads the figure and writes the answer. We run the
+18-case visual grounding benchmark (Section~\ref{sec:visual-bench}) under
+\texttt{gemma4:12b}~\cite{gemmateam2024gemma} and
+\texttt{qwen3.5:9b}~\cite{team2023qwen}, holding everything else fixed.
 Table~\ref{tab:model-comparison} reports retrieval grounding and a
-keyword-overlap answer-quality proxy for each. Both models retrieve the
-correct figure in all 18 cases and never fall back to the caption-only
-degraded path, but the smaller \texttt{qwen3.5:9b} (9B parameters) scores
-higher on answer quality than the larger \texttt{gemma4:12b} (12B parameters)
-on this benchmark. We do not read this as a general claim that smaller models
-are better --- the benchmark is small and the scoring proxy is a lexical
-heuristic, not an LLM-judge --- but it does show that going fully local does
-not require the largest available model, and that model choice is worth
-benchmarking empirically per task rather than assumed from parameter count
-alone.
+keyword-overlap answer-quality proxy. Both retrieve the correct figure in
+all 18 cases with no caption-only fallback, but the smaller
+\texttt{qwen3.5:9b} scores higher on answer quality than the larger
+\texttt{gemma4:12b}. We do not read this as smaller models being generally
+better --- the benchmark is small and the proxy is lexical, not an
+LLM-judge --- but it shows going fully local does not require the largest
+available model.
 
 \begin{table}[t]
   \centering
@@ -627,26 +625,21 @@ alone.
 \subsection{Does Reading the Image Help? A Caption-Only Ablation}
 \label{sec:caption-ablation}
 Rather than implement a full ColPali-style~\cite{faysse2024colpali} visual
-embedding baseline, which would require new retrieval infrastructure this
-benchmark is not built to compare against, we run a cheaper, more direct
-ablation: send the identical prompt to the same local model \emph{without}
-the figure image attached, and score the answer with the same heuristic.
-Under \texttt{gemma4:12b}, caption-only scores \textbf{0.752} versus
-\textbf{0.731} for full vision --- removing the image does not lower this
-particular score.
+embedding baseline, we run a cheaper, more direct ablation: send the
+identical prompt to the same local model \emph{without} the figure image
+attached, scored with the same heuristic. Under \texttt{gemma4:12b},
+caption-only scores \textbf{0.752} versus \textbf{0.731} for full vision ---
+removing the image does not lower this particular score.
 
 We do not read this as evidence that visual reading is unnecessary. Many
-benchmark questions ask about a value also restated in the paper's prose
-near the figure, so a text-only answer can be correct without consulting the
-image; and our answer-quality proxy rewards lexical overlap with the
-\emph{question} rather than grounded correctness, so a model that reports
-fine-grained visual details absent from the question wording (e.g., a
-specific symbol connecting two boxes in a diagram, observed qualitatively in
-Section~\ref{sec:method-visual}) is not credited for them. Properly
-separating these effects requires benchmark cases whose answer is genuinely
-absent from the paper's prose, plus a correctness-based judge rather than a
-lexical-overlap proxy; we flag this as necessary follow-up work rather than
-overstate what the current ablation supports.
+questions ask about a value also restated in the paper's prose near the
+figure, so a text-only answer can be correct without the image; and our
+proxy rewards lexical overlap with the \emph{question} rather than grounded
+correctness, so a model reporting fine-grained visual details absent from
+the question wording is not credited for them. Separating these effects
+properly needs benchmark cases whose answer is genuinely absent from the
+prose plus a correctness-based judge, not a lexical-overlap proxy --- we
+flag this as follow-up work rather than overstate what this ablation shows.
 
 \subsection{Baseline Systems}
 For retrieval, we compare five configurations:
@@ -665,8 +658,15 @@ For faithfulness, we compare:
 Table~\ref{tab:retrieval} shows the retrieval results.
 BM25-primary outperforms keyword overlap on R@1, R@3, and MRR, and ties it on
 R@5.
-Page hints do not change the aggregate MRR on this benchmark but improve
-retrieval for specific page-reference queries.
+Page hints do not change the aggregate MRR; the two page-hint-specific
+cases individually retrieve byte-identical rankings with and without hints,
+so we cannot claim a measurable benefit even per-case here. More broadly,
+none of Section~\ref{sec:method-retrieval}'s reranking heuristics move
+BM25-Only, BM25+Rerank~(No~PH), and BM25+Rerank~(PH) apart on any metric ---
+they are identical to three decimal places. We report this plainly: the
+measured gain over the keyword baseline is attributable to BM25 itself, not
+to ScholAR's own reranking layer, whose benefit this small, homogeneous
+benchmark cannot detect either way.
 Dense-Only unexpectedly beats every lexical baseline (R@1 0.786, R@3/R@5
 1.000, MRR 0.881), contrary to BEIR's finding that zero-shot dense
 retrieval trails BM25~\cite{thakur2021beir}, likely an artifact of this
@@ -694,17 +694,14 @@ not read this as grounds to change the production retriever.
 \end{table}
 
 \subsection{Faithfulness Results}
-Table~\ref{tab:faithfulness} reports SummaC-ZS faithfulness results on the 51-case benchmark.
-The hybrid BM25+Dense+RRF system achieves a Combined CFS of \textbf{0.829},
-improving over BM25-primary (0.809) by 2.0 percentage points.
-More significantly, hybrid retrieval improves SCHR@5 from 0.824 to \textbf{0.922},
-a gain of 9.8 percentage points, confirming that dense semantic retrieval
-recovers chunks that BM25 lexical matching misses.
-BM25-primary classifies 48 of 51 cases (94.1\%) and Hybrid \textbf{49 of 51}
-(96.1\%) as FAITHFUL under the $\geq 0.55$ strict entailment threshold.
-Both systems' SummaC-ZS Tier~1 entailment (0.941 / 0.961) and KFP (0.966 / 0.979)
-scores are high, with SCR (whole-claim cosine) remaining the primary
-differentiating factor between systems.
+Table~\ref{tab:faithfulness} reports SummaC-ZS faithfulness results on the
+51-case benchmark. Hybrid BM25+Dense+RRF reaches Combined CFS of
+\textbf{0.829}, versus 0.809 for BM25-primary. More notably, hybrid raises
+SCHR@5 from 0.824 to \textbf{0.922} (+9.8 pp), confirming dense retrieval
+recovers chunks BM25 lexical matching misses. BM25-primary classifies 48 of
+51 cases (94.1\%) and Hybrid \textbf{49 of 51} (96.1\%) as FAITHFUL
+($\geq 0.55$ CFS). Both systems' Tier~1 entailment (0.941 / 0.961) and KFP
+(0.966 / 0.979) are high, with SCR the primary differentiator between them.
 
 \begin{table}[t]
   \centering
@@ -731,14 +728,12 @@ differentiating factor between systems.
 \end{table}
 
 \subsection{Ablation: CFS vs.\ Retrieval Depth}
-Table~\ref{tab:rank-ablation} shows how Combined CFS grows monotonically as more
-retrieved chunks are included. This confirms that evidence for complex scientific
-claims is distributed across multiple pages and that returning Top-5 chunks is
-necessary to achieve full faithfulness coverage.
-The hybrid system leads at most depths, with the largest gap at Top-1
-(BM25 0.658 vs.\ Hybrid 0.669); the two are within 0.3 points of each other at
-Top-3, where BM25 briefly edges ahead, before hybrid pulls back into the lead
-at Top-4 and Top-5.
+Table~\ref{tab:rank-ablation} shows Combined CFS growing monotonically with
+more retrieved chunks, confirming evidence for complex claims is
+distributed across pages and Top-5 is necessary for full coverage.
+The hybrid system leads at every depth except a near-tie at Top-3 (BM25
+0.799 vs.\ Hybrid 0.796, a 0.003 gap), with the largest hybrid lead at Top-4
+(BM25 0.791 vs.\ Hybrid 0.817, a 0.026 gap).
 
 \begin{table}[t]
   \centering
@@ -761,19 +756,18 @@ at Top-4 and Top-5.
 \end{table}
 
 \subsection{Ablation: CFS by Claim Type}
-Table~\ref{tab:type-ablation} breaks down Combined CFS by claim type under BM25-primary.
-Environmental and human evaluation claims score highest (0.918, 0.882), as their
-supporting text is verbally rich and semantically dense.
-Training-detail claims (0.668) are penalised by multi-hop evidence spread across
-sections; the two chronic BM25 failure cases (\texttt{attn\_training\_steps}:
-0.242 UNFAITHFUL; \texttt{llama\_training\_tokens}: 0.356 PARTIAL) both involve
-numerical claims spread across multiple non-contiguous page ranges.
-A third BM25 failure, \texttt{rag\_trivia\_score} (0.235 UNFAITHFUL, a
-\texttt{result\_number} claim), is retrieval-induced rather than a distributed-evidence
-case: BM25 misses the supporting chunk entirely in its Top-5 for this query,
-while Hybrid still recovers it (0.802 FAITHFUL) via the dense component ---
-see the discussion of the retrieval-precision/compound-term-matching tradeoff
-below.
+Table~\ref{tab:type-ablation} breaks down Combined CFS by claim type under
+BM25-primary. Environmental and human evaluation claims score highest
+(0.918, 0.882), but with only 1 and 2 cases respectively, $N$ is too small
+to draw a mechanism-level conclusion about why. Training-detail claims
+(0.668) are penalised by multi-hop evidence spread across sections; the two
+chronic BM25 failures (\texttt{attn\_training\_steps}: 0.242 UNFAITHFUL;
+\texttt{llama\_training\_tokens}: 0.356 PARTIAL) both involve numerical
+claims spread across non-contiguous pages. A third failure,
+\texttt{rag\_trivia\_score} (0.235 UNFAITHFUL), is retrieval-induced rather
+than distributed-evidence: BM25 misses the supporting chunk entirely, while
+Hybrid recovers it (0.802 FAITHFUL) via the dense component --- see the
+retrieval-precision/compound-term-matching tradeoff discussed below.
 
 \begin{table}[t]
   \centering
@@ -802,108 +796,88 @@ below.
 % -----------------------------------------------------------------------
 
 \textbf{Hybrid retrieval improves semantic recall.}
-BM25-primary achieves Recall@5 of 0.929 and MRR of 0.788,
-confirming that lexical matching over page-preserving chunks is a reliable
-foundation for scientific document QA.
-Our SummaC-ZS evaluation further reveals that hybrid dense retrieval adds
-meaningful value: SCHR@5 improves from 0.824 to 0.922 (+9.8 pp)
-and Combined CFS rises from 0.809 to 0.829 (+2.0 pp).
-These gains are driven by the dense component surfacing semantically relevant
-chunks even when exact BM25 query terms are absent.
+BM25-primary achieves Recall@5 of 0.929 and MRR of 0.788, confirming lexical
+matching over page-preserving chunks as a reliable foundation. Hybrid dense
+retrieval adds meaningful value on top: SCHR@5 improves from 0.824 to 0.922
+(+9.8 pp) and Combined CFS rises from 0.809 to 0.829 (+2.0 pp), driven by
+the dense component surfacing relevant chunks when exact BM25 terms are
+absent.
 
 \textbf{SummaC-ZS detects paraphrased entailment that ROUGE cannot.}
-Our Tier~1 SummaC-ZS score (0.961 for both systems) is significantly higher
-than a purely lexical approach would yield for the same cases.
-The key distinction is that SummaC-ZS uses sentence-level cosine similarity
-(via \texttt{all-MiniLM-L6-v2}) which captures semantic equivalence across
-paraphrased formulations, a property that ROUGE-family metrics fail to exhibit
-\cite{zha2023alignscore}.
+Our Tier~1 SummaC-ZS score is 0.941 for BM25-primary and 0.961 for Hybrid ---
+higher than a purely lexical entailment check would likely yield on the same
+cases, for the reason given in Section~\ref{sec:related-faithfulness}
+(sentence-level embedding similarity captures paraphrase, ROUGE does not).
 The SCR tier (whole-claim cosine, 0.484 BM25 vs.\ 0.509 Hybrid) is the primary
 differentiating signal between the two retrieval systems.
 
-\textbf{Training-detail claims are the main failure mode.}
-The two non-FAITHFUL cases (\texttt{attn\_training\_steps}, \texttt{llama\_training\_tokens})
-are both training-detail claims where numerical evidence is distributed across
-non-contiguous page ranges. This validates structured, math-aware extraction
-as the highest-priority future work for the single-document pipeline.
-
-\textbf{Retrieval depth matters.}
-The rank ablation shows monotonic CFS improvement from Top-1 (BM25: 0.658, Hybrid: 0.669)
-to Top-5 (0.809 / 0.829), confirming the ScholAR default of $K{=}5$ is well-motivated.
+\textbf{Training-detail failures and retrieval depth.} The two non-FAITHFUL
+cases (Section~\ref{sec:faith-bench}) both involve numerical evidence spread
+across non-contiguous pages, validating structured extraction as
+highest-priority future work; the monotonic Top-1-to-Top-5 CFS gains
+(Table~\ref{tab:rank-ablation}) confirm the $K{=}5$ default is well-motivated.
 
 \textbf{Tokenizer fixes trade off single-document precision against
 compound-term matching; hybrid retrieval absorbs the cost better than
 BM25 alone.}
 We fixed a tokenizer bug uncovered during multi-document testing: token
 boundaries only start on a letter, so a fused compound proper noun (e.g.\ a
-figure or paper name written as one capitalized word) and its space-separated
-form reduce to different token sets, breaking exact-name retrieval.
-The fix is necessary for Sections~\ref{sec:method-visual}
-and~\ref{sec:method-multidoc}, but it perturbs BM25's length normalisation
+figure or paper name written as one word) and its space-separated form
+reduce to different token sets, breaking exact-name retrieval. The fix is
+necessary for Sections~\ref{sec:method-visual}
+and~\ref{sec:method-multidoc}, but perturbs BM25's length normalisation
 globally: it cost BM25-only Recall@5 seven points (1.00 $\to$ 0.929) and
-introduced one new faithfulness retrieval miss (\texttt{rag\_trivia\_score}).
-Hybrid BM25+Dense+RRF was materially more robust --- its numbers barely
-moved, and it still recovers the case BM25 now misses --- showing hybrid
-retrieval's real robustness to exactly this kind of perturbation.
+introduced one new faithfulness miss (\texttt{rag\_trivia\_score}). Hybrid
+BM25+Dense+RRF was materially more robust --- barely moved, and still
+recovers the case BM25 now misses.
 
-\textbf{Cross-paper localization is the multi-document pipeline's weak point.}
-\label{sec:discussion-multidoc}
+\textbf{The multi-document pipeline is weak, and not only for the reason we
+first thought.} \label{sec:discussion-multidoc}
 The multi-document locality benchmark (Section~\ref{sec:multidoc-bench})
-shows a wide gap between Recall@5 (0.80) and Recall@1 (0.10): the correct
-secondary paper is usually retrieved but rarely ranks first. We attribute
-this to the flat retrieval design --- all loaded papers' chunks share one
-BM25 pool with no per-paper normalisation, so a niche cited paper competes
-directly against the anchor paper's larger, more central chunk set. This
-mirrors M3SciQA~\cite{li2024m3sciqa}, where even large foundation models
-underperform human experts at the same cross-paper localization task. We
-view per-paper-aware retrieval/reranking and the Recursive Language Model
-pattern~\cite{zhang2025rlm} as the most promising directions for closing
-this gap.
+shows Recall@5 of 0.50 and Recall@1 of 0.00, both at or below the
+random-guessing floor over the same pool (Table~\ref{tab:multidoc-bounds}).
+We had attributed this entirely to flat retrieval --- a niche cited paper
+competing against the anchor paper's larger, more central chunk set in one
+shared BM25 pool --- and a strong oracle bound seemed to confirm that
+isolating the correct paper would mostly fix it. That oracle number was
+inflated by the chunk-ID collision bug (Section~\ref{sec:multidoc-bench}):
+corrected, it shows chunk-level retrieval failing to rank the right chunk
+first even with paper-selection solved (R@1 0.00, MRR 0.289). So this is two
+compounding weaknesses, not one: cross-paper competition \emph{and} a
+within-paper retrieval difficulty on these specific cross-document
+questions --- mirroring M3SciQA~\cite{li2024m3sciqa}'s finding that even
+large foundation models underperform humans here, though our corrected
+numbers suggest the difficulty runs deeper than paper selection alone. We
+still view per-paper-aware retrieval/reranking and the Recursive Language
+Model pattern~\cite{zhang2025rlm} as promising, but no longer sufficient on
+their own without diagnosing why oracle-setting retrieval underperforms.
 
 \textbf{Baseline scope.} Section~\ref{sec:related-sciRAG} explains why
-OpenScholar, PaperQA2, and SciRAG are discussed qualitatively rather than
-run head-to-head: none targets a single consumer laptop, so a fair
-comparison needs a resource-matched setup (e.g., PaperQA2 on a local Ollama
-backend), which we leave to future work rather than an untested,
-crippled substitute or a cloud-API run that would contradict our design
-constraint.
+OpenScholar, PaperQA2~\cite{lala2024paperqa2}, and SciRAG are discussed
+qualitatively, not head-to-head: none targets a consumer laptop, so a fair
+comparison needs a resource-matched setup, left to future work.
 
 
 % -----------------------------------------------------------------------
 \section{Future Work}
 % -----------------------------------------------------------------------
 
-The training-detail failure mode identified in Section~\ref{sec:faith-bench}
-(numerical evidence spread across non-contiguous pages) motivates structured
-extraction as the highest-priority next step:
-we plan to integrate Nougat~\cite{blecher2023nougat} for LaTeX-preserving
-extraction and evaluate it against ColPali~\cite{faysse2024colpali}-style
-visual page retrieval as an alternative to our current caption-and-crop
-figure grounding.
-A math-aware tokeniser that indexes LaTeX tokens
-(e.g., \texttt{\textbackslash sigma}, \texttt{\textbackslash frac}) alongside
-natural language terms remains future work for the BM25 retrieval layer,
-though rendered math display in the answer UI is already implemented via KaTeX.
-We also plan to evaluate the Recursive Language Model
-inference pattern~\cite{zhang2025rlm} as an alternative to flat retrieval
-for multi-document citation-chasing, where our current locality benchmark
-shows the clearest room for improvement.
+The training-detail failure mode (Section~\ref{sec:faith-bench}) motivates
+structured extraction next: integrating Nougat~\cite{blecher2023nougat} for
+LaTeX-preserving extraction, evaluated against
+ColPali~\cite{faysse2024colpali}-style visual retrieval as an alternative
+to our caption-and-crop grounding. We also plan to evaluate the Recursive
+Language Model pattern~\cite{zhang2025rlm} for multi-document
+citation-chasing, our clearest open problem.
 
 % -----------------------------------------------------------------------
 \section{Conclusion}
 % -----------------------------------------------------------------------
 
-We presented ScholAR, a fully local retrieval-augmented system for grounded
-scientific document comprehension, extending single-document QA to visual
-grounding and multi-document citation-chasing via page-preserving
-segmentation and indirect citation grounding. Across four benchmarks:
-BM25-primary retrieval reaches Recall@5 of 0.929 (14 cases); our NLI-CFS
-faithfulness pipeline shows hybrid BM25+Dense+RRF raising Combined CFS to
-0.829 and SCHR@5 to 0.922 (51 cases), with training-detail claims hardest;
-visual grounding routes correctly in all 18 pilot cases; and multi-document
-locality reaches 80\% Recall@5 but only 10\% at top-1 --- a flat-retrieval
-limitation shared with comparable systems, and the clearest open problem
-for future work.
+ScholAR grounds scientific QA in page-preserving chunks and indirect
+citation IDs, extended to visual and multi-document QA. Retrieval,
+faithfulness, and visual grounding are strong; multi-document locality
+remains open.
 
 
 % -----------------------------------------------------------------------

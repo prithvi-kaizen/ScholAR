@@ -83,7 +83,7 @@ as `aaai2027.sty`/`aaai2027.bst`) — no placeholder style file remains.
 
 ```
 Abstract
-1  Introduction                          (contributions as itemized list)
+1  Introduction                          (motivation prose + itemized contributions)
 2  Related Work
    2.1  Retrieval-Augmented Generation
    2.2  Scientific Literature RAG Systems
@@ -100,7 +100,7 @@ Abstract
    4.4  Indirect Citation Grounding
    4.5  Visual Grounding
    4.6  Multi-Document Extension
-   4.7  Study Goal Generation
+   4.7  Study Goal Generation (product feature, not independently benchmarked)
    4.8  Faithfulness Evaluation: SummaC-ZS + Semantic Coverage
    4.9  System Architecture
 5  Evaluation
@@ -133,9 +133,9 @@ References
    ```
    (no extension needed if you use `\graphicspath{{figures/}}` which is already set)
 
-Note: `fig:pipeline` (Figure 1, Method section) currently has a caption but no
-actual image — the `\includegraphics` line is commented out. Add a real pipeline
-diagram before final submission, or remove the empty figure.
+Note: the paper currently has no figures — the earlier caption-only
+`fig:pipeline` placeholder (Method section) was removed since it had no
+actual image. Add a real pipeline diagram using the steps above if desired.
 
 ---
 
