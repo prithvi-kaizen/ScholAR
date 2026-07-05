@@ -330,10 +330,11 @@ async def resolve_references(
 
     Always saves result to disk before returning.
     """
-    if not force:
-        cached = load_references(local_id)
-        if cached:
-            return cached
+    if not force and references_path(local_id).exists():
+        # A cached file may legitimately be an empty list (paper has zero
+        # resolvable references) — an empty list is falsy, so check file
+        # existence rather than truthiness or this cache never "sticks".
+        return load_references(local_id)
 
     arxiv_id = metadata.get("id", "")
     is_upload = metadata.get("source") == "upload"

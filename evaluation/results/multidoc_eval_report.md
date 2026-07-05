@@ -9,29 +9,29 @@
 
 | Subset | Cases | Recall@1 | Recall@3 | Recall@5 | MRR |
 |---|---:|---:|---:|---:|---:|
-| `all` | 18 | 0.222 | 0.389 | 0.611 | 0.355 |
-| `locality_arxiv` | 10 | 0.1 | 0.4 | 0.8 | 0.338 |
-| `locality` | 15 | 0.067 | 0.267 | 0.533 | 0.226 |
+| `all` | 18 | 0.167 | 0.222 | 0.444 | 0.269 |
+| `locality_arxiv` | 10 | 0.0 | 0.1 | 0.5 | 0.183 |
+| `locality` | 15 | 0.0 | 0.067 | 0.333 | 0.122 |
 | `detail` | 3 | 1.0 | 1.0 | 1.0 | 1.0 |
 
 ## Per-Case Results
 
 | ID | Type | Sub-type | R@1 | R@3 | R@5 | MRR | Expected |
 |---|---|---|---:|---:|---:|---:|---|
-| md_001 | locality | comparison | 0 | 1 | 1 | 0.5 | 1508.07909 |
+| md_001 | locality | comparison | 0 | 0 | 1 | 0.25 | 1508.07909 |
 | md_002 | locality | data_extraction | 0 | 0 | 0 | 0.0 | wmt, workshop machine translation |
-| md_003 | locality | comparison | 0 | 0 | 1 | 0.25 | 1412.6980 |
-| md_004 | locality | location | 0 | 1 | 1 | 0.333 | 1512.03385 |
+| md_003 | locality | comparison | 0 | 0 | 1 | 0.2 | 1412.6980 |
+| md_004 | locality | location | 0 | 0 | 1 | 0.25 | 1512.03385 |
 | md_005 | locality | comparison | 0 | 0 | 0 | 0.0 | dropout, preventing overfitting |
-| md_006 | locality | comparison | 0 | 0 | 1 | 0.25 | 2004.04906 |
-| md_007 | locality | data_extraction | 0 | 0 | 0 | 0.1 | 1910.13461 |
+| md_006 | locality | comparison | 0 | 0 | 1 | 0.2 | 2004.04906 |
+| md_007 | locality | data_extraction | 0 | 0 | 0 | 0.167 | 1910.13461 |
 | md_008 | locality | location | 0 | 0 | 0 | 0.0 | wikipedia, knowledge base |
-| md_009 | locality | comparison | 0 | 0 | 1 | 0.25 | 1702.08734 |
-| md_010 | locality | comparison | 0 | 0 | 1 | 0.2 | 1705.03551 |
+| md_009 | locality | comparison | 0 | 0 | 0 | 0.125 | 1702.08734 |
+| md_010 | locality | comparison | 0 | 0 | 0 | 0.143 | 1705.03551 |
 | md_011 | detail | conceptual_understanding | 1 | 1 | 1 | 1.0 | - |
 | md_012 | detail | methodological_analysis | 1 | 1 | 1 | 1.0 | - |
 | md_013 | locality | comparison | 0 | 0 | 0 | 0.0 | 1901.08634 |
-| md_014 | locality | comparison | 1 | 1 | 1 | 1.0 | 1409.0473 |
+| md_014 | locality | comparison | 0 | 0 | 0 | 0.0 | 1409.0473 |
 | md_015 | locality | location | 0 | 0 | 0 | 0.0 | webquestions, semantic parsing |
 | md_016 | locality | comparison | 0 | 1 | 1 | 0.5 | 1607.06450 |
 | md_017 | detail | results_interpretation | 1 | 1 | 1 | 1.0 | - |

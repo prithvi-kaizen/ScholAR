@@ -91,6 +91,31 @@ def expand_query_terms(tokens: list[str]) -> list[str]:
     return expanded
 
 
+_EXPLICIT_FIGURE_RE = re.compile(r"\b(figure|fig\.?|table)\s*\.?\s*(\d+(?:\.\d+)?)\b", re.IGNORECASE)
+
+
+def _normalize_figure_label(label: str) -> str:
+    return re.sub(r"\s+", " ", label.strip().lower())
+
+
+def extract_figure_refs(message: str) -> set[str]:
+    """Extract explicit figure/table references (e.g. "Figure 2", "fig. 14",
+    "Table 3") from a query, normalized to match a figure chunk's own
+    ``label`` field exactly (e.g. {"figure 2"}).
+
+    tokenize() only starts tokens on a letter, so a bare number like "2" is
+    never tokenized — "Figure 2" and "Figure 14" collapse to the identical
+    token set {"figure"}. That makes ordinary BM25/overlap scoring unable to
+    tell which figure a query means, so an explicit reference needs its own
+    exact-match path instead.
+    """
+    refs: set[str] = set()
+    for kind, number in _EXPLICIT_FIGURE_RE.findall(message):
+        kind_norm = "table" if kind.lower().startswith("table") else "figure"
+        refs.add(f"{kind_norm} {number}")
+    return refs
+
+
 def extract_page_hints(message: str) -> list[int]:
     pages: list[int] = []
     for match in re.finditer(r"\bpages?\s+([0-9,\sand]+)", message.lower()):
@@ -132,7 +157,7 @@ def _cosine(left: list[float], right: list[float]) -> float:
     return sum(a * b for a, b in zip(left, right))
 
 
-def _bm25_scores(query_terms: list[str], chunks: list[dict[str, Any]]) -> dict[str, float]:
+def _bm25_scores(query_terms: list[str], chunks: list[dict[str, Any]]) -> dict[int, float]:
     query_counts = Counter(query_terms)
     document_frequency: Counter[str] = Counter()
     chunk_tokens: list[list[str]] = []
@@ -143,11 +168,14 @@ def _bm25_scores(query_terms: list[str], chunks: list[dict[str, Any]]) -> dict[s
 
     total_docs = max(len(chunks), 1)
     average_length = sum(len(tokens) for tokens in chunk_tokens) / max(len(chunk_tokens), 1)
-    scores: dict[str, float] = {}
+    # Keyed by list index rather than chunk_id: chunk_id is only unique within
+    # a single paper (numbering restarts at chunk_001 per paper), so merged
+    # multi-document chunk lists can have duplicate chunk_ids across papers.
+    scores: dict[int, float] = {}
     k1 = 1.4
     b = 0.72
 
-    for chunk, tokens in zip(chunks, chunk_tokens):
+    for index, (chunk, tokens) in enumerate(zip(chunks, chunk_tokens)):
         if not tokens:
             continue
         counts = Counter(tokens)
@@ -159,7 +187,7 @@ def _bm25_scores(query_terms: list[str], chunks: list[dict[str, Any]]) -> dict[s
                 continue
             idf = math.log((total_docs - document_frequency[term] + 0.5) / (document_frequency[term] + 0.5) + 1)
             score += query_weight * idf * ((frequency * (k1 + 1)) / (frequency + length_norm))
-        scores[str(chunk.get("chunk_id"))] = score
+        scores[index] = score
     return scores
 
 
@@ -189,6 +217,19 @@ def retrieve_chunks(
 
     visual_query = _is_visual_query(message, base_query_terms)
 
+    # ── Explicit figure/table reference override ──────────────────────────
+    # "explain figure 2" must retrieve Figure 2, not just any figure — see
+    # extract_figure_refs() for why fuzzy token overlap can't do this.
+    pinned_chunk: dict[str, Any] | None = None
+    figure_refs = extract_figure_refs(message)
+    if figure_refs:
+        for chunk in chunks:
+            if not chunk.get("is_figure_chunk"):
+                continue
+            if _normalize_figure_label(chunk.get("label", "")) in figure_refs:
+                pinned_chunk = chunk
+                break
+
     # BM25 is the primary signal because the project evaluation showed it was
     # the most reliable way to keep exact evidence chunks in the top results.
     # Semantic, section, phrase, and page signals are used as light rerankers.
@@ -198,8 +239,7 @@ def retrieve_chunks(
     section_hints = _section_hints(message)
     bm25_ranked: list[tuple[float, dict[str, Any]]] = []
 
-    for chunk in chunks:
-        chunk_id = str(chunk.get("chunk_id"))
+    for index, chunk in enumerate(chunks):
         text = chunk.get("text", "")
         tokens = tokenize(text)
         is_fig = chunk.get("is_figure_chunk", False)
@@ -209,7 +249,7 @@ def retrieve_chunks(
             if is_fig and visual_query:
                 bm25_ranked.append((0.05, chunk))
             continue
-        score = bm25.get(chunk_id, 0.0)
+        score = bm25.get(index, 0.0)
         if score > 0 or is_fig:
             bm25_ranked.append((max(score, 0.0), chunk))
 
@@ -267,7 +307,12 @@ def retrieve_chunks(
         reranked.append((rerank_score, chunk))
 
     reranked.sort(key=lambda item: item[0], reverse=True)
-    return [chunk for _, chunk in reranked[:limit]]
+    ranked_chunks = [chunk for _, chunk in reranked]
+
+    if pinned_chunk is not None:
+        rest = [chunk for chunk in ranked_chunks if chunk is not pinned_chunk]
+        return [pinned_chunk] + rest[: max(limit - 1, 0)]
+    return ranked_chunks[:limit]
 
 
 def short_quote(chunk: dict[str, Any], query: str, max_length: int = 220) -> str:

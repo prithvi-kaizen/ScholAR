@@ -47,8 +47,12 @@ app = FastAPI(title="ScholAR API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    # No cookies/session auth are used anywhere in this app, so credentials
+    # stay disabled; combined with a wildcard origin, allow_credentials=True
+    # would let any website that a user's browser visits make authenticated-
+    # looking requests against this local server (browser-as-confused-deputy).
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -443,7 +447,7 @@ async def prepare_paper(paper: PaperInput) -> dict[str, Any]:
             await download_pdf(paper.pdf_url, pdf_path)
 
         if not pages_path.exists():
-            pages = extract_pages(pdf_path)
+            pages = await asyncio.to_thread(extract_pages, pdf_path)
             write_json(pages_path, pages)
         else:
             pages = read_json(pages_path)
@@ -456,7 +460,7 @@ async def prepare_paper(paper: PaperInput) -> dict[str, Any]:
 
         # Extract figures/tables (idempotent — skipped if figures.json exists)
         if not figures_path.exists():
-            figures = extract_figures(pdf_path, figures_dir)
+            figures = await asyncio.to_thread(extract_figures, pdf_path, figures_dir)
             write_json(figures_path, figures)
         else:
             figures = read_json(figures_path)
@@ -479,7 +483,15 @@ async def upload_paper(file: UploadFile = File(...), title: str = Form("")) -> d
     if not filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Please upload a PDF file")
 
-    content = await file.read()
+    max_bytes = 50 * 1024 * 1024  # 50MB
+    chunks: list[bytes] = []
+    total = 0
+    while chunk := await file.read(1024 * 1024):
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(status_code=413, detail=f"PDF exceeds {max_bytes // (1024 * 1024)}MB limit")
+        chunks.append(chunk)
+    content = b"".join(chunks)
     if not content.startswith(b"%PDF"):
         raise HTTPException(status_code=400, detail="Uploaded file does not look like a PDF")
 
@@ -499,7 +511,7 @@ async def upload_paper(file: UploadFile = File(...), title: str = Form("")) -> d
         if not pdf_path.exists():
             pdf_path.write_bytes(content)
 
-        pages = extract_pages(pdf_path)
+        pages = await asyncio.to_thread(extract_pages, pdf_path)
         chunks = chunk_pages(pages)
         inferred = infer_uploaded_metadata(pages, clean_title)
         metadata = {
@@ -522,7 +534,7 @@ async def upload_paper(file: UploadFile = File(...), title: str = Form("")) -> d
 
         # Extract figures/tables
         if not figures_path.exists():
-            figures = extract_figures(pdf_path, figures_dir)
+            figures = await asyncio.to_thread(extract_figures, pdf_path, figures_dir)
             write_json(figures_path, figures)
         else:
             figures = read_json(figures_path)
@@ -673,7 +685,7 @@ async def ingest_reference(paper_id: str, ref_index: int) -> dict[str, Any]:
             await download_pdf(pdf_url, sec_pdf)
 
         if not sec_pages_path.exists():
-            sec_pages = extract_pages(sec_pdf)
+            sec_pages = await asyncio.to_thread(extract_pages, sec_pdf)
             write_json(sec_pages_path, sec_pages)
         else:
             sec_pages = read_json(sec_pages_path)
@@ -732,7 +744,7 @@ async def get_pdf(paper_id: str) -> FileResponse:
 async def get_pdf_page(paper_id: str, page_number: int, zoom: float = 1.8, highlight: str = "") -> Response:
     _, _, _, pdf_path = _paths_or_404(paper_id)
     try:
-        image_bytes = render_page_png(pdf_path, page_number, zoom, highlight)
+        image_bytes = await asyncio.to_thread(render_page_png, pdf_path, page_number, zoom, highlight)
     except RuntimeError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return Response(content=image_bytes, media_type="image/png")
@@ -879,12 +891,15 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
 
     ollama_up = await ollama_available()
     context_chunks: list[dict[str, Any]] = []
-    seen_chunk_ids: set[str] = set()
+    # chunk_id numbering restarts per paper (chunk_001, chunk_002, ...), so in
+    # multi-document mode two different papers' chunks can share a chunk_id —
+    # disambiguate with source_paper_id or this dedup silently drops real chunks.
+    seen_chunk_keys: set[tuple[Any, str]] = set()
     for chunk in chunks[:2] + selected:
-        chunk_id = str(chunk.get("chunk_id"))
-        if chunk_id in seen_chunk_ids:
+        chunk_key = (chunk.get("source_paper_id"), str(chunk.get("chunk_id")))
+        if chunk_key in seen_chunk_keys:
             continue
-        seen_chunk_ids.add(chunk_id)
+        seen_chunk_keys.add(chunk_key)
         context_chunks.append(chunk)
     prompt_chunks = context_chunks[:4]
     history_char_limit = 180
@@ -924,6 +939,7 @@ Response requirements:
 - Do not use Markdown heading markers like #, ##, or ###.
 - Put each section label on its own line, for example **Answer**.
 - Use bullet points for multi-part explanations.
+- Wrap every piece of mathematical notation in single dollar signs, e.g. $x_t$ or $p_\\theta(x_{{t-1}}\\mid x_t)$, so it renders instead of showing raw symbols.
 - Cite paper claims inline only with evidence IDs from the Paper evidence list, such as [E1] or [E2].
 - Never invent page citations. Do not write [p. 1], [p. 2], or any page number yourself.
 - The app will convert evidence IDs into compact numbered references like [1], [2].

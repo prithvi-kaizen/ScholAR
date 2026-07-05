@@ -81,6 +81,9 @@ def _arxiv_url_candidates(pdf_url: str, oa_pdf_url: str | None = None) -> list[s
 
 
 
+_MAX_PDF_BYTES = 50 * 1024 * 1024  # 50MB — reject/abort anything larger
+
+
 async def download_pdf(pdf_url: str, destination: Path) -> None:
     if not pdf_url:
         raise RuntimeError("Paper is missing a PDF URL")
@@ -95,14 +98,23 @@ async def download_pdf(pdf_url: str, destination: Path) -> None:
             try:
                 if attempt > 0:
                     await asyncio.sleep(2.0 * attempt)
-                response = await client.get(url)
-                if response.status_code == 403 and attempt < len(urls_to_try) - 1:
-                    continue  # try next URL
-                response.raise_for_status()
+                async with client.stream("GET", url) as response:
+                    if response.status_code == 403 and attempt < len(urls_to_try) - 1:
+                        continue  # try next URL
+                    response.raise_for_status()
 
-                content_type = response.headers.get("content-type", "")
-                if "pdf" in content_type.lower() or response.content.startswith(b"%PDF"):
-                    destination.write_bytes(response.content)
+                    content_type = response.headers.get("content-type", "")
+                    chunks: list[bytes] = []
+                    total = 0
+                    async for chunk in response.aiter_bytes():
+                        total += len(chunk)
+                        if total > _MAX_PDF_BYTES:
+                            raise RuntimeError(f"PDF exceeds {_MAX_PDF_BYTES // (1024 * 1024)}MB limit")
+                        chunks.append(chunk)
+                    content = b"".join(chunks)
+
+                if "pdf" in content_type.lower() or content.startswith(b"%PDF"):
+                    destination.write_bytes(content)
                     return
                 # Not a PDF — try next
             except httpx.HTTPStatusError as exc:
@@ -140,7 +152,7 @@ _CAPTION_RE = re.compile(
 # Fraction of page height to capture above/below the caption block
 _FIG_ABOVE_FRAC = 0.38
 _FIG_BELOW_FRAC = 0.12
-_FIG_RENDER_ZOOM = 2.0  # 2× for readable detail
+_FIG_RENDER_ZOOM = 3.0  # 3× so dense figures (small axis labels, grid thumbnails) stay legible to the vision model
 
 
 def _caption_bbox(page: "fitz.Page", caption_label: str) -> "fitz.Rect | None":
