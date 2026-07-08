@@ -1,6 +1,6 @@
 # ScholAR — Research Roadmap & Thesis Checklist
 **Target Venue:** AAAI-27 (The Forty-First AAAI Conference on Artificial Intelligence)
-**Target Submission Window:** Approximately August 2026
+**Target Submission Window:** Abstract due July 21, 2026; full paper due July 28, 2026
 
 ---
 
@@ -33,11 +33,11 @@
       using all-MiniLM-L6-v2 for dense ranking without sentence-transformers library
 - [x] Expand benchmark from 20 → **51 oracle-claim cases** across 3 papers
       (15 Attention, 12 RAG, 24 LLaMA; 8 claim types fully balanced)
-- [x] **Results (v3):**
-      - BM25-primary: Combined NLI-CFS = 0.658, SCHR@5 = 0.863 (33/51 FAITHFUL)
-      - Hybrid BM25+Dense+RRF: NLI-CFS = **0.667**, SCHR@5 = **0.922** (+6.9 pp)
-      - Conceptual claims: 0.810 (best); Result-number: 0.469 (hardest)
-- [x] Full ablation: CFS monotonically improves Top-1 (0.548) → Top-5 (0.658/0.667)
+- [x] **Results (v3, verified against `evaluation/results/faithfulness_eval_results_v3.json`):**
+      - BM25-primary: Combined NLI-CFS = **0.820**, SCHR@5 = 0.863 (49/51 FAITHFUL)
+      - Hybrid BM25+Dense+RRF: NLI-CFS = **0.829**, SCHR@5 = **0.922** (+6.9 pp)
+      - Environmental/human-eval claims: ~0.90 (best); Training-detail: 0.668 (hardest)
+- [x] Full ablation: CFS monotonically improves Top-1 (0.644/0.669) → Top-5 (0.820/0.829)
 - [x] LaTeX paper updated with real results, new tables, and SummaC/AlignScore/RRF citations
 - [x] PDF compiled: `paper/scholar_aaai27.pdf` (5 pages, clean compile)
 

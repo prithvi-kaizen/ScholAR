@@ -115,6 +115,10 @@ Spans *Attention Is All You Need*, *RAG*, and *LLaMA* across 8 claim types: `res
 
 A chunk-ID collision bug (fixed) had inflated an earlier version of these numbers (R@5 0.80, MRR 0.356) — the corrected result is at or below the random-guessing floor on this small benchmark. See the paper's Discussion for the full writeup and the oracle-bound analysis.
 
+### Human Evaluation Pipeline (built, ready to run)
+
+A model-agnostic, citation-grounded human evaluation lives in `evaluation/human_eval/`, grounded in the methodology of OpenScholar, SciRAG, and PaperQA2. Each of 100 curated questions (40 single-document, 20 visual, 20 multi-document, 20 hard-retrieval) is answered by four local models running the same ScholAR pipeline — only the generation model changes. Expert evaluators score each answer on four anchored 1-5 dimensions (Relevance, Coverage, Faithfulness, Usefulness) plus per-citation Supported/Partial/Unsupported grading, through a self-contained offline HTML interface. The analysis reports per-model quality and citation precision/recall/F1, a Friedman test for model-agnostic grounding, inter-annotator agreement, and the correlation between human faithfulness and the automated NLI-CFS metric. See `evaluation/human_eval/README.md` to run it.
+
 ---
 
 ## Repository Structure
@@ -155,6 +159,13 @@ ScholAR/
 │   ├── benchmark_cases.json        # Retrieval ground truth
 │   ├── faithfulness_cases.json     # Faithfulness oracle claims
 │   ├── visual_benchmark.json       # Figure-grounded QA cases
+│   ├── human_eval/                 # Human-evaluation pipeline (see below)
+│   │   ├── HUMAN_EVAL_DESIGN.md     # Instrument design, grounded in SciRAG/OpenScholar/PaperQA2
+│   │   ├── rubric.md               # Evaluator guideline (Q1-Q7, anchored scales)
+│   │   ├── cases.json              # 100 curated cases (4 capabilities)
+│   │   ├── generate_answers.py     # Runs each case across 4 local models (one at a time)
+│   │   ├── _build_score_sheet.py   # Builds the offline blinded scoring interface
+│   │   └── compute_scores.py       # Per-model metrics, model-agnostic test, human-vs-NLI-CFS
 │   └── results/                    # Evaluation reports
 ├── docs/
 │   ├── reference_papers/           # M3SciQA, PaperQA, SciDQA, ScholarlyQA PDFs

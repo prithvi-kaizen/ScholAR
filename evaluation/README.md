@@ -35,16 +35,23 @@ These metrics are common for retrieval evaluation and are simple enough to expla
 
 ## Run
 
+`run_retrieval_eval.py` has no extra dependencies beyond `requirements.txt` at
+the project root. `run_faithfulness_eval.py` additionally needs `numpy`,
+`torch`, and `safetensors` (for the local `all-MiniLM-L6-v2` sentence
+encoder) — install them with `pip install -r evaluation/requirements.txt`
+into whichever environment you run the eval scripts from.
+
 From the project root:
 
 ```bash
 python3 evaluation/run_retrieval_eval.py
+python3 evaluation/run_faithfulness_eval.py   # needs evaluation/requirements.txt installed
 ```
 
-The script writes:
+The scripts write:
 
-- `evaluation/results/retrieval_eval_results.json`
-- `evaluation/results/retrieval_eval_report.md`
+- `evaluation/results/retrieval_eval_results.json` / `retrieval_eval_report.md`
+- `evaluation/results/faithfulness_eval_results_v3.json` / `faithfulness_eval_report_v3.md`
 
 ## Important limitation
 

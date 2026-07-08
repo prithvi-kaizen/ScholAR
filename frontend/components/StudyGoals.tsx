@@ -12,10 +12,16 @@ interface StudyGoalsProps {
 export function StudyGoals({ goals, loading, onGoalClick }: StudyGoalsProps) {
   if (loading && !goals.length) {
     return (
-      <div className="space-y-3">
-        {[...Array(8)].map((_, index) => (
-          <div key={index} className="h-20 animate-pulse rounded-lg border border-line bg-panelSoft" />
-        ))}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-sm text-zinc-300">
+          <Loader2 size={15} className="animate-spin text-acid" />
+          Personalizing study goals for this paper…
+        </div>
+        <div className="space-y-3">
+          {[...Array(8)].map((_, index) => (
+            <div key={index} className="h-20 animate-pulse rounded-lg border border-line bg-panelSoft" />
+          ))}
+        </div>
       </div>
     );
   }

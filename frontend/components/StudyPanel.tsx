@@ -29,7 +29,7 @@ const defaultGoals: StudyGoal[] = [
 
 export function StudyPanel({ paperId, onCitationClick }: StudyPanelProps) {
   const [activeTab,   setActiveTab]   = useState<Tab>("chat");
-  const [goals,       setGoals]       = useState<StudyGoal[]>(defaultGoals);
+  const [goals,       setGoals]       = useState<StudyGoal[]>([]);
   const [loadingGoals, setLoadingGoals] = useState(false);
   const [queuedPrompt, setQueuedPrompt] = useState<{ id: number; text: string } | null>(null);
   const [secondaryPaperIds, setSecondaryPaperIds] = useState<Set<string>>(new Set());
@@ -38,7 +38,7 @@ export function StudyPanel({ paperId, onCitationClick }: StudyPanelProps) {
   useEffect(() => {
     let cancelled = false;
     async function loadGoals() {
-      setGoals(defaultGoals);
+      setGoals([]);
       setLoadingGoals(true);
       try {
         const res = await fetch(
@@ -47,7 +47,9 @@ export function StudyPanel({ paperId, onCitationClick }: StudyPanelProps) {
         );
         if (!res.ok) throw new Error("Could not load study goals");
         const payload = await res.json();
-        if (!cancelled && payload.goals?.length) setGoals(payload.goals);
+        if (!cancelled) setGoals(payload.goals?.length ? payload.goals : defaultGoals);
+      } catch {
+        if (!cancelled) setGoals(defaultGoals);
       } finally {
         if (!cancelled) setLoadingGoals(false);
       }
