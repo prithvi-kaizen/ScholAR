@@ -14,3 +14,14 @@ tmp/
 backend/data/papers/*/
 backend/data/search_cache.json
 !backend/data/papers/.gitkeep
+
+# Local tooling / editor working directories
+.claude/
+.impeccable/
+
+# Third-party AAAI author kit (its needed files are copied into paper/)
+AuthorKit27/
+
+# Disconnected prototype code (future-work scaffolding, not part of the app)
+backend/parsers/
+backend/rlm/
