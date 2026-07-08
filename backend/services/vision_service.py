@@ -70,6 +70,7 @@ def _build_vision_prompt(
         "",
         "Based on the image above and the supporting context, answer the following question.",
         "Cite specific values, labels, and visual elements you can read from the image.",
+        "Wrap every piece of mathematical notation in single dollar signs, e.g. $x_t$ or $p_\\theta(x_{t-1}\\mid x_t)$, so it renders instead of showing raw symbols.",
         "Use the format:",
         "**Answer**",
         "<your answer>",
@@ -89,6 +90,7 @@ async def answer_with_figure(
     context_chunks: list[dict[str, Any]],
     paper_id: str,
     paper_metadata: dict[str, Any] | None = None,
+    model: str | None = None,
 ) -> dict[str, Any]:
     """Answer a question grounded in a specific figure or table image.
 
@@ -180,7 +182,7 @@ async def answer_with_figure(
     # -- Call vision model ----------------------------------------------------
     prompt = _build_vision_prompt(question, label, caption, text_context, paper_title)
     try:
-        answer_text = await generate(prompt, temperature=0.1, images=[image_b64])
+        answer_text = await generate(prompt, temperature=0.1, images=[image_b64], model=model)
     except Exception as exc:
         logger.warning("Vision model call failed: %s", exc)
         return _caption_fallback("vision model error: " + type(exc).__name__)
@@ -195,7 +197,7 @@ async def answer_with_figure(
         "caption":    caption,
         "image_file": image_file,
         "page":       page,
-        "model_used": OLLAMA_MODEL,
+        "model_used": model or OLLAMA_MODEL,
         "fallback":   False,
         "citations":  [figure_citation],
     }

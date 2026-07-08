@@ -1,0 +1,1719 @@
+[
+  {
+    "case_id": "he_sd_01",
+    "capability": "single_doc_text",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What is the scaled dot-product attention formula?",
+    "gold_answer": "Attention is computed as softmax of QK-transpose divided by square root of d_k, multiplied by V",
+    "must_include": [
+      "Attention",
+      "QK-transpose"
+    ],
+    "answer_locus": "page 4",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (formula); supporting chunk chunk_004.",
+    "source_faithfulness_id": "attn_softmax_claim",
+    "claim_type": "formula"
+  },
+  {
+    "case_id": "he_sd_02",
+    "capability": "single_doc_text",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "How many attention heads and model dimensions does the base Transformer use?",
+    "gold_answer": "The base model uses 8 attention heads and a model dimension of 512",
+    "must_include": [
+      "8",
+      "512"
+    ],
+    "answer_locus": "page 9",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (architecture_detail); supporting chunk chunk_009.",
+    "source_faithfulness_id": "attn_heads_claim",
+    "claim_type": "architecture_detail"
+  },
+  {
+    "case_id": "he_sd_03",
+    "capability": "single_doc_text",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What BLEU score does the Transformer achieve on English to German translation?",
+    "gold_answer": "The Transformer achieves 28.4 BLEU on WMT 2014 English-to-German translation",
+    "must_include": [
+      "28.4",
+      "2014",
+      "The Transformer",
+      "BLEU",
+      "WMT"
+    ],
+    "answer_locus": "page 8",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (result_number); supporting chunk chunk_008.",
+    "source_faithfulness_id": "attn_bleu_ende",
+    "claim_type": "result_number"
+  },
+  {
+    "case_id": "he_sd_04",
+    "capability": "single_doc_text",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What is the BLEU score on English to French translation?",
+    "gold_answer": "The Transformer achieves 41.0 BLEU on WMT 2014 English-to-French translation",
+    "must_include": [
+      "41.0",
+      "2014",
+      "The Transformer",
+      "BLEU",
+      "WMT"
+    ],
+    "answer_locus": "page 8",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (result_number); supporting chunk chunk_008.",
+    "source_faithfulness_id": "attn_bleu_enfr",
+    "claim_type": "result_number"
+  },
+  {
+    "case_id": "he_sd_05",
+    "capability": "single_doc_text",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "How many training steps were used and what optimizer was used?",
+    "gold_answer": "The model was trained for 100000 steps using the Adam optimizer",
+    "must_include": [
+      "100000",
+      "Adam"
+    ],
+    "answer_locus": "page 7",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (training_detail); supporting chunk chunk_007.",
+    "source_faithfulness_id": "attn_training_steps",
+    "claim_type": "training_detail"
+  },
+  {
+    "case_id": "he_sd_06",
+    "capability": "single_doc_text",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What dropout rate was applied during training?",
+    "gold_answer": "Dropout with rate 0.1 was applied to the output of each sub-layer",
+    "must_include": [
+      "0.1",
+      "Dropout"
+    ],
+    "answer_locus": "page 7",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (training_detail); supporting chunk chunk_007.",
+    "source_faithfulness_id": "attn_dropout",
+    "claim_type": "training_detail"
+  },
+  {
+    "case_id": "he_sd_07",
+    "capability": "single_doc_text",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What is the computational complexity per layer for self-attention?",
+    "gold_answer": "Self-attention has O(n squared d) complexity per layer and O(1) sequential operations",
+    "must_include": [
+      "1",
+      "Self-attention"
+    ],
+    "answer_locus": "page 6",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (technical_claim); supporting chunk chunk_006.",
+    "source_faithfulness_id": "attn_complexity",
+    "claim_type": "technical_claim"
+  },
+  {
+    "case_id": "he_sd_08",
+    "capability": "single_doc_text",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What architecture does the Transformer follow?",
+    "gold_answer": "The Transformer uses an encoder-decoder structure with stacked self-attention and point-wise fully connected layers",
+    "must_include": [
+      "The Transformer"
+    ],
+    "answer_locus": "page 3",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (architecture_detail); supporting chunk chunk_003.",
+    "source_faithfulness_id": "attn_encoder_decoder",
+    "claim_type": "architecture_detail"
+  },
+  {
+    "case_id": "he_sd_09",
+    "capability": "single_doc_text",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "How does the Transformer encode position information?",
+    "gold_answer": "Positional encodings are added to the input embeddings using sine and cosine functions of different frequencies",
+    "must_include": [
+      "Positional"
+    ],
+    "answer_locus": "page 5",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (technical_claim); supporting chunk chunk_005.",
+    "source_faithfulness_id": "attn_positional_encoding",
+    "claim_type": "technical_claim"
+  },
+  {
+    "case_id": "he_sd_10",
+    "capability": "single_doc_text",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "How does the learning rate schedule work in training?",
+    "gold_answer": "The learning rate increases linearly for the first 4000 warmup steps then decreases proportionally to the inverse square root of step number",
+    "must_include": [
+      "4000"
+    ],
+    "answer_locus": "page 7",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (training_detail); supporting chunk chunk_007.",
+    "source_faithfulness_id": "attn_warmup_steps",
+    "claim_type": "training_detail"
+  },
+  {
+    "case_id": "he_sd_11",
+    "capability": "single_doc_text",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "Was label smoothing used in Transformer training?",
+    "gold_answer": "Label smoothing with value 0.1 was employed during training",
+    "must_include": [
+      "0.1",
+      "Label"
+    ],
+    "answer_locus": "page 7",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (training_detail); supporting chunk chunk_007.",
+    "source_faithfulness_id": "attn_label_smoothing",
+    "claim_type": "training_detail"
+  },
+  {
+    "case_id": "he_sd_12",
+    "capability": "single_doc_text",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What are multi-head attention projections?",
+    "gold_answer": "Multi-head attention projects queries keys and values h times with different learned projections before applying attention in parallel",
+    "must_include": [
+      "Multi-head"
+    ],
+    "answer_locus": "page 5",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (technical_claim); supporting chunk chunk_005.",
+    "source_faithfulness_id": "attn_multi_head_proj",
+    "claim_type": "technical_claim"
+  },
+  {
+    "case_id": "he_sd_13",
+    "capability": "single_doc_text",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "Why does the Transformer avoid recurrent layers?",
+    "gold_answer": "Recurrent models require sequential computation which prevents parallelization and becomes a bottleneck for long sequences",
+    "must_include": [
+      "Recurrent"
+    ],
+    "answer_locus": "page 2",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (conceptual_claim); supporting chunk chunk_002.",
+    "source_faithfulness_id": "attn_recurrent_compare",
+    "claim_type": "conceptual_claim"
+  },
+  {
+    "case_id": "he_sd_14",
+    "capability": "single_doc_text",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What is the feed-forward sub-layer in the Transformer?",
+    "gold_answer": "Each encoder and decoder layer contains a fully connected feed-forward network applied to each position separately with inner dimension 2048",
+    "must_include": [
+      "2048",
+      "Each"
+    ],
+    "answer_locus": "page 5",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (architecture_detail); supporting chunk chunk_005.",
+    "source_faithfulness_id": "attn_feed_forward",
+    "claim_type": "architecture_detail"
+  },
+  {
+    "case_id": "he_sd_15",
+    "capability": "single_doc_text",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "What are the two types of memory in RAG?",
+    "gold_answer": "RAG combines parametric memory in neural network weights with non-parametric memory in a dense vector index of Wikipedia",
+    "must_include": [
+      "RAG",
+      "Wikipedia"
+    ],
+    "answer_locus": "page 1",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (conceptual_claim); supporting chunk chunk_001.",
+    "source_faithfulness_id": "rag_parametric_nonparametric",
+    "claim_type": "conceptual_claim"
+  },
+  {
+    "case_id": "he_sd_16",
+    "capability": "single_doc_text",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "What retriever does RAG use to find relevant passages?",
+    "gold_answer": "RAG uses a Dense Passage Retriever based on bi-encoder BERT representations to retrieve relevant passages",
+    "must_include": [
+      "RAG",
+      "Dense Passage Retriever",
+      "BERT"
+    ],
+    "answer_locus": "page 2",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (technical_claim); supporting chunk chunk_002.",
+    "source_faithfulness_id": "rag_retriever",
+    "claim_type": "technical_claim"
+  },
+  {
+    "case_id": "he_sd_17",
+    "capability": "single_doc_text",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "What exact match score does RAG achieve on Natural Questions?",
+    "gold_answer": "RAG achieves 44.5 exact match on Natural Questions open-domain QA",
+    "must_include": [
+      "44.5",
+      "RAG",
+      "Natural Questions"
+    ],
+    "answer_locus": "page 6",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (result_number); supporting chunk chunk_006.",
+    "source_faithfulness_id": "rag_nq_score",
+    "claim_type": "result_number"
+  },
+  {
+    "case_id": "he_sd_18",
+    "capability": "single_doc_text",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "What exact match score does RAG report on TriviaQA?",
+    "gold_answer": "RAG achieves 56.8 exact match on TriviaQA",
+    "must_include": [
+      "56.8",
+      "RAG",
+      "TriviaQA"
+    ],
+    "answer_locus": "page 6",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (result_number); supporting chunk chunk_006.",
+    "source_faithfulness_id": "rag_trivia_score",
+    "claim_type": "result_number"
+  },
+  {
+    "case_id": "he_sd_19",
+    "capability": "single_doc_text",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "What did human evaluation find about RAG factuality on Jeopardy generation?",
+    "gold_answer": "Human evaluators rated RAG outputs as more factual and specific than a BART baseline on Jeopardy question generation",
+    "must_include": [
+      "Human",
+      "RAG",
+      "BART",
+      "Jeopardy"
+    ],
+    "answer_locus": "page 8",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (human_eval); supporting chunk chunk_008.",
+    "source_faithfulness_id": "rag_human_factuality",
+    "claim_type": "human_eval"
+  },
+  {
+    "case_id": "he_sd_20",
+    "capability": "single_doc_text",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "What generative model is used in RAG?",
+    "gold_answer": "RAG uses BART-large as the generative component",
+    "must_include": [
+      "RAG",
+      "BART-large"
+    ],
+    "answer_locus": "page 2",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (technical_claim); supporting chunk chunk_002.",
+    "source_faithfulness_id": "rag_generator",
+    "claim_type": "technical_claim"
+  },
+  {
+    "case_id": "he_sd_21",
+    "capability": "single_doc_text",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "How is RAG trained end-to-end?",
+    "gold_answer": "RAG is trained by minimizing negative marginal log-likelihood using stochastic gradient descent",
+    "must_include": [
+      "RAG"
+    ],
+    "answer_locus": "page 4",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (training_detail); supporting chunk chunk_004.",
+    "source_faithfulness_id": "rag_gradient_training",
+    "claim_type": "training_detail"
+  },
+  {
+    "case_id": "he_sd_22",
+    "capability": "single_doc_text",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "What corpus does RAG index for retrieval?",
+    "gold_answer": "RAG indexes Wikipedia passages using FAISS dense vector retrieval for maximum inner product search",
+    "must_include": [
+      "RAG",
+      "Wikipedia",
+      "FAISS"
+    ],
+    "answer_locus": "page 2",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (technical_claim); supporting chunk chunk_002.",
+    "source_faithfulness_id": "rag_wikipedia_index",
+    "claim_type": "technical_claim"
+  },
+  {
+    "case_id": "he_sd_23",
+    "capability": "single_doc_text",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "How many tokens was LLaMA trained on?",
+    "gold_answer": "LLaMA models are trained on up to 1.4 trillion tokens from publicly available data",
+    "must_include": [
+      "1.4",
+      "LLaMA"
+    ],
+    "answer_locus": "page 1",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (training_detail); supporting chunk chunk_001.",
+    "source_faithfulness_id": "llama_training_tokens",
+    "claim_type": "training_detail"
+  },
+  {
+    "case_id": "he_sd_24",
+    "capability": "single_doc_text",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What datasets were used to train LLaMA?",
+    "gold_answer": "LLaMA was trained on publicly available datasets including CommonCrawl C4 GitHub Wikipedia Books ArXiv and StackExchange",
+    "must_include": [
+      "LLaMA",
+      "CommonCrawl C4 GitHub Wikipedia Books ArXiv",
+      "StackExchange"
+    ],
+    "answer_locus": "page 2",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (training_detail); supporting chunk chunk_002.",
+    "source_faithfulness_id": "llama_public_data",
+    "claim_type": "training_detail"
+  },
+  {
+    "case_id": "he_sd_25",
+    "capability": "single_doc_text",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What model sizes does LLaMA come in?",
+    "gold_answer": "LLaMA comes in four sizes 7B 13B 33B and 65B parameters",
+    "must_include": [
+      "LLaMA"
+    ],
+    "answer_locus": "page 1",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (architecture_detail); supporting chunk chunk_001.",
+    "source_faithfulness_id": "llama_sizes",
+    "claim_type": "architecture_detail"
+  },
+  {
+    "case_id": "he_sd_26",
+    "capability": "single_doc_text",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What does LLaMA 65B achieve on HellaSwag?",
+    "gold_answer": "LLaMA 65B achieves 84.2 on HellaSwag zero-shot benchmark",
+    "must_include": [
+      "84.2",
+      "LLaMA",
+      "HellaSwag"
+    ],
+    "answer_locus": "page 4",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (result_number); supporting chunk chunk_004.",
+    "source_faithfulness_id": "llama_hellaswag",
+    "claim_type": "result_number"
+  },
+  {
+    "case_id": "he_sd_27",
+    "capability": "single_doc_text",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What accuracy does LLaMA report on BoolQ?",
+    "gold_answer": "LLaMA 65B achieves 85.3 accuracy on BoolQ",
+    "must_include": [
+      "85.3",
+      "LLaMA",
+      "BoolQ"
+    ],
+    "answer_locus": "page 4",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (result_number); supporting chunk chunk_004.",
+    "source_faithfulness_id": "llama_boolq",
+    "claim_type": "result_number"
+  },
+  {
+    "case_id": "he_sd_28",
+    "capability": "single_doc_text",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What does the paper say about carbon emissions from training LLaMA?",
+    "gold_answer": "The paper reports GPU hours power consumption and carbon dioxide equivalent emissions for training the LLaMA models",
+    "must_include": [
+      "GPU",
+      "LLaMA"
+    ],
+    "answer_locus": "page 11",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (environmental_claim); supporting chunk chunk_011.",
+    "source_faithfulness_id": "llama_carbon",
+    "claim_type": "environmental_claim"
+  },
+  {
+    "case_id": "he_sd_29",
+    "capability": "single_doc_text",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What normalization technique does LLaMA use instead of post-layer normalization?",
+    "gold_answer": "LLaMA uses pre-normalization with RMSNorm for training stability",
+    "must_include": [
+      "LLaMA",
+      "RMSNorm"
+    ],
+    "answer_locus": "page 3",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (architecture_detail); supporting chunk chunk_003.",
+    "source_faithfulness_id": "llama_architecture_norm",
+    "claim_type": "architecture_detail"
+  },
+  {
+    "case_id": "he_sd_30",
+    "capability": "single_doc_text",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What activation function does LLaMA replace ReLU with?",
+    "gold_answer": "LLaMA replaces ReLU with SwiGLU activation function in the feed-forward layers",
+    "must_include": [
+      "LLaMA",
+      "ReLU",
+      "SwiGLU"
+    ],
+    "answer_locus": "page 3",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (architecture_detail); supporting chunk chunk_003.",
+    "source_faithfulness_id": "llama_activation_fn",
+    "claim_type": "architecture_detail"
+  },
+  {
+    "case_id": "he_sd_31",
+    "capability": "single_doc_text",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What positional embedding does LLaMA use?",
+    "gold_answer": "LLaMA uses rotary positional embeddings instead of absolute positional embeddings",
+    "must_include": [
+      "LLaMA"
+    ],
+    "answer_locus": "page 3",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (architecture_detail); supporting chunk chunk_003.",
+    "source_faithfulness_id": "llama_rotary_embedding",
+    "claim_type": "architecture_detail"
+  },
+  {
+    "case_id": "he_sd_32",
+    "capability": "single_doc_text",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What is the learning rate and batch size for the 6.7B LLaMA model?",
+    "gold_answer": "The 6.7B LLaMA model uses a learning rate of 3.0e-4 and batch size of 4M tokens",
+    "must_include": [
+      "6",
+      "3",
+      "4",
+      "LLaMA"
+    ],
+    "answer_locus": "page 3",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (training_detail); supporting chunk chunk_003.",
+    "source_faithfulness_id": "llama_learning_rate",
+    "claim_type": "training_detail"
+  },
+  {
+    "case_id": "he_sd_33",
+    "capability": "single_doc_text",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "How does LLaMA compare to GPT-3 on MMLU?",
+    "gold_answer": "LLaMA 65B approaches GPT-3 175B performance on MMLU across humanities STEM social sciences and other categories",
+    "must_include": [
+      "3",
+      "LLaMA",
+      "GPT-3",
+      "MMLU",
+      "STEM"
+    ],
+    "answer_locus": "page 7",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (result_number); supporting chunk chunk_007.",
+    "source_faithfulness_id": "llama_mmlu",
+    "claim_type": "result_number"
+  },
+  {
+    "case_id": "he_sd_34",
+    "capability": "single_doc_text",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What does the LLaMA paper report about gender bias?",
+    "gold_answer": "LLaMA is evaluated for gender bias using co-reference resolution showing higher bias scores for certain pronoun categories",
+    "must_include": [
+      "LLaMA"
+    ],
+    "answer_locus": "page 9",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (human_eval); supporting chunk chunk_009.",
+    "source_faithfulness_id": "llama_bias_gender",
+    "claim_type": "human_eval"
+  },
+  {
+    "case_id": "he_sd_35",
+    "capability": "single_doc_text",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What tokenizer does LLaMA use?",
+    "gold_answer": "LLaMA uses the byte-pair encoding tokenizer from the SentencePiece library",
+    "must_include": [
+      "LLaMA",
+      "SentencePiece"
+    ],
+    "answer_locus": "page 2",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (technical_claim); supporting chunk chunk_002.",
+    "source_faithfulness_id": "llama_tokenizer",
+    "claim_type": "technical_claim"
+  },
+  {
+    "case_id": "he_sd_36",
+    "capability": "single_doc_text",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What is LLaMA-I?",
+    "gold_answer": "LLaMA-I refers to LLaMA 65B fine-tuned with instruction following similar to InstructGPT",
+    "must_include": [
+      "LLaMA-I",
+      "LLaMA",
+      "InstructGPT"
+    ],
+    "answer_locus": "page 22",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (technical_claim); supporting chunk chunk_022.",
+    "source_faithfulness_id": "llama_instruction_tuned",
+    "claim_type": "technical_claim"
+  },
+  {
+    "case_id": "he_sd_37",
+    "capability": "single_doc_text",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "What are the two variants of RAG described in the paper?",
+    "gold_answer": "RAG-Sequence uses the same retrieved document for the whole answer while RAG-Token can use different documents per token",
+    "must_include": [
+      "RAG-Sequence",
+      "RAG-Token"
+    ],
+    "answer_locus": "page 3",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (technical_claim); supporting chunk chunk_003.",
+    "source_faithfulness_id": "rag_seq_vs_token",
+    "claim_type": "technical_claim"
+  },
+  {
+    "case_id": "he_sd_38",
+    "capability": "single_doc_text",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What are the hyperparameters for the 65B LLaMA model?",
+    "gold_answer": "The 65B LLaMA model has 8192 dimensions and 64 attention heads across 80 transformer layers",
+    "must_include": [
+      "8192",
+      "64",
+      "80",
+      "LLaMA"
+    ],
+    "answer_locus": "page 3",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (architecture_detail); supporting chunk chunk_003.",
+    "source_faithfulness_id": "llama_model_dim_65b",
+    "claim_type": "architecture_detail"
+  },
+  {
+    "case_id": "he_sd_39",
+    "capability": "single_doc_text",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What bias scores does LLaMA report for religion-related prompts?",
+    "gold_answer": "LLaMA 65B has a religion bias score of 79.0 which is higher than GPT-3 and OPT",
+    "must_include": [
+      "79.0",
+      "3",
+      "LLaMA",
+      "GPT-3",
+      "OPT"
+    ],
+    "answer_locus": "page 9",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (result_number); supporting chunk chunk_009.",
+    "source_faithfulness_id": "llama_religion_bias",
+    "claim_type": "result_number"
+  },
+  {
+    "case_id": "he_sd_40",
+    "capability": "single_doc_text",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What is the model size of the big Transformer variant?",
+    "gold_answer": "The Transformer big model uses 16 attention heads with a feed-forward dimension and achieves the best BLEU score",
+    "must_include": [
+      "16",
+      "The Transformer",
+      "BLEU"
+    ],
+    "answer_locus": "page 9",
+    "difficulty": "medium",
+    "notes": "From faithfulness benchmark (architecture_detail); supporting chunk chunk_009.",
+    "source_faithfulness_id": "attn_model_size_big",
+    "claim_type": "architecture_detail"
+  },
+  {
+    "case_id": "he_vis_01",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What does Figure 1 show about the Transformer model architecture?",
+    "gold_answer": "Figure 1 shows the full Transformer architecture: a left encoder stack and a right decoder stack, each built from repeated layers of multi-head self-attention and position-wise feed-forward sub-layers, with residual connections and layer normalization, plus encoder-decoder attention in the decoder.",
+    "must_include": [
+      "encoder",
+      "decoder",
+      "multi-head",
+      "self-attention",
+      "feed-forward"
+    ],
+    "answer_locus": "page 3",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Figure 1. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Figure 1"
+  },
+  {
+    "case_id": "he_vis_02",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What are the two attention mechanisms shown in Figure 2?",
+    "gold_answer": "Figure 2 shows Scaled Dot-Product Attention on the left and Multi-Head Attention on the right; multi-head attention runs several scaled dot-product attention operations in parallel over learned linear projections.",
+    "must_include": [
+      "Scaled Dot-Product Attention",
+      "Multi-Head Attention"
+    ],
+    "answer_locus": "page 4",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Figure 2. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Figure 2"
+  },
+  {
+    "case_id": "he_vis_03",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "According to Table 2, what BLEU score does the Transformer (big) model achieve on English-to-German?",
+    "gold_answer": "In Table 2 the Transformer (big) achieves 28.4 BLEU on WMT 2014 English-to-German, the best reported at the time, and 41.0 (41.8) BLEU on English-to-French, at lower training cost than prior models.",
+    "must_include": [
+      "28.4",
+      "BLEU",
+      "English-to-German"
+    ],
+    "answer_locus": "page 8",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Table 2. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Table 2"
+  },
+  {
+    "case_id": "he_vis_04",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "How does the Transformer compare to ByteNet and Deep-Att models in Table 2?",
+    "gold_answer": "Table 2 shows the Transformer outperforms ByteNet and Deep-Att (and other prior models) in BLEU while requiring substantially less training compute (FLOPs).",
+    "must_include": [
+      "outperforms",
+      "training cost"
+    ],
+    "answer_locus": "page 8",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Table 2. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Table 2"
+  },
+  {
+    "case_id": "he_vis_05",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What does Table 1 show about the maximum path length for self-attention versus recurrent layers?",
+    "gold_answer": "Table 1 compares layer types by complexity, sequential operations, and maximum path length: self-attention has O(1) maximum path length and O(1) sequential operations, whereas recurrent layers have O(n) maximum path length and O(n) sequential operations.",
+    "must_include": [
+      "self-attention",
+      "maximum path length",
+      "O(1)",
+      "recurrent"
+    ],
+    "answer_locus": "page 6",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Table 1. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Table 1"
+  },
+  {
+    "case_id": "he_vis_06",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "Based on Table 3, what happens to model quality when the number of attention heads is varied?",
+    "gold_answer": "Table 3 (row A) shows that varying the number of attention heads while keeping computation constant affects quality: single-head attention is worse than the base 8-head setting, and too many heads also degrades quality, so 8 heads is a good balance.",
+    "must_include": [
+      "attention heads",
+      "single-head",
+      "8 heads"
+    ],
+    "answer_locus": "page 9",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Table 3. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Table 3"
+  },
+  {
+    "case_id": "he_vis_07",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What long-distance dependency behaviour is illustrated in the attention visualization figures?",
+    "gold_answer": "The attention visualization figures show individual heads attending to distant, syntactically or semantically related words, illustrating that self-attention captures long-distance dependencies and that different heads specialize in different relations.",
+    "must_include": [
+      "long-distance",
+      "attention heads"
+    ],
+    "answer_locus": "page 13",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Figure 3. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Figure 3"
+  },
+  {
+    "case_id": "he_vis_08",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What does Table 4 show about the Transformer on English constituency parsing?",
+    "gold_answer": "Table 4 shows the Transformer generalizes to English constituency parsing, achieving results competitive with strong prior models even with limited task-specific tuning.",
+    "must_include": [
+      "constituency parsing",
+      "competitive"
+    ],
+    "answer_locus": "page 10",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Table 4. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Table 4"
+  },
+  {
+    "case_id": "he_vis_09",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "Show me the diagram that illustrates the encoder-decoder structure in the Transformer. What does it depict?",
+    "gold_answer": "Figure 1 depicts the encoder-decoder structure: the encoder maps the input sequence to continuous representations via stacked self-attention and feed-forward layers, and the decoder generates the output autoregressively using masked self-attention and encoder-decoder attention.",
+    "must_include": [
+      "encoder-decoder",
+      "self-attention",
+      "decoder"
+    ],
+    "answer_locus": "page 3",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Figure 1. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Figure 1"
+  },
+  {
+    "case_id": "he_vis_10",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "Looking at Table 2, roughly what training cost (FLOPs) does the Transformer base model require relative to competitors?",
+    "gold_answer": "Table 2 reports the Transformer base model's training cost in FLOPs as far lower than prior state-of-the-art models while matching or exceeding their BLEU, demonstrating strong efficiency.",
+    "must_include": [
+      "training cost",
+      "FLOPs",
+      "lower"
+    ],
+    "answer_locus": "page 8",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Table 2. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Table 2"
+  },
+  {
+    "case_id": "he_vis_11",
+    "capability": "visual",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "What does Figure 1 in the RAG paper illustrate about the retrieval-augmented pipeline?",
+    "gold_answer": "Figure 1 illustrates the RAG pipeline: a query encoder and a dense retriever (DPR) select relevant Wikipedia passages from a FAISS index, and a BART generator conditions on the query plus retrieved passages to produce the output, with the retrieved documents treated as a latent variable.",
+    "must_include": [
+      "retriever",
+      "DPR",
+      "generator",
+      "BART",
+      "Wikipedia"
+    ],
+    "answer_locus": "page 1",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Figure 1. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Figure 1"
+  },
+  {
+    "case_id": "he_vis_12",
+    "capability": "visual",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "Which datasets and metrics are summarized in the open-domain QA results table of the RAG paper?",
+    "gold_answer": "The open-domain QA results table reports exact match on Natural Questions, TriviaQA, WebQuestions, and CuratedTrec, showing RAG outperforming prior extractive and closed-book baselines.",
+    "must_include": [
+      "exact match",
+      "Natural Questions",
+      "TriviaQA"
+    ],
+    "answer_locus": "page 6",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Table 1. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Table 1"
+  },
+  {
+    "case_id": "he_vis_13",
+    "capability": "visual",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "How does RAG-Token compare to RAG-Sequence in the results tables of the RAG paper?",
+    "gold_answer": "The results tables show RAG-Sequence and RAG-Token perform comparably overall, with RAG-Token often better on tasks benefiting from drawing different documents for different tokens, and RAG-Sequence competitive on others.",
+    "must_include": [
+      "RAG-Token",
+      "RAG-Sequence"
+    ],
+    "answer_locus": "page 6",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Table. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Table"
+  },
+  {
+    "case_id": "he_vis_14",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "In Table 2, what English-to-French BLEU does the Transformer (big) reach?",
+    "gold_answer": "In Table 2 the Transformer (big) reaches 41.0 (reported as 41.8 in the big configuration) BLEU on WMT 2014 English-to-French, exceeding prior single models at lower training cost.",
+    "must_include": [
+      "41.0",
+      "English-to-French",
+      "BLEU"
+    ],
+    "answer_locus": "page 8",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Table 2. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Table 2"
+  },
+  {
+    "case_id": "he_vis_15",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What does the attention head visualization suggest about anaphora resolution?",
+    "gold_answer": "The attention visualizations suggest some heads perform anaphora-like resolution, attending from a pronoun or reference back to the noun it refers to, evidence that heads learn interpretable linguistic relations.",
+    "must_include": [
+      "attention",
+      "anaphora",
+      "heads"
+    ],
+    "answer_locus": "page 13",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Figure 4. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Figure 4"
+  },
+  {
+    "case_id": "he_vis_16",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "According to Table 3, what happens to performance when attention key size d_k is reduced?",
+    "gold_answer": "Table 3 shows that reducing the attention key dimension d_k hurts quality, indicating that determining compatibility is non-trivial and that a more sophisticated compatibility function than dot product may help.",
+    "must_include": [
+      "key size",
+      "d_k",
+      "quality"
+    ],
+    "answer_locus": "page 9",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Table 3. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Table 3"
+  },
+  {
+    "case_id": "he_vis_17",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "Which table shows the Transformer base model training cost, and what does it indicate?",
+    "gold_answer": "Table 2 shows the training cost; it indicates the base model reaches competitive BLEU at a small fraction of the FLOPs used by prior state-of-the-art systems.",
+    "must_include": [
+      "Table 2",
+      "training cost",
+      "FLOPs"
+    ],
+    "answer_locus": "page 8",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Table 2. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Table 2"
+  },
+  {
+    "case_id": "he_vis_18",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What pattern do the attention heads in the visualization figures exhibit?",
+    "gold_answer": "The visualization figures show that different attention heads exhibit distinct, structured patterns: some attend locally, some to distant related tokens, and some to specific syntactic roles, indicating specialization across heads.",
+    "must_include": [
+      "attention heads",
+      "patterns",
+      "specialize"
+    ],
+    "answer_locus": "page 14",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Figure 5. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Figure 5"
+  },
+  {
+    "case_id": "he_vis_19",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "In Figure 2, how is multi-head attention constructed from scaled dot-product attention?",
+    "gold_answer": "Figure 2 shows multi-head attention linearly projects queries, keys, and values h times, applies scaled dot-product attention to each projection in parallel, concatenates the results, and projects once more.",
+    "must_include": [
+      "multi-head",
+      "scaled dot-product",
+      "projects",
+      "concatenate"
+    ],
+    "answer_locus": "page 4",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Figure 2. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Figure 2"
+  },
+  {
+    "case_id": "he_vis_20",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "According to Table 3, which base Transformer setting gives the best trade-off between quality and computation?",
+    "gold_answer": "Table 3 varies base-model hyperparameters and shows the chosen base configuration (8 heads, d_model 512, d_ff 2048) gives a strong quality-computation trade-off, with quality dropping when heads, key size, or model size are reduced too far.",
+    "must_include": [
+      "8 heads",
+      "512",
+      "trade-off"
+    ],
+    "answer_locus": "page 9",
+    "difficulty": "medium",
+    "notes": "Visual grounding on Table 3. Answered by the 2 multimodal models only.",
+    "expected_figure_label": "Table 3"
+  },
+  {
+    "case_id": "he_md_01",
+    "capability": "multi_doc",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [
+      "1508.07909"
+    ],
+    "question": "Which paper introduced the byte-pair encoding used for the Transformer vocabulary, and what does that method do?",
+    "gold_answer": "The byte-pair encoding used for the Transformer vocabulary comes from Sennrich et al. (1508.07909), which adapts BPE to segment words into subword units, letting the model represent rare and unseen words as sequences of frequent subwords.",
+    "must_include": [
+      "byte-pair encoding",
+      "subword",
+      "Sennrich"
+    ],
+    "answer_locus": "cited paper 1508.07909",
+    "difficulty": "hard",
+    "notes": "Cross-paper: answer lives in the cited secondary paper."
+  },
+  {
+    "case_id": "he_md_02",
+    "capability": "multi_doc",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [
+      "1412.6980"
+    ],
+    "question": "The Transformer is trained with the Adam optimizer. What is Adam, according to the paper that introduced it?",
+    "gold_answer": "Adam (Kingma and Ba, 1412.6980) is an adaptive first-order optimizer that maintains exponential moving averages of gradients and squared gradients (first and second moments) with bias correction, giving per-parameter adaptive learning rates.",
+    "must_include": [
+      "Adam",
+      "adaptive",
+      "moments"
+    ],
+    "answer_locus": "cited paper 1412.6980",
+    "difficulty": "hard",
+    "notes": "Cross-paper: answer lives in the cited secondary paper."
+  },
+  {
+    "case_id": "he_md_03",
+    "capability": "multi_doc",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [
+      "1512.03385"
+    ],
+    "question": "Which paper is cited for the residual connections used in each Transformer sub-layer, and what problem do residual connections address?",
+    "gold_answer": "Residual connections come from ResNet (He et al., 1512.03385), which introduced identity shortcut connections that ease optimization of very deep networks and mitigate the degradation and vanishing-gradient problems.",
+    "must_include": [
+      "residual",
+      "ResNet",
+      "deep networks"
+    ],
+    "answer_locus": "cited paper 1512.03385",
+    "difficulty": "hard",
+    "notes": "Cross-paper: answer lives in the cited secondary paper."
+  },
+  {
+    "case_id": "he_md_04",
+    "capability": "multi_doc",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [
+      "2004.04906"
+    ],
+    "question": "Which paper introduced the dense retriever used in RAG, and how does it retrieve passages?",
+    "gold_answer": "RAG uses Dense Passage Retrieval (Karpukhin et al., 2004.04906), a dual-encoder that embeds questions and passages with BERT and retrieves by maximum inner-product search over dense vectors.",
+    "must_include": [
+      "Dense Passage Retrieval",
+      "dual-encoder",
+      "inner product"
+    ],
+    "answer_locus": "cited paper 2004.04906",
+    "difficulty": "hard",
+    "notes": "Cross-paper: answer lives in the cited secondary paper."
+  },
+  {
+    "case_id": "he_md_05",
+    "capability": "multi_doc",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [
+      "1910.13461"
+    ],
+    "question": "Which paper introduced the BART model used as the RAG generator, and what is BART?",
+    "gold_answer": "The RAG generator is BART (Lewis et al., 1910.13461), a denoising sequence-to-sequence autoencoder pretrained by corrupting text and learning to reconstruct it, effective for generation tasks.",
+    "must_include": [
+      "BART",
+      "denoising",
+      "sequence-to-sequence"
+    ],
+    "answer_locus": "cited paper 1910.13461",
+    "difficulty": "hard",
+    "notes": "Cross-paper: answer lives in the cited secondary paper."
+  },
+  {
+    "case_id": "he_md_06",
+    "capability": "multi_doc",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [
+      "1702.08734"
+    ],
+    "question": "Which library/paper provides the index used for maximum inner product search in RAG, and what does it do?",
+    "gold_answer": "RAG uses FAISS (Johnson et al., 1702.08734) for maximum inner-product search, a library for efficient similarity search and clustering of dense vectors at billion scale, including GPU acceleration.",
+    "must_include": [
+      "FAISS",
+      "similarity search",
+      "dense vectors"
+    ],
+    "answer_locus": "cited paper 1702.08734",
+    "difficulty": "hard",
+    "notes": "Cross-paper: answer lives in the cited secondary paper."
+  },
+  {
+    "case_id": "he_md_07",
+    "capability": "multi_doc",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [
+      "1705.03551"
+    ],
+    "question": "Which paper introduced TriviaQA, one of the benchmarks RAG is evaluated on, and what kind of dataset is it?",
+    "gold_answer": "TriviaQA (Joshi et al., 1705.03551) is a large-scale reading-comprehension and open-domain QA dataset of trivia question-answer pairs with distantly supervised evidence documents.",
+    "must_include": [
+      "TriviaQA",
+      "question",
+      "open-domain"
+    ],
+    "answer_locus": "cited paper 1705.03551",
+    "difficulty": "hard",
+    "notes": "Cross-paper: answer lives in the cited secondary paper."
+  },
+  {
+    "case_id": "he_md_08",
+    "capability": "multi_doc",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [
+      "1901.08634"
+    ],
+    "question": "Which paper introduced the Natural Questions benchmark used in RAG evaluation, and what does it contain?",
+    "gold_answer": "Natural Questions (Kwiatkowski et al., 1901.08634) is a QA benchmark of real anonymized Google queries paired with Wikipedia pages containing long-answer and short-answer annotations.",
+    "must_include": [
+      "Natural Questions",
+      "Wikipedia",
+      "queries"
+    ],
+    "answer_locus": "cited paper 1901.08634",
+    "difficulty": "hard",
+    "notes": "Cross-paper: answer lives in the cited secondary paper."
+  },
+  {
+    "case_id": "he_md_09",
+    "capability": "multi_doc",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [
+      "1409.0473"
+    ],
+    "question": "Which earlier sequence-to-sequence paper is cited for the encoder-decoder attention idea, and what did it introduce?",
+    "gold_answer": "The encoder-decoder attention lineage traces to Bahdanau et al. (1409.0473), which introduced the attention mechanism for neural machine translation, letting the decoder softly align to and attend over source positions.",
+    "must_include": [
+      "attention",
+      "neural machine translation",
+      "align"
+    ],
+    "answer_locus": "cited paper 1409.0473",
+    "difficulty": "hard",
+    "notes": "Cross-paper: answer lives in the cited secondary paper."
+  },
+  {
+    "case_id": "he_md_10",
+    "capability": "multi_doc",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [
+      "1607.06450"
+    ],
+    "question": "Which paper introduced layer normalization used in the Transformer sub-layers, and what does it normalize?",
+    "gold_answer": "Layer normalization (Ba et al., 1607.06450) normalizes the summed inputs across the features of a single training example (rather than across the batch), stabilizing training and working well for recurrent and attention models.",
+    "must_include": [
+      "layer normalization",
+      "features",
+      "single example"
+    ],
+    "answer_locus": "cited paper 1607.06450",
+    "difficulty": "hard",
+    "notes": "Cross-paper: answer lives in the cited secondary paper."
+  },
+  {
+    "case_id": "he_md_11",
+    "capability": "multi_doc",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "How does scaled dot-product attention work, and why is the scaling by the square root of d_k used?",
+    "gold_answer": "Scaled dot-product attention computes softmax(QK^T / sqrt(d_k)) V. The scaling by sqrt(d_k) counteracts large dot-product magnitudes at high dimensions that would push the softmax into regions with very small gradients.",
+    "must_include": [
+      "softmax",
+      "sqrt",
+      "d_k",
+      "gradients"
+    ],
+    "answer_locus": "anchor paper body",
+    "difficulty": "medium",
+    "notes": "Detail: answerable from the anchor paper alone."
+  },
+  {
+    "case_id": "he_md_12",
+    "capability": "multi_doc",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "How does RAG-Token differ from RAG-Sequence in how it marginalizes over retrieved documents?",
+    "gold_answer": "RAG-Sequence uses one retrieved document to generate the entire answer and marginalizes over documents per output sequence, while RAG-Token can attend to a different document for each generated token, marginalizing per token.",
+    "must_include": [
+      "RAG-Token",
+      "RAG-Sequence",
+      "marginalizes",
+      "token"
+    ],
+    "answer_locus": "anchor paper body",
+    "difficulty": "medium",
+    "notes": "Detail: answerable from the anchor paper alone."
+  },
+  {
+    "case_id": "he_md_13",
+    "capability": "multi_doc",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What BLEU score did the Transformer base model achieve on WMT 2014 English-to-German?",
+    "gold_answer": "The Transformer base model achieves 27.3 BLEU on WMT 2014 English-to-German (the big model reaches 28.4).",
+    "must_include": [
+      "27.3",
+      "BLEU",
+      "English-to-German"
+    ],
+    "answer_locus": "anchor paper body",
+    "difficulty": "medium",
+    "notes": "Detail: answerable from the anchor paper alone."
+  },
+  {
+    "case_id": "he_md_14",
+    "capability": "multi_doc",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [
+      "1412.6980"
+    ],
+    "question": "The Transformer sets Adam's beta2 to 0.98. What is the default beta2 recommended in the Adam paper, and why might the Transformer differ?",
+    "gold_answer": "The Adam paper (1412.6980) recommends default beta2 = 0.999; the Transformer instead uses 0.98, a slightly less smoothed second-moment estimate that improves stability under its warmup learning-rate schedule.",
+    "must_include": [
+      "0.999",
+      "beta2",
+      "Adam"
+    ],
+    "answer_locus": "cited paper 1412.6980",
+    "difficulty": "hard",
+    "notes": "Cross-paper: answer lives in the cited secondary paper."
+  },
+  {
+    "case_id": "he_md_15",
+    "capability": "multi_doc",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [
+      "1512.03385"
+    ],
+    "question": "ResNet is cited for residual connections. What core empirical result did the ResNet paper report on ImageNet?",
+    "gold_answer": "The ResNet paper (1512.03385) showed that residual networks enable training of very deep models (for example 152 layers) and won ImageNet classification, dramatically reducing error compared to plain deep networks.",
+    "must_include": [
+      "ResNet",
+      "deep",
+      "ImageNet"
+    ],
+    "answer_locus": "cited paper 1512.03385",
+    "difficulty": "hard",
+    "notes": "Cross-paper: answer lives in the cited secondary paper."
+  },
+  {
+    "case_id": "he_md_16",
+    "capability": "multi_doc",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [
+      "2004.04906"
+    ],
+    "question": "DPR is RAG's retriever. What retrieval baseline did the DPR paper show it outperforms, and by roughly how much?",
+    "gold_answer": "The DPR paper (2004.04906) showed dense retrieval substantially outperforms the traditional BM25 lexical baseline on open-domain QA passage retrieval, improving top-k retrieval accuracy by a large margin.",
+    "must_include": [
+      "DPR",
+      "BM25",
+      "outperforms"
+    ],
+    "answer_locus": "cited paper 2004.04906",
+    "difficulty": "hard",
+    "notes": "Cross-paper: answer lives in the cited secondary paper."
+  },
+  {
+    "case_id": "he_md_17",
+    "capability": "multi_doc",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [
+      "1910.13461"
+    ],
+    "question": "BART is RAG's generator. What pretraining objective does the BART paper use?",
+    "gold_answer": "The BART paper (1910.13461) pretrains by corrupting text with an arbitrary noising function (for example token masking, deletion, and sentence permutation) and learning to reconstruct the original text.",
+    "must_include": [
+      "BART",
+      "corrupt",
+      "reconstruct"
+    ],
+    "answer_locus": "cited paper 1910.13461",
+    "difficulty": "hard",
+    "notes": "Cross-paper: answer lives in the cited secondary paper."
+  },
+  {
+    "case_id": "he_md_18",
+    "capability": "multi_doc",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [
+      "1508.07909"
+    ],
+    "question": "BPE is used for the Transformer vocabulary. What problem in machine translation did the BPE paper originally target?",
+    "gold_answer": "The BPE paper (1508.07909) targeted the open-vocabulary and rare-word problem in neural machine translation, enabling translation of rare and unknown words via subword units instead of a fixed word vocabulary.",
+    "must_include": [
+      "rare",
+      "subword",
+      "vocabulary"
+    ],
+    "answer_locus": "cited paper 1508.07909",
+    "difficulty": "hard",
+    "notes": "Cross-paper: answer lives in the cited secondary paper."
+  },
+  {
+    "case_id": "he_md_19",
+    "capability": "multi_doc",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [
+      "1705.03551"
+    ],
+    "question": "TriviaQA is a RAG benchmark. How is evidence provided in the TriviaQA dataset, according to its paper?",
+    "gold_answer": "The TriviaQA paper (1705.03551) provides distantly supervised evidence documents (from web and Wikipedia) for each question-answer pair, rather than gold labeled spans, making it a challenging QA setting.",
+    "must_include": [
+      "TriviaQA",
+      "distantly supervised",
+      "evidence"
+    ],
+    "answer_locus": "cited paper 1705.03551",
+    "difficulty": "hard",
+    "notes": "Cross-paper: answer lives in the cited secondary paper."
+  },
+  {
+    "case_id": "he_md_20",
+    "capability": "multi_doc",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [
+      "1409.0473"
+    ],
+    "question": "The encoder-decoder attention derives from Bahdanau et al. What limitation of fixed-length encodings did that paper address?",
+    "gold_answer": "Bahdanau et al. (1409.0473) addressed the bottleneck of compressing a whole source sentence into a single fixed-length vector, introducing attention so the decoder can dynamically focus on relevant source words.",
+    "must_include": [
+      "fixed-length",
+      "attention",
+      "source"
+    ],
+    "answer_locus": "cited paper 1409.0473",
+    "difficulty": "hard",
+    "notes": "Cross-paper: answer lives in the cited secondary paper."
+  },
+  {
+    "case_id": "he_hard_01",
+    "capability": "hard_retrieval",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What value of beta2 does the Transformer use in the Adam optimizer, and what epsilon?",
+    "gold_answer": "The Transformer uses Adam with beta1 = 0.9, beta2 = 0.98, and epsilon = 1e-9.",
+    "must_include": [
+      "0.98",
+      "beta2",
+      "1e-9"
+    ],
+    "answer_locus": "training section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_02",
+    "capability": "hard_retrieval",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "How many warmup steps does the Transformer learning-rate schedule use?",
+    "gold_answer": "The Transformer uses 4000 warmup steps, increasing the learning rate linearly for the first 4000 steps then decaying proportionally to the inverse square root of the step number.",
+    "must_include": [
+      "4000",
+      "warmup"
+    ],
+    "answer_locus": "training section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_03",
+    "capability": "hard_retrieval",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What is the dimensionality of the inner feed-forward layer (d_ff) in the base Transformer?",
+    "gold_answer": "The base Transformer uses an inner feed-forward dimensionality d_ff = 2048, with model dimension d_model = 512.",
+    "must_include": [
+      "2048",
+      "d_ff",
+      "512"
+    ],
+    "answer_locus": "model section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_04",
+    "capability": "hard_retrieval",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "How long did the base Transformer take to train and on what hardware?",
+    "gold_answer": "The base model trained for about 12 hours (100,000 steps) on 8 NVIDIA P100 GPUs; the big model trained for about 3.5 days.",
+    "must_include": [
+      "12 hours",
+      "8",
+      "P100"
+    ],
+    "answer_locus": "training section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_05",
+    "capability": "hard_retrieval",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What label smoothing value did the Transformer use and what effect did it have?",
+    "gold_answer": "The Transformer used label smoothing of epsilon_ls = 0.1, which hurt perplexity (the model becomes less confident) but improved accuracy and BLEU.",
+    "must_include": [
+      "0.1",
+      "label smoothing",
+      "BLEU"
+    ],
+    "answer_locus": "training section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_06",
+    "capability": "hard_retrieval",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "How many top passages (K) does RAG retrieve for marginalization in its main experiments?",
+    "gold_answer": "RAG retrieves the top K latent documents (commonly K = 5 or 10 in experiments) and marginalizes over them when generating the answer.",
+    "must_include": [
+      "top",
+      "K",
+      "marginalizes"
+    ],
+    "answer_locus": "method section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_07",
+    "capability": "hard_retrieval",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "What exact-match score does RAG achieve on Natural Questions open-domain QA?",
+    "gold_answer": "RAG achieves 44.5 exact match on Natural Questions, outperforming prior extractive and closed-book baselines.",
+    "must_include": [
+      "44.5",
+      "Natural Questions",
+      "exact match"
+    ],
+    "answer_locus": "results section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_08",
+    "capability": "hard_retrieval",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "Which component of RAG is kept fixed during training and which are fine-tuned?",
+    "gold_answer": "During RAG training the document encoder and the document index are kept fixed, while the query encoder and the BART generator are fine-tuned jointly.",
+    "must_include": [
+      "document encoder",
+      "fixed",
+      "query encoder",
+      "generator"
+    ],
+    "answer_locus": "training section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_09",
+    "capability": "hard_retrieval",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "What did the human evaluation of RAG find about factuality relative to BART on Jeopardy generation?",
+    "gold_answer": "Human evaluators judged RAG's Jeopardy question generations to be more factual and more specific than a BART-only baseline.",
+    "must_include": [
+      "human",
+      "more factual",
+      "specific",
+      "BART"
+    ],
+    "answer_locus": "results section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_10",
+    "capability": "hard_retrieval",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "How many tokens was the LLaMA 65B model trained on?",
+    "gold_answer": "The larger LLaMA models (33B and 65B) were trained on 1.4 trillion tokens of publicly available data.",
+    "must_include": [
+      "1.4 trillion",
+      "tokens"
+    ],
+    "answer_locus": "training section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_11",
+    "capability": "hard_retrieval",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What normalization function and activation does LLaMA use, and where in the block?",
+    "gold_answer": "LLaMA applies pre-normalization with RMSNorm on the input of each transformer sub-layer and uses the SwiGLU activation in the feed-forward network.",
+    "must_include": [
+      "RMSNorm",
+      "pre-normalization",
+      "SwiGLU"
+    ],
+    "answer_locus": "architecture section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_12",
+    "capability": "hard_retrieval",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What positional encoding does LLaMA use, replacing absolute positional embeddings?",
+    "gold_answer": "LLaMA uses rotary positional embeddings (RoPE) applied at each layer instead of absolute positional embeddings.",
+    "must_include": [
+      "rotary",
+      "RoPE",
+      "positional"
+    ],
+    "answer_locus": "architecture section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_13",
+    "capability": "hard_retrieval",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What are the dimension, head count, and layer count of the LLaMA 65B model?",
+    "gold_answer": "LLaMA 65B has model dimension 8192, 64 attention heads, and 80 transformer layers.",
+    "must_include": [
+      "8192",
+      "64",
+      "80"
+    ],
+    "answer_locus": "architecture table",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_14",
+    "capability": "hard_retrieval",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What optimizer and learning-rate schedule does LLaMA use for training?",
+    "gold_answer": "LLaMA is trained with the AdamW optimizer and a cosine learning-rate schedule that decays the final learning rate to 10 percent of the peak, with weight decay 0.1 and gradient clipping 1.0.",
+    "must_include": [
+      "AdamW",
+      "cosine",
+      "weight decay"
+    ],
+    "answer_locus": "training section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_15",
+    "capability": "hard_retrieval",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What HellaSwag zero-shot score does LLaMA 65B report?",
+    "gold_answer": "LLaMA 65B reports 84.2 on the HellaSwag commonsense reasoning benchmark in the zero-shot setting.",
+    "must_include": [
+      "84.2",
+      "HellaSwag"
+    ],
+    "answer_locus": "results section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_16",
+    "capability": "hard_retrieval",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "Which specific public datasets make up the LLaMA pretraining mixture?",
+    "gold_answer": "The LLaMA pretraining mixture is English CommonCrawl, C4, GitHub, Wikipedia, the Books corpora (Gutenberg and Books3), ArXiv, and Stack Exchange.",
+    "must_include": [
+      "CommonCrawl",
+      "C4",
+      "GitHub",
+      "Wikipedia",
+      "ArXiv"
+    ],
+    "answer_locus": "data section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_17",
+    "capability": "hard_retrieval",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What does the LLaMA paper report about the carbon footprint of training?",
+    "gold_answer": "The LLaMA paper reports training GPU-hours, power consumption, and estimated carbon-dioxide-equivalent emissions for its models, quantifying the environmental cost of training.",
+    "must_include": [
+      "carbon",
+      "GPU-hours",
+      "emissions"
+    ],
+    "answer_locus": "environmental section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_18",
+    "capability": "hard_retrieval",
+    "paper_id": "2302.13971",
+    "secondary_paper_ids": [],
+    "question": "What tokenizer does LLaMA use and how are numbers handled?",
+    "gold_answer": "LLaMA uses a byte-pair encoding tokenizer from SentencePiece, splitting all numbers into individual digits and falling back to bytes for unknown UTF-8 characters.",
+    "must_include": [
+      "SentencePiece",
+      "byte-pair",
+      "digits"
+    ],
+    "answer_locus": "tokenizer section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_19",
+    "capability": "hard_retrieval",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": [],
+    "question": "What is the per-layer computational complexity of self-attention versus a recurrent layer?",
+    "gold_answer": "Self-attention has O(n^2 * d) complexity per layer with O(1) sequential operations, while a recurrent layer has O(n * d^2) complexity with O(n) sequential operations.",
+    "must_include": [
+      "n^2",
+      "self-attention",
+      "recurrent",
+      "sequential"
+    ],
+    "answer_locus": "complexity table",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  },
+  {
+    "case_id": "he_hard_20",
+    "capability": "hard_retrieval",
+    "paper_id": "2005.11401",
+    "secondary_paper_ids": [],
+    "question": "What generative backbone size (parameter count) does RAG's BART generator use?",
+    "gold_answer": "RAG uses BART-large (around 400 million parameters) as its generative component.",
+    "must_include": [
+      "BART-large",
+      "400 million"
+    ],
+    "answer_locus": "method section",
+    "difficulty": "hard",
+    "notes": "Answer is in the paper body, not the abstract; single-source and specific (LitQA2-style design principle)."
+  }
+]

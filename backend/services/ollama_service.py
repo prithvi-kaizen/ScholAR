@@ -36,9 +36,9 @@ async def ollama_available() -> bool:
         return False
 
 
-async def generate(prompt: str, temperature: float = 0.2, images: list[str] | None = None) -> str:
+async def generate(prompt: str, temperature: float = 0.2, images: list[str] | None = None, model: str | None = None) -> str:
     payload: dict[str, Any] = {
-        "model": OLLAMA_MODEL,
+        "model": model or OLLAMA_MODEL,
         "prompt": prompt,
         "stream": False,
         "think": False,
