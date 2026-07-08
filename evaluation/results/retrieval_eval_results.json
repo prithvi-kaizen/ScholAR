@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-05T08:59:58",
+  "generated_at": "2026-07-08T08:49:09",
   "case_count": 14,
   "retrievers": [
     "keyword_overlap",
@@ -8,6 +8,7 @@
     "bm25_primary_with_page_hints",
     "dense_only"
   ],
+  "embedder_available": true,
   "summary": {
     "keyword_overlap": {
       "cases": 14,

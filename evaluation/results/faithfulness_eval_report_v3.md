@@ -1,6 +1,6 @@
 # ScholAR NLI-Based Citation Faithfulness Report (v3)
 
-**Generated:** 2026-06-16 13:29
+**Generated:** 2026-07-04 13:35
 **Cases:** 51
 **Method:** NLI-CFS = 0.50×NLI + 0.30×SCR + 0.20×KFP
 **NLI:** Token-level entailment (SummaC/AlignScore-style)
@@ -13,20 +13,20 @@
 
 | System | Mean NLI-CFS | SCHR@5 | Faithful | Partial | Unfaithful |
 |---|---:|---:|---:|---:|---:|
-| BM25-primary (ScholAR baseline) | **0.820** | 0.863 | 49/51 | 1/51 | 1/51 |
+| BM25-primary (ScholAR baseline) | **0.809** | 0.824 | 48/51 | 1/51 | 2/51 |
 | Hybrid BM25+Dense+RRF          | **0.829** | 0.922 | 49/51 | 1/51 | 1/51 |
 
 ## Component Scores (BM25)
 
 | Metric | Value |
 |---|---:|
-| Mean NLI-CFS (Tier 1) | 0.961 |
+| Mean NLI-CFS (Tier 1) | 0.941 |
 | Mean SCR (Tier 2)     | 0.484 |
-| Mean KFP (Tier 3)     | 0.973 |
-| Mean Combined NLI-CFS | **0.820** |
-| SCHR@1 | 0.353 |
-| SCHR@3 | 0.706 |
-| SCHR@5 | 0.863 |
+| Mean KFP (Tier 3)     | 0.966 |
+| Mean Combined NLI-CFS | **0.809** |
+| SCHR@1 | 0.373 |
+| SCHR@3 | 0.725 |
+| SCHR@5 | 0.824 |
 | Avg atoms/claim | 1.08 |
 
 ---
@@ -35,11 +35,11 @@
 
 | Chunks Used | N | BM25 | Hybrid |
 |---|---:|---:|---:|
-| Top-1 | 51 | 0.644 | 0.669 |
+| Top-1 | 51 | 0.658 | 0.669 |
 | Top-2 | 51 | 0.757 | 0.776 |
-| Top-3 | 51 | 0.797 | 0.796 |
+| Top-3 | 51 | 0.799 | 0.796 |
 | Top-4 | 51 | 0.791 | 0.817 |
-| Top-5 | 51 | 0.820 | 0.829 |
+| Top-5 | 51 | 0.809 | 0.829 |
 
 ---
 
@@ -52,8 +52,8 @@
 | environmental_claim | 1 | 0.918 | 1.000 | 0.727 | 1.000 | 1.000 |
 | formula | 1 | 0.876 | 1.000 | 0.586 | 1.000 | 1.000 |
 | human_eval | 2 | 0.882 | 1.000 | 0.607 | 1.000 | 1.000 |
-| result_number | 13 | 0.852 | 1.000 | 0.507 | 1.000 | 1.000 |
-| technical_claim | 11 | 0.846 | 1.000 | 0.533 | 0.932 | 0.727 |
+| result_number | 13 | 0.811 | 0.923 | 0.514 | 0.974 | 0.923 |
+| technical_claim | 11 | 0.844 | 1.000 | 0.525 | 0.932 | 0.636 |
 | training_detail | 8 | 0.668 | 0.750 | 0.350 | 0.941 | 0.750 |
 
 ---
@@ -80,7 +80,7 @@
 | `rag_parametric_nonparametric` | conceptual_claim | BM25 | 1.000 | 0.479 | 1.000 | **0.844** | 1 | FAITHFUL |
 | `rag_retriever` | technical_claim | BM25 | 1.000 | 0.504 | 1.000 | **0.851** | 3 | FAITHFUL |
 | `rag_nq_score` | result_number | BM25 | 1.000 | 0.400 | 1.000 | **0.820** | 5 | FAITHFUL |
-| `rag_trivia_score` | result_number | BM25 | 1.000 | 0.295 | 1.000 | **0.788** | 5 | FAITHFUL |
+| `rag_trivia_score` | result_number | BM25 | 0.000 | 0.340 | 0.667 | **0.235** | miss | UNFAITHFUL |
 | `rag_human_factuality` | human_eval | BM25 | 1.000 | 0.741 | 1.000 | **0.922** | 3 | FAITHFUL |
 | `rag_generator` | technical_claim | BM25 | 1.000 | 0.431 | 1.000 | **0.829** | miss | FAITHFUL |
 | `rag_gradient_training` | training_detail | BM25 | 1.000 | 0.449 | 1.000 | **0.835** | miss | FAITHFUL |
@@ -89,11 +89,11 @@
 | `rag_broader_impact` | conceptual_claim | BM25 | 1.000 | 0.633 | 1.000 | **0.890** | 2 | FAITHFUL |
 | `rag_marginalization` | technical_claim | BM25 | 1.000 | 0.677 | 1.000 | **0.903** | 1 | FAITHFUL |
 | `rag_appendix_details` | conceptual_claim | BM25 | 1.000 | 0.448 | 1.000 | **0.834** | 1 | FAITHFUL |
-| `llama_training_tokens` | training_detail | BM25 | 0.000 | 0.521 | 1.000 | **0.356** | 5 | PARTIAL |
+| `llama_training_tokens` | training_detail | BM25 | 0.000 | 0.521 | 1.000 | **0.356** | 4 | PARTIAL |
 | `llama_public_data` | training_detail | BM25 | 1.000 | 0.293 | 0.857 | **0.759** | miss | FAITHFUL |
-| `llama_sizes` | architecture_detail | BM25 | 1.000 | 0.353 | 1.000 | **0.806** | 4 | FAITHFUL |
-| `llama_hellaswag` | result_number | BM25 | 1.000 | 0.308 | 1.000 | **0.792** | 4 | FAITHFUL |
-| `llama_boolq` | result_number | BM25 | 1.000 | 0.343 | 1.000 | **0.803** | 4 | FAITHFUL |
+| `llama_sizes` | architecture_detail | BM25 | 1.000 | 0.353 | 1.000 | **0.806** | 5 | FAITHFUL |
+| `llama_hellaswag` | result_number | BM25 | 1.000 | 0.308 | 1.000 | **0.792** | 3 | FAITHFUL |
+| `llama_boolq` | result_number | BM25 | 1.000 | 0.343 | 1.000 | **0.803** | 1 | FAITHFUL |
 | `llama_carbon` | environmental_claim | BM25 | 1.000 | 0.727 | 1.000 | **0.918** | 2 | FAITHFUL |
 | `llama_architecture_norm` | architecture_detail | BM25 | 1.000 | 0.310 | 1.000 | **0.793** | 2 | FAITHFUL |
 | `llama_activation_fn` | architecture_detail | BM25 | 1.000 | 0.345 | 1.000 | **0.804** | 1 | FAITHFUL |
@@ -102,9 +102,9 @@
 | `llama_math_eval` | result_number | BM25 | 1.000 | 0.507 | 1.000 | **0.852** | 2 | FAITHFUL |
 | `llama_mmlu` | result_number | BM25 | 1.000 | 0.524 | 1.000 | **0.857** | 1 | FAITHFUL |
 | `llama_bias_gender` | human_eval | BM25 | 1.000 | 0.473 | 1.000 | **0.842** | 1 | FAITHFUL |
-| `llama_triviaqa` | result_number | BM25 | 1.000 | 0.442 | 1.000 | **0.833** | 3 | FAITHFUL |
+| `llama_triviaqa` | result_number | BM25 | 1.000 | 0.490 | 1.000 | **0.847** | 3 | FAITHFUL |
 | `llama_approach_similar` | conceptual_claim | BM25 | 1.000 | 0.360 | 1.000 | **0.808** | 3 | FAITHFUL |
-| `llama_tokenizer` | technical_claim | BM25 | 1.000 | 0.270 | 0.500 | **0.681** | 2 | FAITHFUL |
+| `llama_tokenizer` | technical_claim | BM25 | 1.000 | 0.180 | 0.500 | **0.654** | miss | FAITHFUL |
 | `llama_instruction_tuned` | technical_claim | BM25 | 1.000 | 0.552 | 0.750 | **0.816** | 2 | FAITHFUL |
 | `attn_big_base_layer_count` | architecture_detail | BM25 | 1.000 | 0.486 | 1.000 | **0.846** | 5 | FAITHFUL |
 | `rag_seq_vs_token` | technical_claim | BM25 | 1.000 | 0.481 | 1.000 | **0.844** | miss | FAITHFUL |

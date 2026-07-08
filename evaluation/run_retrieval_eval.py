@@ -311,10 +311,21 @@ def main() -> None:
             rows.append(evaluate_case(case, retriever))
 
     summary = summarize(rows)
+    # Record whether the dense embedder was actually available. dense_only
+    # returns [] (scoring 0.0 across the board) when it is not, which is an
+    # infrastructure failure, not a real "dense retrieval is useless" result.
+    try:
+        from hybrid_retrieval import _get_embedder
+        embedder_available = _get_embedder() is not None
+    except Exception:
+        embedder_available = False
+    if not embedder_available and "dense_only" in summary:
+        summary["dense_only"]["embedder_unavailable"] = True
     payload = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "case_count": len(cases),
         "retrievers": list(RETRIEVERS),
+        "embedder_available": embedder_available,
         "summary": summary,
         "rows": rows,
     }

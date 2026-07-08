@@ -57,6 +57,14 @@ function InlineMath({ expr }: { expr: string }) {
   return <span dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
+// A single-$ span is only math if it looks like math: it contains a LaTeX
+// control char, or has no internal whitespace (e.g. $x$, $d_k$, $\tau$).
+// This keeps currency like "$50 million and $10" from being rendered as KaTeX.
+function looksLikeMath(inner: string): boolean {
+  if (/[\\^_{}]/.test(inner)) return true;
+  return !/\s/.test(inner);
+}
+
 function renderInline(
   text: string,
   citations: Citation[] = [],
@@ -73,7 +81,7 @@ function renderInline(
     if (part.startsWith("$$") && part.endsWith("$$") && part.length > 4) {
       return <InlineMath key={i} expr={part.slice(2, -2)} />;
     }
-    if (part.startsWith("$") && part.endsWith("$") && part.length > 2) {
+    if (part.startsWith("$") && part.endsWith("$") && part.length > 2 && looksLikeMath(part.slice(1, -1))) {
       return <InlineMath key={i} expr={part.slice(1, -1)} />;
     }
     const m = part.match(/^\[(\d+)\]$/);

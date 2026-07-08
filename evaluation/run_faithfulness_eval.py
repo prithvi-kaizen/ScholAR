@@ -100,7 +100,13 @@ def kfp_score(claim: str, chunk_texts: list[str]) -> float:
     if not facts:
         return 1.0
     combined = " ".join(chunk_texts).lower()
-    found = sum(1 for f in facts if f.lower() in combined)
+    # Match on word/number boundaries, not raw substring: the numeric fact "8"
+    # must not count as found inside "2048", and "1" must not match everything.
+    found = 0
+    for f in facts:
+        fl = f.lower().strip()
+        if fl and re.search(r"(?<!\w)" + re.escape(fl) + r"(?!\w)", combined):
+            found += 1
     return round(found / len(facts), 3)
 
 
@@ -304,7 +310,7 @@ def write_report(bm25: list[dict], hybrid: list[dict],
 **Generated:** {datetime.now().strftime("%Y-%m-%d %H:%M")}
 **Cases:** {bm25_agg['n']}
 **Method:** NLI-CFS = 0.50×NLI + 0.30×SCR + 0.20×KFP
-**NLI:** Token-level entailment (SummaC/AlignScore-style)
+**NLI:** {'Sentence-level semantic entailment via MiniLM (SummaC/AlignScore-style)' if _NLI._mode == 'semantic' else 'LEXICAL FALLBACK (embedder unavailable) — not the semantic metric'}
 **SCR:** {'MiniLM cosine similarity' if _SCR_AVAILABLE else 'Bigram Jaccard (MiniLM fallback)'}
 **KFP:** Numeric and technical term precision
 
@@ -407,6 +413,11 @@ def main() -> None:
         "generated_at":   datetime.now().isoformat(timespec="seconds"),
         "n_cases":        len(bm25_results),
         "scr_model":      "MiniLM-L6-v2 cosine" if _SCR_AVAILABLE else "bigram-jaccard",
+        # Records whether the NLI tier ran with the real MiniLM embedder
+        # ("semantic") or silently fell back to lexical scoring
+        # ("lexical_fallback"). Without this, two runs on different machines
+        # could produce different combined_cfs with nothing to distinguish them.
+        "nli_mode":       _NLI._mode,
         "bm25": {
             "summary":       bm25_agg,
             "rank_ablation": rank_abl_bm25,

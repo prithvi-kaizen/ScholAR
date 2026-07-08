@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import json
 import re
+import socket
 import unicodedata
 from pathlib import Path
 from typing import Any
+from urllib.parse import urljoin, urlsplit
 
 import fitz
 import httpx
@@ -82,6 +85,69 @@ def _arxiv_url_candidates(pdf_url: str, oa_pdf_url: str | None = None) -> list[s
 
 
 _MAX_PDF_BYTES = 50 * 1024 * 1024  # 50MB — reject/abort anything larger
+_MAX_REDIRECTS = 5
+
+
+def _host_is_public(host: str) -> bool:
+    """True only if every IP the host resolves to is a globally-routable public
+    address. Blocks loopback (127.0.0.1), link-local (169.254.169.254 cloud
+    metadata), private (10/172.16/192.168), reserved, multicast, and unspecified
+    addresses. This is the core SSRF defense: it is applied at every redirect hop.
+    """
+    if not host:
+        return False
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except socket.gaierror:
+        return False
+    for info in infos:
+        ip = info[4][0]
+        try:
+            addr = ipaddress.ip_address(ip)
+        except ValueError:
+            return False
+        if (addr.is_private or addr.is_loopback or addr.is_link_local
+                or addr.is_reserved or addr.is_multicast or addr.is_unspecified
+                or not addr.is_global):
+            return False
+    return True
+
+
+def _validate_fetch_url(url: str) -> str:
+    """Reject non-http(s) schemes and non-public hosts. Returns the host."""
+    parts = urlsplit(url)
+    if parts.scheme not in ("http", "https"):
+        raise RuntimeError(f"Refusing to fetch non-http(s) URL: {parts.scheme}")
+    host = parts.hostname or ""
+    if not _host_is_public(host):
+        raise RuntimeError(f"Refusing to fetch non-public host: {host}")
+    return host
+
+
+async def _fetch_pdf_bytes(client: httpx.AsyncClient, url: str) -> tuple[bytes, str]:
+    """Fetch a URL following redirects manually, validating the host at EVERY hop
+    (httpx auto-redirects would bypass the per-hop SSRF check). Enforces the size cap."""
+    current = url
+    for _ in range(_MAX_REDIRECTS + 1):
+        _validate_fetch_url(current)
+        async with client.stream("GET", current) as response:
+            if response.status_code in (301, 302, 303, 307, 308):
+                location = response.headers.get("location")
+                if not location:
+                    response.raise_for_status()
+                current = urljoin(current, location)
+                continue
+            response.raise_for_status()
+            content_type = response.headers.get("content-type", "")
+            chunks: list[bytes] = []
+            total = 0
+            async for chunk in response.aiter_bytes():
+                total += len(chunk)
+                if total > _MAX_PDF_BYTES:
+                    raise RuntimeError(f"PDF exceeds {_MAX_PDF_BYTES // (1024 * 1024)}MB limit")
+                chunks.append(chunk)
+            return b"".join(chunks), content_type
+    raise RuntimeError("Too many redirects")
 
 
 async def download_pdf(pdf_url: str, destination: Path) -> None:
@@ -93,36 +159,32 @@ async def download_pdf(pdf_url: str, destination: Path) -> None:
     urls_to_try = _arxiv_url_candidates(pdf_url)
     last_exc: Exception | None = None
 
-    async with httpx.AsyncClient(timeout=60.0, follow_redirects=True, headers=_PDF_HEADERS) as client:
+    # follow_redirects=False: we follow manually so the SSRF host check runs at
+    # every hop, not just on the initial URL.
+    async with httpx.AsyncClient(timeout=60.0, follow_redirects=False, headers=_PDF_HEADERS) as client:
         for attempt, url in enumerate(urls_to_try):
             try:
                 if attempt > 0:
                     await asyncio.sleep(2.0 * attempt)
-                async with client.stream("GET", url) as response:
-                    if response.status_code == 403 and attempt < len(urls_to_try) - 1:
-                        continue  # try next URL
-                    response.raise_for_status()
-
-                    content_type = response.headers.get("content-type", "")
-                    chunks: list[bytes] = []
-                    total = 0
-                    async for chunk in response.aiter_bytes():
-                        total += len(chunk)
-                        if total > _MAX_PDF_BYTES:
-                            raise RuntimeError(f"PDF exceeds {_MAX_PDF_BYTES // (1024 * 1024)}MB limit")
-                        chunks.append(chunk)
-                    content = b"".join(chunks)
-
+                content, content_type = await _fetch_pdf_bytes(client, url)
                 if "pdf" in content_type.lower() or content.startswith(b"%PDF"):
                     destination.write_bytes(content)
                     return
-                # Not a PDF — try next
+                # Not a PDF — try next candidate
             except httpx.HTTPStatusError as exc:
                 last_exc = exc
+                if exc.response is not None and exc.response.status_code == 403 and attempt < len(urls_to_try) - 1:
+                    continue
                 if attempt < len(urls_to_try) - 1:
                     continue
-            except httpx.HTTPError as exc:
+            except (httpx.HTTPError, RuntimeError) as exc:
                 last_exc = exc
+                # RuntimeError includes the SSRF rejection and the size cap; do not
+                # keep trying other candidates for an SSRF rejection of a bad host.
+                if isinstance(exc, RuntimeError) and "non-public host" in str(exc):
+                    break
+                if attempt < len(urls_to_try) - 1:
+                    continue
                 break
 
     raise RuntimeError(f"PDF download failed: {last_exc}") from last_exc
@@ -153,6 +215,10 @@ _CAPTION_RE = re.compile(
 _FIG_ABOVE_FRAC = 0.38
 _FIG_BELOW_FRAC = 0.12
 _FIG_RENDER_ZOOM = 3.0  # 3× so dense figures (small axis labels, grid thumbnails) stay legible to the vision model
+# Cap figures rendered per document. A crafted PDF whose text contains thousands
+# of "Figure N" strings would otherwise force thousands of 3x full-page renders
+# (CPU, memory, and disk exhaustion). Real papers have far fewer than this.
+_MAX_FIGURES = 80
 
 
 def _caption_bbox(page: "fitz.Page", caption_label: str) -> "fitz.Rect | None":
@@ -201,11 +267,15 @@ def extract_figures(
 
     with fitz.open(pdf_path) as doc:
         for page_idx, page in enumerate(doc):
+            if fig_counter >= _MAX_FIGURES:
+                break
             page_num = page_idx + 1
             page_text = page.get_text("text")
             page_rect = page.rect  # (x0=0, y0=0, x1=width, y1=height)
 
             for match in _CAPTION_RE.finditer(page_text):
+                if fig_counter >= _MAX_FIGURES:
+                    break
                 label_raw = match.group(1).strip()   # e.g. "Figure 1"
                 caption_text = re.sub(r"\s+", " ", match.group(2)).strip()
 

@@ -1,0 +1,100 @@
+{
+  "summary": {
+    "model": "gemma4:12b",
+    "n": 18,
+    "mean_caption_only_score": 0.752,
+    "mean_vision_score": 0.731
+  },
+  "cases": [
+    {
+      "case_id": "vis_001",
+      "answer_score": 0.6,
+      "answer_snippet": "**Answer**\nFigure 1 illustrates the architectural flow of the Transformer model, which processes an input sequence through a series of encoder and decoder blocks. The **Encoder** consists of $N=6$ identical layers (as indicated by the \"$\\times$ 6\" label), where each layer contains two sub-layers: a "
+    },
+    {
+      "case_id": "vis_002",
+      "answer_score": 1.0,
+      "answer_snippet": "**Answer**\nThe two attention mechanisms shown in Figure 2 are **Scaled Dot-Product Attention** (left) and **Multi-Head Attention** (right).\n\n**Visual evidence**\n- The caption for Figure 2 explicitly labels the left side as \"(left) Scaled Dot-Product Attention\" and the right side as \"(right) Multi-He"
+    },
+    {
+      "case_id": "vis_003",
+      "answer_score": 1.0,
+      "answer_snippet": "**Answer**\nAccording to Table 2, the Transformer (big) model achieves a BLEU score of $28.4$ on the English-to-German (EN-DE) translation task.\n\n**Visual evidence**\n- The table header identifies the first column as \"Model\" and the second column as \"BLEU\".\n- The row labeled \"Transformer (big)\" contai"
+    },
+    {
+      "case_id": "vis_004",
+      "answer_score": 0.833,
+      "answer_snippet": "**Answer**\nOn the English-to-French (EN-FR) test, the Transformer achieves a higher BLEU score than both ByteNet and Deep-Att + PosUnk. Specifically, the Transformer achieves a score of $40.46$, while ByteNet scores $1.0 \\times 10^{20}$ (Note: The table formatting in the provided text suggests these"
+    },
+    {
+      "case_id": "vis_005",
+      "answer_score": 0.889,
+      "answer_snippet": "**Answer**\nTable 1 shows that both Self-Attention and Recurrent layers have a Maximum Path Length of $O(1)$. This indicates that in both layer types, any two positions in the sequence can interact in a single step (or \"hop\") through the network.\n\n**Visual evidence**\n- The table contains a column lab"
+    },
+    {
+      "case_id": "vis_006",
+      "answer_score": 0.7,
+      "answer_snippet": "**Answer**\nBased on Table 3, the Transformer variant that performs best with $16$ attention heads is the **Transformer (16 heads)**. It achieves a score of $28.4$ for EN-DE and $41.5$ for EN-FR.\n\n**Visual evidence**\n- The table lists \"Transformer (16 heads)\" in the \"Model\" column.\n- Under the \"EN-DE"
+    },
+    {
+      "case_id": "vis_007",
+      "answer_score": 0.8,
+      "answer_snippet": "**Answer**\nFigure 3 illustrates a long-distance dependency where the attention mechanism successfully links the word \"it\" (at position $t=1$) to its antecedent \"majority of American governments\" (located at positions $t=5$ through $t=8$). This demonstrates that the self-attention mechanism can captu"
+    },
+    {
+      "case_id": "vis_008",
+      "answer_score": 0.833,
+      "answer_snippet": "**Answer**\nFigure 1, which illustrates the Transformer model architecture, appears on page 3 of the paper.\n\n**Visual evidence**\n- The provided text context explicitly states: \"[p. 3] Figure 1: The Transformer - model architecture.\"\n\n**Limits**\n- The image itself does not contain a page number; the l"
+    },
+    {
+      "case_id": "vis_009",
+      "answer_score": 0.857,
+      "answer_snippet": "**Answer**\nTable 4 shows that the Transformer (with 4 layers) achieves an $F1$ score of $91.7$ on the WSJ 23 dataset for English constituency parsing. This result is identical to the performance achieved by Dyer et al. (2016), who used a discriminative model trained only on WSJ data. The table demon"
+    },
+    {
+      "case_id": "vis_010",
+      "answer_score": 0.75,
+      "answer_snippet": "**Answer**\nWhen the attention key size $d_k$ is reduced to 16 (while keeping other parameters like $d_{model}$ at 512 and $d_{ff}$ at 2048), the performance remains identical to the base model. Specifically, the BLEU score remains at 24.3 and the perplexity ($PPL$) remains at 11.9.\n\n**Visual evidenc"
+    },
+    {
+      "case_id": "vis_011",
+      "answer_score": 0.625,
+      "answer_snippet": "**Answer**\nFigure 1 illustrates the architecture of a Retrieval-Augmented Generation (RAG) system, which combines a pre-trained retriever with a generator to produce an output $y$. The process involves taking a query $x$ and passing it through a Query Encoder $q(x)$ to retrieve relevant documents fr"
+    },
+    {
+      "case_id": "vis_012",
+      "answer_score": 0.714,
+      "answer_snippet": "**Answer**\nBased on Table 7 and the supporting text, the datasets summarized (which are used for training, development, and testing) are **Natural Questions**, **TriviaQA**, **WebQuestions**, **CuratedTrec**, **Jeopardy Question Generation**, **MS-MARCO**, **FEVER-3-way**, and **FEVER-2-way**. \n\nThe"
+    },
+    {
+      "case_id": "vis_013",
+      "answer_score": 0.333,
+      "answer_snippet": "**Answer**\nIn Table 2, **RAG-Token** outperforms **RAG-Seq.** on the Jeopardy question generation task. Specifically, RAG-Token achieves a score of $45.5$ while RAG-Seq. achieves a score of $41.3$.\n\n**Visual evidence**\n- The table is labeled \"Table 2: Jeopardy Question Generation\".\n- The row for **R"
+    },
+    {
+      "case_id": "vis_014",
+      "answer_score": 0.875,
+      "answer_snippet": "**Answer**\nThe provided image (Figure 5) does not contain a diagram of the encoder-decoder structure. Figure 5 specifically visualizes \"the attention heads\" and their behavior related to the structure of the input, rather than the high-level architecture of the Transformer model. The encoder-decoder"
+    },
+    {
+      "case_id": "vis_015",
+      "answer_score": 0.625,
+      "answer_snippet": "**Answer**\nFigure 4 illustrates how two specific attention heads in layer 5 of 6 are involved in anaphora resolution. The \"Top\" portion of the figure shows a specific attention head focusing on the word \"it\" (which refers back to \"the Law\"). Specifically, the attention weights for the token \"it\" are"
+    },
+    {
+      "case_id": "vis_016",
+      "answer_score": 0.769,
+      "answer_snippet": "**Answer**\nTable 2 shows the comparison of the Transformer's translation quality (BLEU scores) and training costs (measured in FLOPs) against other state-of-the-art models, specifically for English-to-German (EN-DE) and English-to-French (EN-FR).\n\n**Visual evidence**\n- The caption for Table 2 explic"
+    },
+    {
+      "case_id": "vis_017",
+      "answer_score": 0.625,
+      "answer_snippet": "Based on the provided text and the description of Table 2, here is the information regarding the training costs.\n\n**Answer**\nThe provided text for Table 2 lists the training costs (in $FLOPs$) for several models, including \"Transformer\" (implied as the primary model being evaluated in the paper's re"
+    },
+    {
+      "case_id": "vis_018",
+      "answer_score": 0.714,
+      "answer_snippet": "**Answer**\nThe visualization of the attention heads in Figure 5 shows that different heads specialize in distinct structural roles within the sequence. Specifically, some heads focus on local context (neighboring words), while others appear to attend to specific grammatical or structural markers. Fo"
+    }
+  ]
+}

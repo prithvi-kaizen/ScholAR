@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import logging
 import re
 from pathlib import Path
 from typing import Any
@@ -43,6 +44,8 @@ from backend.services.vision_service import answer_with_figure
 from backend.services.web_search_service import search_web, web_search_enabled
 
 
+logger = logging.getLogger("scholar")
+
 app = FastAPI(title="ScholAR API")
 
 app.add_middleware(
@@ -71,11 +74,17 @@ class PaperInput(BaseModel):
 
 
 class ChatInput(BaseModel):
-    message: str
-    history: list[dict[str, Any]] = Field(default_factory=list)
+    # Bounds keep a single request body from being used for memory exhaustion;
+    # the whole body is parsed before downstream truncation, so bound it here.
+    message: str = Field(max_length=8000)
+    history: list[dict[str, Any]] = Field(default_factory=list, max_length=50)
     web_search: bool = True
     # Multi-document mode: local_ids of secondary papers already ingested
-    secondary_paper_ids: list[str] = Field(default_factory=list)
+    secondary_paper_ids: list[str] = Field(default_factory=list, max_length=25)
+    # Optional per-request generation model override (used by the human-eval
+    # pipeline to run the same pipeline across several local models). Falls back
+    # to OLLAMA_MODEL when absent.
+    model: str | None = Field(default=None, max_length=100)
 
 
 class StudyGoalsInput(BaseModel):
@@ -421,7 +430,8 @@ async def search(q: str = "", max_results: int = 12) -> dict[str, Any]:
     try:
         papers = await search_arxiv(q, max_results=max_results)
     except RuntimeError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        logger.warning("arXiv search failed: %s", exc)
+        raise HTTPException(status_code=502, detail="Paper search is temporarily unavailable.") from exc
     return {"papers": papers}
 
 
@@ -453,7 +463,7 @@ async def prepare_paper(paper: PaperInput) -> dict[str, Any]:
             pages = read_json(pages_path)
 
         if not chunks_path.exists():
-            chunks = chunk_pages(pages)
+            chunks = await asyncio.to_thread(chunk_pages, pages)
             write_json(chunks_path, chunks)
         else:
             chunks = _ensure_chunk_metadata(chunks_path, pages_path)
@@ -466,7 +476,8 @@ async def prepare_paper(paper: PaperInput) -> dict[str, Any]:
             figures = read_json(figures_path)
 
     except RuntimeError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        logger.warning("Request failed: %s", exc)
+        raise HTTPException(status_code=500, detail="Could not process the paper. Please try again.") from exc
 
     return {
         "paper_id": local_id,
@@ -512,7 +523,7 @@ async def upload_paper(file: UploadFile = File(...), title: str = Form("")) -> d
             pdf_path.write_bytes(content)
 
         pages = await asyncio.to_thread(extract_pages, pdf_path)
-        chunks = chunk_pages(pages)
+        chunks = await asyncio.to_thread(chunk_pages, pages)
         inferred = infer_uploaded_metadata(pages, clean_title)
         metadata = {
             "id": local_id,
@@ -540,7 +551,8 @@ async def upload_paper(file: UploadFile = File(...), title: str = Form("")) -> d
             figures = read_json(figures_path)
 
     except RuntimeError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        logger.warning("Request failed: %s", exc)
+        raise HTTPException(status_code=500, detail="Could not process the paper. Please try again.") from exc
 
     return {
         "paper_id": local_id,
@@ -692,13 +704,13 @@ async def ingest_reference(paper_id: str, ref_index: int) -> dict[str, Any]:
 
         if not sec_chunks_path.exists():
             # Tag every chunk with the secondary paper's id for provenance
-            sec_chunks = chunk_pages(sec_pages, source_paper_id=sec_local_id)
+            sec_chunks = await asyncio.to_thread(chunk_pages, sec_pages, source_paper_id=sec_local_id)
             write_json(sec_chunks_path, sec_chunks)
         else:
             sec_chunks = read_json(sec_chunks_path)
             # Back-fill source_paper_id if missing (re-ingestion of older cache)
             if sec_chunks and "source_paper_id" not in sec_chunks[0]:
-                sec_chunks = chunk_pages(sec_pages, source_paper_id=sec_local_id)
+                sec_chunks = await asyncio.to_thread(chunk_pages, sec_pages, source_paper_id=sec_local_id)
                 write_json(sec_chunks_path, sec_chunks)
 
         # Write secondary metadata
@@ -720,7 +732,8 @@ async def ingest_reference(paper_id: str, ref_index: int) -> dict[str, Any]:
             write_json(sec_meta_path, sec_meta)
 
     except RuntimeError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        logger.warning("Request failed: %s", exc)
+        raise HTTPException(status_code=500, detail="Could not process the paper. Please try again.") from exc
 
     mark_reference_ingested(paper_id, ref_index, sec_local_id)
 
@@ -838,13 +851,13 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
     figures_path = paper_dir(paper_id) / "figures.json"
     if figures_path.exists():
         figure_records = read_json(figures_path)
-        figure_chunks = chunk_figures(figure_records, source_paper_id=paper_id)
+        figure_chunks = await asyncio.to_thread(chunk_figures, figure_records, source_paper_id=paper_id)
         # Tag anchor figure chunks with paper_id (same convention as text chunks)
         figure_chunks = [{**c, "source_paper_id": paper_id} for c in figure_chunks]
         all_chunks = all_chunks + figure_chunks
 
     page_hints = extract_page_hints(payload.message)
-    selected = retrieve_chunks(payload.message, all_chunks, limit=6, preferred_pages=page_hints)
+    selected = await asyncio.to_thread(retrieve_chunks, payload.message, all_chunks, limit=6, preferred_pages=page_hints)
     web_results: list[dict[str, Any]] = []
     used_web_search = False
 
@@ -873,6 +886,7 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
             context_chunks=text_support,
             paper_id=paper_id,
             paper_metadata=metadata,
+            model=payload.model,
         )
         fig_label = vision_result.get("label", "Figure")
         return {
@@ -906,7 +920,7 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
     abstract = str(metadata.get("summary") or "")[:350]
     question_text = payload.message[:900]
 
-    evidence_items = _build_evidence_items(question_text, prompt_chunks, limit=7)
+    evidence_items = await asyncio.to_thread(_build_evidence_items, question_text, prompt_chunks, limit=7)
     paper_context = _format_evidence_context(evidence_items, secondary_meta=secondary_meta)
     web_context = _format_web_context(web_results)
     recent_history = "\n".join(
@@ -964,7 +978,7 @@ Question: {question_text}
 
     if ollama_up:
         try:
-            answer = await generate(prompt, temperature=0.1)
+            answer = await generate(prompt, temperature=0.1, model=payload.model)
         except Exception as exc:
             return {
                 **_model_failure_payload(exc),
@@ -1005,5 +1019,5 @@ Question: {question_text}
         "citations": citations,
         "web_results": web_results,
         "used_web_search": used_web_search,
-        "model": OLLAMA_MODEL,
+        "model": payload.model or OLLAMA_MODEL,
     }
