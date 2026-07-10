@@ -445,9 +445,9 @@ the job of the human evaluation (Section~\ref{sec:humaneval}).
     \toprule
     \textbf{Metric} & \textbf{Value} \\
     \midrule
-    Mean generation faithfulness (atoms entailed) & 0.971 \\
-    Mean contradiction rate                       & 0.000 \\
-    Citation support rate (supported / checked)   & 0.94 \\
+    Mean generation faithfulness & 0.971 \\
+    Mean contradiction rate      & 0.000 \\
+    Citation support rate        & 0.94 \\
     Citations supported / partial / unsupported   & 188 / 12 / 0 \\
     \bottomrule
   \end{tabular}
@@ -485,7 +485,8 @@ would judge an answer correct and well-cited. We therefore designed a
 model-agnostic human evaluation, grounded in the practice of comparable systems
 ~\citep{asai2024openscholar,ding2025scirag,lala2024paperqa2}, over the 100-case
 diverse benchmark of Section~\ref{sec:datasets}. Each question is answered by four
-local generation models (qwen3.5:9b, gemma4:12b, llama3.1:8b, mistral:7b) running
+local generation models (qwen3.5:9b, gemma4:12b, llama3.1:8b~\citep{llamateam2024llama3},
+mistral:7b~\citep{jiang2023mistral}) running
 the \emph{same} ScholAR pipeline, so only the generation model changes. Expert
 evaluators score every answer on four anchored 1--5 dimensions, Relevance,
 Coverage, Faithfulness, and Usefulness, and grade each inline citation as Supported,
