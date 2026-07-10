@@ -28,3 +28,7 @@ backend/rlm/
 
 # bulky third-party reference PDFs (kept locally, not shipped)
 docs/reference_papers/
+
+# human-eval generated artifacts (regeneratable; answers.json is committed)
+evaluation/human_eval/score_sheet.html
+evaluation/human_eval/exports/
