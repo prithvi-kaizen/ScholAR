@@ -73,7 +73,11 @@ def main() -> None:
     ap.add_argument("--limit", type=int, default=0, help="only the first N cases (smoke test)")
     ap.add_argument("--only-installed", action="store_true",
                     help="skip models not currently pulled in Ollama instead of erroring")
+    ap.add_argument("--models", default="",
+                    help="comma-separated subset of models to run (default: all four); "
+                         "pass one model to run it alone in its own terminal (resumable)")
     args = ap.parse_args()
+    requested = {m.strip() for m in args.models.split(",") if m.strip()} or None
 
     cases = json.loads(CASES.read_text(encoding="utf-8"))
     if args.limit:
@@ -89,7 +93,7 @@ def main() -> None:
         sys.exit(f"Cannot reach backend at {args.backend} (run `make backend`): {exc}")
 
     have = installed_models()
-    wanted = set(TEXT_MODELS) | set(VISION_MODELS)
+    wanted = requested or (set(TEXT_MODELS) | set(VISION_MODELS))
     absent = sorted(wanted - have) if have else []
     if absent:
         msg = f"Models not pulled in Ollama: {absent}. Run: ollama pull {' '.join(absent)}"
@@ -112,6 +116,8 @@ def main() -> None:
     for m in VISION_MODELS:
         if m not in run_models and (not args.only_installed or m in have):
             run_models.append(m)
+    if requested:
+        run_models = [m for m in run_models if m in requested]
 
     # count remaining work
     def cases_for_model(model):
