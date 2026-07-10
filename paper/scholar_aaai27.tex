@@ -422,7 +422,7 @@ Section~\ref{sec:auto-gen}.
 \subsection{Generation Faithfulness}
 \label{sec:auto-gen}
 Table~\ref{tab:gen} reports the faithfulness of the system's generated answers on
-the same 51 queries, using the local model gemma4:12b for generation. The mean
+the same 51 queries, using the local model gemma4:12b~\citep{gemmateam2026gemma4} for generation. The mean
 generation-faithfulness score is 0.971: 97.1\% of the atomic claims in the generated
 answers are entailed by the retrieved context. The mean contradiction rate is 0.0, so
 no answer atom was classified as contradicting its source. Of 200 inline citations
@@ -457,7 +457,7 @@ the job of the human evaluation (Section~\ref{sec:humaneval}).
 On the 18-case visual pilot, retrieval routes to the correct figure or table in all
 18 cases, with no case falling back to the caption-only path. We also compare two
 local multimodal models on a keyword-overlap answer-quality proxy (not an
-LLM-judge): gemma4:12b scores 0.731 and qwen3.5:9b scores 0.812. A caption-only
+LLM-judge): gemma4:12b scores 0.731 and qwen3.5:9b~\citep{qwenteam2026qwen35} scores 0.812. A caption-only
 ablation, sending the same prompt without the image, scores 0.752 versus 0.731 for
 full vision under gemma4:12b. We do not read this as evidence that the image is
 unnecessary: the proxy rewards lexical overlap with the question rather than grounded
