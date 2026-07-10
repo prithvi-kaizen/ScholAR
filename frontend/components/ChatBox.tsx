@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
-  AlertTriangle, BookOpen, Camera, ExternalLink,
+  AlertTriangle, BookOpen, Camera,
   Send, Sparkles, Zap, FileText, GitCompare, BarChart2
 } from "lucide-react";
 import katex from "katex";
@@ -198,28 +198,6 @@ function FigureThumbnail({ imageUrl, label, caption, onClick }: {
   );
 }
 
-function WebResultCard({ result, index }: { result: { url: string; title: string }; index: number }) {
-  let domain = "";
-  try { domain = new URL(result.url).hostname.replace("www.", ""); } catch { /* ignore */ }
-  return (
-    <a
-      href={result.url}
-      target="_blank"
-      rel="noreferrer"
-      className="flex items-start gap-2 rounded-lg border border-line bg-ink/60 px-3 py-2 text-xs text-zinc-400 transition hover:border-zinc-500 hover:text-white"
-    >
-      <span className="mt-0.5 shrink-0 rounded bg-zinc-700 px-1 text-[10px] font-bold text-zinc-300">
-        {index + 1}
-      </span>
-      <span className="min-w-0">
-        <span className="block truncate font-medium text-zinc-200">{result.title}</span>
-        <span className="block truncate text-zinc-600">{domain}</span>
-      </span>
-      <ExternalLink size={11} className="mt-0.5 shrink-0 text-zinc-600" />
-    </a>
-  );
-}
-
 export function ChatBox({
   paperId,
   queuedPrompt,
@@ -253,7 +231,6 @@ export function ChatBox({
         body: JSON.stringify({
           message: trimmed,
           history,
-          web_search: true,
           secondary_paper_ids: secondaryPaperIds,
         }),
       });
@@ -270,8 +247,6 @@ export function ChatBox({
             role: "assistant",
             content: payload.message ?? "The local model is unavailable.",
             error: true,
-            web_results: payload.web_results ?? [],
-            used_web_search: Boolean(payload.used_web_search),
           },
         ]);
         return;
@@ -283,8 +258,6 @@ export function ChatBox({
           role: "assistant",
           content: payload.answer,
           citations: payload.citations ?? [],
-          web_results: payload.web_results ?? [],
-          used_web_search: Boolean(payload.used_web_search),
           vision: Boolean(payload.vision),
           vision_fallback: Boolean(payload.vision_fallback),
           figure_id: payload.figure_id ?? undefined,
@@ -459,17 +432,6 @@ export function ChatBox({
                 </div>
               )}
 
-              {/* Web results */}
-              {(msg.web_results?.length ?? 0) > 0 && (
-                <div className="mt-3 space-y-1.5 border-t border-line pt-3">
-                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
-                    Web sources
-                  </div>
-                  {msg.web_results!.slice(0, 4).map((r, ri) => (
-                    <WebResultCard key={`${r.url}-${ri}`} result={r} index={ri} />
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         ))}

@@ -1,6 +1,6 @@
 # ScholAR Quantitative Evaluation Report
 
-Generated on: 2026-07-08 08:49:09
+Generated on: 2026-07-09 23:52:10
 
 ## What was tested
 

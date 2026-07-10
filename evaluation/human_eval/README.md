@@ -1,10 +1,16 @@
 # ScholAR Human Evaluation Pipeline
 
-A model-agnostic, citation-grounded human evaluation for ScholAR. Each of 100 curated
-questions is answered by several local models running the same ScholAR pipeline (only
-the generation model changes), and expert evaluators score every answer on four 1-5
+A model-agnostic, citation-grounded human evaluation for ScholAR. Each of 100 questions
+is answered by several local models running the same ScholAR pipeline (only the
+generation model changes), and expert evaluators score every answer on four 1-5
 dimensions plus per-citation grading. Design and grounding are in `HUMAN_EVAL_DESIGN.md`;
 the evaluator-facing instructions are in `rubric.md`.
+
+The 100 cases span **25 papers** and three query types: 50 text, 25 mathematical, and
+25 figure/table questions. They were mined from the prepared corpus by a local model and
+every gold answer was verified to appear in its source passage (`mine_cases.py` at the
+`evaluation/` root). The earlier 3-paper curated set is preserved as
+`cases_curated_3paper.json`.
 
 ## Files
 
@@ -12,8 +18,9 @@ the evaluator-facing instructions are in `rubric.md`.
 |---|---|
 | `HUMAN_EVAL_DESIGN.md` | The design: instrument, 4-model structure, metrics, grounded in SciRAG/OpenScholar/PaperQA2 |
 | `rubric.md` | The guideline handed to each human evaluator (Q1-Q7, anchors, worked examples) |
-| `cases.json` | The 100 curated cases (40 single-doc, 20 visual, 20 multi-doc, 20 hard-retrieval) |
-| `_build_cases.py` | Regenerates `cases.json` from the source benchmarks plus curated additions |
+| `cases.json` | The 100 evaluation cases (50 text, 25 math, 25 figure) across 25 papers |
+| `cases_curated_3paper.json` | Provenance: the earlier hand-curated 3-paper set (superseded) |
+| `../mine_cases.py` | Mines and source-verifies the diverse cases from the corpus |
 | `generate_answers.py` | Runs every case through each model via the live backend, writes `answers.json` |
 | `_build_score_sheet.py` | Builds the self-contained `score_sheet.html` from cases + answers (blinded, randomized) |
 | `compute_scores.py` | Aggregates evaluator exports into `human_eval_results.json` + `human_eval_report.md` |

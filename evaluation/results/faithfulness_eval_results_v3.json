@@ -1,43 +1,44 @@
 {
-  "generated_at": "2026-07-04T13:35:19",
+  "generated_at": "2026-07-10T00:02:52",
   "n_cases": 51,
   "scr_model": "MiniLM-L6-v2 cosine",
+  "nli_mode": "semantic",
   "bm25": {
     "summary": {
       "n": 51,
-      "mean_combined_cfs": 0.809,
+      "mean_combined_cfs": 0.807,
       "mean_nli_cfs": 0.941,
       "mean_scr": 0.484,
-      "mean_kfp": 0.966,
+      "mean_kfp": 0.956,
       "schr_top1": 0.373,
       "schr_top3": 0.725,
       "schr_top5": 0.824,
       "n_faithful": 48,
-      "n_partial": 1,
-      "n_unfaith": 2,
+      "n_partial": 0,
+      "n_unfaith": 3,
       "mean_atoms": 1.08,
       "mean_entailed": 1.02
     },
     "rank_ablation": {
       "1": {
         "n": 51,
-        "mean_cfs": 0.658
+        "mean_cfs": 0.653
       },
       "2": {
         "n": 51,
-        "mean_cfs": 0.757
+        "mean_cfs": 0.753
       },
       "3": {
         "n": 51,
-        "mean_cfs": 0.799
+        "mean_cfs": 0.796
       },
       "4": {
         "n": 51,
-        "mean_cfs": 0.791
+        "mean_cfs": 0.789
       },
       "5": {
         "n": 51,
-        "mean_cfs": 0.809
+        "mean_cfs": 0.807
       }
     },
     "type_ablation": {
@@ -83,9 +84,9 @@
       },
       "result_number": {
         "n": 13,
-        "mean_cfs": 0.811,
+        "mean_cfs": 0.81,
         "mean_nli": 0.923,
-        "mean_scr": 0.514,
+        "mean_scr": 0.513,
         "mean_kfp": 0.974,
         "schr5": 0.923
       },
@@ -99,10 +100,10 @@
       },
       "training_detail": {
         "n": 8,
-        "mean_cfs": 0.668,
+        "mean_cfs": 0.656,
         "mean_nli": 0.75,
         "mean_scr": 0.35,
-        "mean_kfp": 0.941,
+        "mean_kfp": 0.878,
         "schr5": 0.75
       }
     },
@@ -678,9 +679,9 @@
         "n_contradicted": 0,
         "label": "FAITHFUL",
         "rank_cfs": {
-          "1": 0.771,
-          "2": 0.851,
-          "3": 0.851,
+          "1": 0.691,
+          "2": 0.771,
+          "3": 0.811,
           "4": 0.851,
           "5": 0.851
         }
@@ -1044,19 +1045,19 @@
         "schr5": 1,
         "nli_cfs": 0.0,
         "scr": 0.521,
-        "kfp": 1.0,
-        "combined_cfs": 0.356,
+        "kfp": 0.5,
+        "combined_cfs": 0.256,
         "n_atoms": 1,
         "n_entailed": 0,
         "n_neutral": 1,
         "n_contradicted": 0,
-        "label": "PARTIAL",
+        "label": "UNFAITHFUL",
         "rank_cfs": {
-          "1": 0.307,
-          "2": 0.307,
-          "3": 0.307,
-          "4": 0.356,
-          "5": 0.356
+          "1": 0.207,
+          "2": 0.207,
+          "3": 0.207,
+          "4": 0.256,
+          "5": 0.256
         }
       },
       {
@@ -1145,20 +1146,20 @@
         "schr3": 1,
         "schr5": 1,
         "nli_cfs": 1.0,
-        "scr": 0.308,
+        "scr": 0.298,
         "kfp": 1.0,
-        "combined_cfs": 0.792,
+        "combined_cfs": 0.789,
         "n_atoms": 1,
         "n_entailed": 1,
         "n_neutral": 0,
         "n_contradicted": 0,
         "label": "FAITHFUL",
         "rank_cfs": {
-          "1": 0.727,
+          "1": 0.725,
           "2": 0.737,
-          "3": 0.792,
-          "4": 0.792,
-          "5": 0.792
+          "3": 0.789,
+          "4": 0.789,
+          "5": 0.789
         }
       },
       {
@@ -1664,8 +1665,8 @@
         "n_contradicted": 0,
         "label": "FAITHFUL",
         "rank_cfs": {
-          "1": 0.768,
-          "2": 0.768,
+          "1": 0.718,
+          "2": 0.718,
           "3": 0.818,
           "4": 0.844,
           "5": 0.844
@@ -1846,39 +1847,39 @@
   "hybrid": {
     "summary": {
       "n": 51,
-      "mean_combined_cfs": 0.829,
+      "mean_combined_cfs": 0.827,
       "mean_nli_cfs": 0.961,
-      "mean_scr": 0.509,
-      "mean_kfp": 0.979,
+      "mean_scr": 0.508,
+      "mean_kfp": 0.969,
       "schr_top1": 0.392,
       "schr_top3": 0.686,
       "schr_top5": 0.922,
       "n_faithful": 49,
-      "n_partial": 1,
-      "n_unfaith": 1,
+      "n_partial": 0,
+      "n_unfaith": 2,
       "mean_atoms": 1.08,
       "mean_entailed": 1.04
     },
     "rank_ablation": {
       "1": {
         "n": 51,
-        "mean_cfs": 0.669
+        "mean_cfs": 0.665
       },
       "2": {
         "n": 51,
-        "mean_cfs": 0.776
+        "mean_cfs": 0.774
       },
       "3": {
         "n": 51,
-        "mean_cfs": 0.796
+        "mean_cfs": 0.793
       },
       "4": {
         "n": 51,
-        "mean_cfs": 0.817
+        "mean_cfs": 0.815
       },
       "5": {
         "n": 51,
-        "mean_cfs": 0.829
+        "mean_cfs": 0.827
       }
     },
     "type_ablation": {
@@ -1940,10 +1941,10 @@
       },
       "training_detail": {
         "n": 8,
-        "mean_cfs": 0.674,
+        "mean_cfs": 0.661,
         "mean_nli": 0.75,
         "mean_scr": 0.357,
-        "mean_kfp": 0.958,
+        "mean_kfp": 0.896,
         "schr5": 0.875
       }
     },
@@ -2519,9 +2520,9 @@
         "n_contradicted": 0,
         "label": "FAITHFUL",
         "rank_cfs": {
-          "1": 0.772,
-          "2": 0.811,
-          "3": 0.84,
+          "1": 0.732,
+          "2": 0.771,
+          "3": 0.8,
           "4": 0.88,
           "5": 0.88
         }
@@ -2885,19 +2886,19 @@
         "schr5": 1,
         "nli_cfs": 0.0,
         "scr": 0.521,
-        "kfp": 1.0,
-        "combined_cfs": 0.356,
+        "kfp": 0.5,
+        "combined_cfs": 0.256,
         "n_atoms": 1,
         "n_entailed": 0,
         "n_neutral": 1,
         "n_contradicted": 0,
-        "label": "PARTIAL",
+        "label": "UNFAITHFUL",
         "rank_cfs": {
-          "1": 0.284,
-          "2": 0.321,
-          "3": 0.321,
-          "4": 0.356,
-          "5": 0.356
+          "1": 0.184,
+          "2": 0.221,
+          "3": 0.221,
+          "4": 0.256,
+          "5": 0.256
         }
       },
       {
@@ -2986,20 +2987,20 @@
         "schr3": 1,
         "schr5": 1,
         "nli_cfs": 1.0,
-        "scr": 0.325,
+        "scr": 0.319,
         "kfp": 1.0,
-        "combined_cfs": 0.798,
+        "combined_cfs": 0.796,
         "n_atoms": 1,
         "n_entailed": 1,
         "n_neutral": 0,
         "n_contradicted": 0,
         "label": "FAITHFUL",
         "rank_cfs": {
-          "1": 0.688,
-          "2": 0.792,
-          "3": 0.792,
+          "1": 0.684,
+          "2": 0.789,
+          "3": 0.789,
           "4": 0.792,
-          "5": 0.798
+          "5": 0.796
         }
       },
       {
@@ -3267,7 +3268,7 @@
         "n_contradicted": 0,
         "label": "FAITHFUL",
         "rank_cfs": {
-          "1": 0.801,
+          "1": 0.772,
           "2": 0.829,
           "3": 0.866,
           "4": 0.866,
@@ -3505,7 +3506,7 @@
         "n_contradicted": 0,
         "label": "FAITHFUL",
         "rank_cfs": {
-          "1": 0.768,
+          "1": 0.718,
           "2": 0.844,
           "3": 0.844,
           "4": 0.855,

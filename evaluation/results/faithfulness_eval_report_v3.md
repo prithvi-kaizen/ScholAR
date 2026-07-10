@@ -1,9 +1,9 @@
 # ScholAR NLI-Based Citation Faithfulness Report (v3)
 
-**Generated:** 2026-07-04 13:35
+**Generated:** 2026-07-10 00:02
 **Cases:** 51
 **Method:** NLI-CFS = 0.50×NLI + 0.30×SCR + 0.20×KFP
-**NLI:** Token-level entailment (SummaC/AlignScore-style)
+**NLI:** Sentence-level semantic entailment via MiniLM (SummaC/AlignScore-style)
 **SCR:** MiniLM cosine similarity
 **KFP:** Numeric and technical term precision
 
@@ -13,8 +13,8 @@
 
 | System | Mean NLI-CFS | SCHR@5 | Faithful | Partial | Unfaithful |
 |---|---:|---:|---:|---:|---:|
-| BM25-primary (ScholAR baseline) | **0.809** | 0.824 | 48/51 | 1/51 | 2/51 |
-| Hybrid BM25+Dense+RRF          | **0.829** | 0.922 | 49/51 | 1/51 | 1/51 |
+| BM25-primary (ScholAR baseline) | **0.807** | 0.824 | 48/51 | 0/51 | 3/51 |
+| Hybrid BM25+Dense+RRF          | **0.827** | 0.922 | 49/51 | 0/51 | 2/51 |
 
 ## Component Scores (BM25)
 
@@ -22,8 +22,8 @@
 |---|---:|
 | Mean NLI-CFS (Tier 1) | 0.941 |
 | Mean SCR (Tier 2)     | 0.484 |
-| Mean KFP (Tier 3)     | 0.966 |
-| Mean Combined NLI-CFS | **0.809** |
+| Mean KFP (Tier 3)     | 0.956 |
+| Mean Combined NLI-CFS | **0.807** |
 | SCHR@1 | 0.373 |
 | SCHR@3 | 0.725 |
 | SCHR@5 | 0.824 |
@@ -35,11 +35,11 @@
 
 | Chunks Used | N | BM25 | Hybrid |
 |---|---:|---:|---:|
-| Top-1 | 51 | 0.658 | 0.669 |
-| Top-2 | 51 | 0.757 | 0.776 |
-| Top-3 | 51 | 0.799 | 0.796 |
-| Top-4 | 51 | 0.791 | 0.817 |
-| Top-5 | 51 | 0.809 | 0.829 |
+| Top-1 | 51 | 0.653 | 0.665 |
+| Top-2 | 51 | 0.753 | 0.774 |
+| Top-3 | 51 | 0.796 | 0.793 |
+| Top-4 | 51 | 0.789 | 0.815 |
+| Top-5 | 51 | 0.807 | 0.827 |
 
 ---
 
@@ -52,9 +52,9 @@
 | environmental_claim | 1 | 0.918 | 1.000 | 0.727 | 1.000 | 1.000 |
 | formula | 1 | 0.876 | 1.000 | 0.586 | 1.000 | 1.000 |
 | human_eval | 2 | 0.882 | 1.000 | 0.607 | 1.000 | 1.000 |
-| result_number | 13 | 0.811 | 0.923 | 0.514 | 0.974 | 0.923 |
+| result_number | 13 | 0.810 | 0.923 | 0.513 | 0.974 | 0.923 |
 | technical_claim | 11 | 0.844 | 1.000 | 0.525 | 0.932 | 0.636 |
-| training_detail | 8 | 0.668 | 0.750 | 0.350 | 0.941 | 0.750 |
+| training_detail | 8 | 0.656 | 0.750 | 0.350 | 0.878 | 0.750 |
 
 ---
 
@@ -89,10 +89,10 @@
 | `rag_broader_impact` | conceptual_claim | BM25 | 1.000 | 0.633 | 1.000 | **0.890** | 2 | FAITHFUL |
 | `rag_marginalization` | technical_claim | BM25 | 1.000 | 0.677 | 1.000 | **0.903** | 1 | FAITHFUL |
 | `rag_appendix_details` | conceptual_claim | BM25 | 1.000 | 0.448 | 1.000 | **0.834** | 1 | FAITHFUL |
-| `llama_training_tokens` | training_detail | BM25 | 0.000 | 0.521 | 1.000 | **0.356** | 4 | PARTIAL |
+| `llama_training_tokens` | training_detail | BM25 | 0.000 | 0.521 | 0.500 | **0.256** | 4 | UNFAITHFUL |
 | `llama_public_data` | training_detail | BM25 | 1.000 | 0.293 | 0.857 | **0.759** | miss | FAITHFUL |
 | `llama_sizes` | architecture_detail | BM25 | 1.000 | 0.353 | 1.000 | **0.806** | 5 | FAITHFUL |
-| `llama_hellaswag` | result_number | BM25 | 1.000 | 0.308 | 1.000 | **0.792** | 3 | FAITHFUL |
+| `llama_hellaswag` | result_number | BM25 | 1.000 | 0.298 | 1.000 | **0.789** | 3 | FAITHFUL |
 | `llama_boolq` | result_number | BM25 | 1.000 | 0.343 | 1.000 | **0.803** | 1 | FAITHFUL |
 | `llama_carbon` | environmental_claim | BM25 | 1.000 | 0.727 | 1.000 | **0.918** | 2 | FAITHFUL |
 | `llama_architecture_norm` | architecture_detail | BM25 | 1.000 | 0.310 | 1.000 | **0.793** | 2 | FAITHFUL |
@@ -140,10 +140,10 @@
 | `rag_broader_impact` | conceptual_claim | Hybrid | 1.000 | 0.633 | 1.000 | **0.890** | 1 | FAITHFUL |
 | `rag_marginalization` | technical_claim | Hybrid | 1.000 | 0.677 | 1.000 | **0.903** | 1 | FAITHFUL |
 | `rag_appendix_details` | conceptual_claim | Hybrid | 1.000 | 0.448 | 1.000 | **0.834** | 1 | FAITHFUL |
-| `llama_training_tokens` | training_detail | Hybrid | 0.000 | 0.521 | 1.000 | **0.356** | 4 | PARTIAL |
+| `llama_training_tokens` | training_detail | Hybrid | 0.000 | 0.521 | 0.500 | **0.256** | 4 | UNFAITHFUL |
 | `llama_public_data` | training_detail | Hybrid | 1.000 | 0.347 | 1.000 | **0.804** | 2 | FAITHFUL |
 | `llama_sizes` | architecture_detail | Hybrid | 1.000 | 0.445 | 1.000 | **0.833** | 3 | FAITHFUL |
-| `llama_hellaswag` | result_number | Hybrid | 1.000 | 0.325 | 1.000 | **0.798** | 2 | FAITHFUL |
+| `llama_hellaswag` | result_number | Hybrid | 1.000 | 0.319 | 1.000 | **0.796** | 2 | FAITHFUL |
 | `llama_boolq` | result_number | Hybrid | 1.000 | 0.343 | 1.000 | **0.803** | 3 | FAITHFUL |
 | `llama_carbon` | environmental_claim | Hybrid | 1.000 | 0.727 | 1.000 | **0.918** | 1 | FAITHFUL |
 | `llama_architecture_norm` | architecture_detail | Hybrid | 1.000 | 0.310 | 1.000 | **0.793** | 1 | FAITHFUL |

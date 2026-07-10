@@ -25,3 +25,6 @@ AuthorKit27/
 # Disconnected prototype code (future-work scaffolding, not part of the app)
 backend/parsers/
 backend/rlm/
+
+# bulky third-party reference PDFs (kept locally, not shipped)
+docs/reference_papers/

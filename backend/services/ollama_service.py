@@ -22,9 +22,9 @@ def _ollama_options(temperature: float) -> dict[str, Any]:
     return {
         "temperature": temperature,
         "top_p": float(os.getenv("OLLAMA_TOP_P", "0.9")),
-        "num_ctx": int(os.getenv("OLLAMA_NUM_CTX", "4096")),
-        "num_predict": int(os.getenv("OLLAMA_NUM_PREDICT", "650")),
-    }
+        "num_ctx": int(os.getenv("OLLAMA_NUM_CTX", "16000")),
+        "num_predict": int(os.getenv("OLLAMA_NUM_PREDICT", "1650")),
+}
 
 
 async def ollama_available() -> bool:

@@ -49,19 +49,10 @@ export type Citation = {
   caption?: string;
 };
 
-export type WebResult = {
-  id: string;
-  title: string;
-  url: string;
-  snippet: string;
-};
-
 export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   citations?: Citation[];
-  web_results?: WebResult[];
-  used_web_search?: boolean;
   error?: boolean;
   /** Vision grounding fields — set when the answer was generated from a figure */
   vision?: boolean;

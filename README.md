@@ -41,7 +41,7 @@ For the faithfulness evaluation pipeline:
 ### 4. Visual Grounding (Figure & Table QA)
 When a query targets a figure, table, or chart:
 1. Visual-cue retrieval boosts figure chunks (+1.5) to rank them first
-2. The figure image (rendered page region) is base64-encoded and sent to the local **Ollama `qwen3.5:9b`** model (natively multimodal) with the question
+2. The figure image (rendered page region, rendered at 3× zoom) is base64-encoded and sent to the configured local multimodal model (default `qwen3.5:9b`; `gemma4:12b` also supported) with the question
 3. Caption-only fallback if the image is unavailable, too small, or Ollama is unreachable
 4. The frontend renders a teal-bordered thumbnail of the cited figure inline in the answer
 
@@ -64,9 +64,10 @@ Three-tier faithfulness scorer aligned with 2024–2026 SOTA practices:
 
 Claims are labeled FAITHFUL (CFS ≥ 0.55), PARTIAL (≥ 0.35), or UNFAITHFUL.
 
-### 7. Fully Local Inference
-- **Text and vision, one model:** Ollama with `qwen3.5:9b` — natively multimodal, fully offline, private
-- **No cloud dependency:** every answer, study goal, and figure/table QA call runs on-device
+### 7. Fully Local, Model-Agnostic Inference
+- **Local by default:** Ollama with `qwen3.5:9b` (natively multimodal) is the default text + vision model — fully offline and private
+- **Model-agnostic:** the pipeline takes a per-request model override, and the grounding lives in retrieval + the evidence-ID citation layer, not in the model. The evaluation runs the **same** pipeline across **four local models** — `qwen3.5:9b`, `gemma4:12b`, `llama3.1:8b`, `mistral:7b` — so only the generation model changes (see the generation-faithfulness matrix and the human study)
+- **No cloud dependency:** every answer, study goal, and figure/table QA call runs on-device; only public paper acquisition and reference resolution touch the network (arXiv / Semantic Scholar, by identifier)
 
 ---
 
@@ -88,12 +89,12 @@ Dense-only beats every lexical config on this 14-case benchmark — a genuine, s
 
 | System | Combined CFS | SCHR@5 | Faithful |
 |---|---:|---:|---:|
-| BM25-primary | 0.809 | 0.824 | 48 / 51 |
-| Hybrid BM25 + Dense + RRF | 0.829 | 0.922 | 49 / 51 |
+| BM25-primary | 0.807 | 0.824 | 48 / 51 |
+| Hybrid BM25 + Dense + RRF | 0.827 | 0.922 | 49 / 51 |
 
 ### Baseline Scope
 
-Retrieval/faithfulness baselines above are internal ablations (lexical → dense → hybrid), matching the BEIR-standard comparison framework. We do **not** benchmark against OpenScholar, PaperQA2, or SciRAG head-to-head: all three depend on cloud-hosted frontier LLM backends (and, for OpenScholar, a tens-of-millions-of-papers datastore), incompatible with ScholAR's local-only, single-laptop design constraint. See the paper's Discussion section for the full reasoning.
+Retrieval/faithfulness baselines above are internal ablations (lexical → dense → hybrid), matching the BEIR-standard comparison framework. We do **not** benchmark against the *hosted* OpenScholar, PaperQA2, or SciRAG: all three depend on cloud-hosted frontier LLM backends (and, for OpenScholar, a tens-of-millions-of-papers datastore), incompatible with ScholAR's local-only constraint. Instead, `run_comparison_eval.py` runs a **resource-matched local comparison** — ScholAR vs long-context PDF-chat, vanilla RAG, and a local reimplementation of PaperQA2's rerank+summarize (RCS) step — all on the same local model and cases (in progress). See the paper's Discussion for the full reasoning.
 
 Spans *Attention Is All You Need*, *RAG*, and *LLaMA* across 8 claim types: `result_number` (13), `technical_claim` (11), `architecture_detail` (10), `training_detail` (8), `conceptual_claim` (5), `human_eval` (2), `formula` (1), `environmental_claim` (1).
 
@@ -117,7 +118,9 @@ A chunk-ID collision bug (fixed) had inflated an earlier version of these number
 
 ### Human Evaluation Pipeline (built, ready to run)
 
-A model-agnostic, citation-grounded human evaluation lives in `evaluation/human_eval/`, grounded in the methodology of OpenScholar, SciRAG, and PaperQA2. Each of 100 curated questions (40 single-document, 20 visual, 20 multi-document, 20 hard-retrieval) is answered by four local models running the same ScholAR pipeline — only the generation model changes. Expert evaluators score each answer on four anchored 1-5 dimensions (Relevance, Coverage, Faithfulness, Usefulness) plus per-citation Supported/Partial/Unsupported grading, through a self-contained offline HTML interface. The analysis reports per-model quality and citation precision/recall/F1, a Friedman test for model-agnostic grounding, inter-annotator agreement, and the correlation between human faithfulness and the automated NLI-CFS metric. See `evaluation/human_eval/README.md` to run it.
+A model-agnostic, citation-grounded human evaluation lives in `evaluation/human_eval/`, grounded in the methodology of OpenScholar, SciRAG, and PaperQA2. It runs over a diverse 100-case benchmark (50 text, 25 mathematical, 25 figure/table questions across 25 papers), mined from the corpus and source-verified. Each question is answered by four local models (`qwen3.5:9b`, `gemma4:12b`, `llama3.1:8b`, `mistral:7b`) running the same ScholAR pipeline — only the generation model changes. Expert evaluators score each answer on four anchored 1-5 dimensions (Relevance, Coverage, Faithfulness, Usefulness) plus per-citation Supported/Partial/Unsupported grading, through a self-contained offline HTML interface. The analysis reports per-model quality and citation precision/recall/F1, a Friedman test for model-agnostic grounding, inter-annotator agreement, and the correlation between human faithfulness and the automated NLI-CFS metric. See `evaluation/human_eval/README.md` to run it.
+
+The automated counterpart, `run_generation_faithfulness_matrix.py`, scores each of the four models' **generated answers** for grounding + citation support with no human involvement — the automated sibling of the human study.
 
 ---
 
@@ -153,9 +156,15 @@ ScholAR/
 │   ├── hybrid_retrieval.py         # BM25 + Dense + RRF pipeline
 │   ├── nli_faithfulness.py         # SummaC-ZS faithfulness scorer
 │   ├── run_retrieval_eval.py       # 14-case retrieval benchmark
-│   ├── run_faithfulness_eval.py    # 51-case faithfulness benchmark
+│   ├── run_faithfulness_eval.py    # 51-case retrieval-support faithfulness benchmark
+│   ├── run_generation_faithfulness_eval.py    # faithfulness of GENERATED answers (single model)
+│   ├── run_generation_faithfulness_matrix.py  # 4-model automated faithfulness matrix
+│   ├── run_comparison_eval.py      # ScholAR vs local baselines (pdfchat/vanilla-RAG/PaperQA2-RCS)
 │   ├── run_visual_eval.py          # 18-case visual grounding benchmark
+│   ├── run_visual_caption_ablation.py         # caption-only vs full-vision ablation
 │   ├── run_multidoc_eval.py        # Multi-doc locality benchmark
+│   ├── run_multidoc_bounds_eval.py # Multi-doc oracle / random-floor bounds
+│   ├── mine_cases.py               # Mines + source-verifies the diverse 100-case benchmark
 │   ├── benchmark_cases.json        # Retrieval ground truth
 │   ├── faithfulness_cases.json     # Faithfulness oracle claims
 │   ├── visual_benchmark.json       # Figure-grounded QA cases
@@ -168,7 +177,7 @@ ScholAR/
 │   │   └── compute_scores.py       # Per-model metrics, model-agnostic test, human-vs-NLI-CFS
 │   └── results/                    # Evaluation reports
 ├── docs/
-│   ├── reference_papers/           # M3SciQA, PaperQA, SciDQA, ScholarlyQA PDFs
+│   ├── reference_papers/           # Domain/AAAI PDFs for tone + related work (gitignored): OpenScholar, PaperQA2, SciRAG, Pleias-RAG, ColPali, M3SciQA, SummaC, FActScore, RAGAS, ALCE, RGB
 │   └── architecture/               # System diagrams
 ├── paper/
 │   ├── scholar_aaai27.tex          # AAAI-27 manuscript source
@@ -185,7 +194,7 @@ ScholAR/
 ### Prerequisites
 - Python 3.11 or 3.12
 - Node.js v18+
-- [Ollama](https://ollama.ai) running locally with `qwen3.5:9b` pulled (`ollama pull qwen3.5:9b`) — text and vision both use this one model
+- [Ollama](https://ollama.ai) running locally with `qwen3.5:9b` pulled (`ollama pull qwen3.5:9b`) — the default text + vision model. The evaluation additionally uses `gemma4:12b`, `llama3.1:8b`, and `mistral:7b` (`ollama pull <model>`); any of them can serve the app via the `OLLAMA_MODEL` env var or a per-request override
 
 ### 1. Clone & configure
 
@@ -227,20 +236,29 @@ UI runs at **http://localhost:3000**
 ## Running the Evaluation Suite
 
 ```bash
-# Retrieval benchmark (14 cases, ~5 sec)
+# Retrieval benchmark (14 cases, ~5 sec) — no model needed
 python3 evaluation/run_retrieval_eval.py
 
-# Faithfulness benchmark (51 oracle claims, ~2 min)
+# Retrieval-support faithfulness (51 oracle claims, ~2 min) — no model needed
 python3 evaluation/run_faithfulness_eval.py
 
-# Visual grounding benchmark (18 figure cases)
-python3 evaluation/run_visual_eval.py
-
-# Multi-doc locality benchmark (10 clusters)
+# Multi-doc locality + oracle/floor bounds (10 arXiv-resolvable cases) — no model needed
 python3 evaluation/run_multidoc_eval.py
+python3 evaluation/run_multidoc_bounds_eval.py
+
+# Visual grounding + caption ablation (18 figure cases) — needs a local multimodal model
+python3 evaluation/run_visual_eval.py
+python3 evaluation/run_visual_caption_ablation.py
+
+# Generation faithfulness of actual answers — needs the backend + a model
+python3 evaluation/run_generation_faithfulness_eval.py                 # single model
+python3 evaluation/run_generation_faithfulness_matrix.py --models qwen3.5:9b   # per model; accumulates a 4-model matrix
+
+# ScholAR vs local baselines (pdfchat / vanilla-RAG / PaperQA2-RCS), one system at a time
+python3 evaluation/run_comparison_eval.py --systems scholar --cases both --limit 40
 ```
 
-All results are written to `evaluation/results/`.
+All results are written to `evaluation/results/`. The scripts that generate answers use the local model(s) via Ollama; the retrieval/faithfulness/multi-doc scripts run standalone.
 
 ---
 
@@ -259,10 +277,12 @@ The AAAI-27 draft is in [`paper/scholar_aaai27.pdf`](paper/scholar_aaai27.pdf). 
 
 ## Comparison to Related Work
 
-| System | Multi-modal | Multi-doc | Local inference | Page-grounded citations |
+| System | Multi-modal | Multi-doc | Local inference | Deterministic page-grounded citations¹ |
 |---|:---:|:---:|:---:|:---:|
 | PaperQA2 | ❌ | ✅ | ❌ | ❌ |
 | SciDQA | ❌ | ❌ | ❌ | ❌ |
 | ScholarlyQA | ❌ | ✅ | ❌ | ❌ |
 | M3SciQA (benchmark) | ✅ | ✅ | ❌ | ❌ |
 | **ScholAR (ours)** | ✅ | ✅ | ✅ | ✅ |
+
+¹ PaperQA2 emits model-written page citations (e.g. `(pages 3-4)`); ScholAR's citations are evidence IDs mapped to pages by the application, so the page reference cannot be a model guess. This is a feature comparison, not a head-to-head quality benchmark.

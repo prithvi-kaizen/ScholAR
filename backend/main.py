@@ -41,7 +41,6 @@ from backend.services.reference_service import (
 )
 from backend.services.retrieval_service import extract_page_hints, retrieve_chunks, short_quote, tokenize
 from backend.services.vision_service import answer_with_figure
-from backend.services.web_search_service import search_web, web_search_enabled
 
 
 logger = logging.getLogger("scholar")
@@ -54,7 +53,7 @@ app.add_middleware(
     # stay disabled; combined with a wildcard origin, allow_credentials=True
     # would let any website that a user's browser visits make authenticated-
     # looking requests against this local server (browser-as-confused-deputy).
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -78,7 +77,6 @@ class ChatInput(BaseModel):
     # the whole body is parsed before downstream truncation, so bound it here.
     message: str = Field(max_length=8000)
     history: list[dict[str, Any]] = Field(default_factory=list, max_length=50)
-    web_search: bool = True
     # Multi-document mode: local_ids of secondary papers already ingested
     secondary_paper_ids: list[str] = Field(default_factory=list, max_length=25)
     # Optional per-request generation model override (used by the human-eval
@@ -157,8 +155,6 @@ def _error_payload(message: str) -> dict[str, Any]:
     return {
         "answer": "",
         "citations": [],
-        "web_results": [],
-        "used_web_search": False,
         "model": OLLAMA_MODEL,
         "error": True,
         "message": message,
@@ -169,61 +165,6 @@ def _model_failure_payload(exc: Exception | None = None) -> dict[str, Any]:
     if isinstance(exc, (httpx.ReadTimeout, httpx.TimeoutException)):
         return _error_payload("Local model took too long to answer. Try again with a shorter question.")
     return _error_payload("Local model could not complete this answer. Make sure Ollama is running and the selected model is loaded.")
-
-
-def _should_search_web(message: str, selected_chunks: list[dict[str, Any]]) -> bool:
-    lowered = message.lower()
-    explicit_terms = (
-        "web",
-        "internet",
-        "search",
-        "latest",
-        "recent",
-        "current",
-        "today",
-        "news",
-        "who is",
-        "what is",
-        "compare with",
-        "outside this paper",
-        "other papers",
-        "implementation library",
-        "github",
-        "dataset link",
-    )
-    if any(term in lowered for term in explicit_terms):
-        return True
-    if not selected_chunks:
-        return True
-    if len(message.split()) > 10 and len(selected_chunks) < 3:
-        return True
-    return False
-
-
-def _web_query(message: str, metadata: dict[str, Any]) -> str:
-    title = metadata.get("title") or ""
-    if any(term in message.lower() for term in ("this paper", "the paper", "authors", "code", "github", "dataset")):
-        return f"{title} {message}".strip()
-    return message.strip()
-
-
-def _format_web_context(results: list[dict[str, Any]]) -> str:
-    if not results:
-        return "No web results were available."
-    return "\n\n".join(
-        f"[web:{index}]\nTitle: {result.get('title')}\nURL: {result.get('url')}\nSnippet: {result.get('snippet')}"
-        for index, result in enumerate(results, start=1)
-    )
-
-
-def _extractive_web_answer(results: list[dict[str, Any]]) -> str:
-    if not results:
-        return ""
-    lines = ["I could not get a full model response, but the web search returned these potentially useful sources:"]
-    for index, result in enumerate(results[:5], start=1):
-        snippet = result.get("snippet") or "No snippet available."
-        lines.append(f"- {result.get('title')} [web:{index}]\n  {snippet}\n  {result.get('url')}")
-    return "\n".join(lines)
 
 
 def _citation_candidates(text: str) -> list[str]:
@@ -420,7 +361,6 @@ async def health() -> dict[str, Any]:
     return {
         "status": "ok",
         "ollama_available": await ollama_available(),
-        "web_search_enabled": web_search_enabled(),
         "model": OLLAMA_MODEL,
     }
 
@@ -858,19 +798,11 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
 
     page_hints = extract_page_hints(payload.message)
     selected = await asyncio.to_thread(retrieve_chunks, payload.message, all_chunks, limit=6, preferred_pages=page_hints)
-    web_results: list[dict[str, Any]] = []
-    used_web_search = False
 
-    if payload.web_search and web_search_enabled() and _should_search_web(payload.message, selected):
-        used_web_search = True
-        web_results = await search_web(_web_query(payload.message, metadata), limit=5)
-
-    if not selected and not web_results:
+    if not selected:
         return {
             "answer": "The paper context does not contain enough information to answer that.",
             "citations": [],
-            "web_results": [],
-            "used_web_search": used_web_search,
         }
 
     # ── Vision routing ────────────────────────────────────────────────────────
@@ -892,8 +824,6 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
         return {
             "answer":            vision_result["answer"],
             "citations":         vision_result["citations"],
-            "web_results":       [],
-            "used_web_search":   False,
             "model":             vision_result.get("model_used", OLLAMA_MODEL),
             "vision":            True,
             "vision_fallback":   vision_result.get("fallback", False),
@@ -922,22 +852,15 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
 
     evidence_items = await asyncio.to_thread(_build_evidence_items, question_text, prompt_chunks, limit=7)
     paper_context = _format_evidence_context(evidence_items, secondary_meta=secondary_meta)
-    web_context = _format_web_context(web_results)
     recent_history = "\n".join(
         f"{item.get('role', 'user')}: {str(item.get('content', ''))[:history_char_limit]}"
         for item in payload.history[-6:]
         if isinstance(item, dict)
     )
     prompt = f"""
-You are ScholAR, a rigorous research paper tutor with two tools:
-1. Paper retrieval: selected chunks from the PDF being studied.
-2. Web search: free web results, used only when paper context is insufficient or the question asks for outside/current information.
-
-Think in this order:
-1. Identify whether the user is asking about the paper itself, outside context, or both.
-2. Use paper context first for paper-specific claims.
-3. Use web context only for outside/current/general facts or when the paper context is missing.
-4. Reconcile conflicts explicitly instead of blending sources.
+You are ScholAR, a rigorous research paper tutor. Your only source is the paper
+retrieval: selected chunks from the PDF being studied. Answer strictly from that
+context; if it does not contain the answer, say so plainly.
 
 Paper metadata:
 Title: {metadata.get("title")}
@@ -958,10 +881,7 @@ Response requirements:
 - Never invent page citations. Do not write [p. 1], [p. 2], or any page number yourself.
 - The app will convert evidence IDs into compact numbered references like [1], [2].
 - Every paper-specific claim in the Evidence section must cite one of the provided evidence IDs.
-- Cite web claims inline as [web:1].
-- Never cite web results as if they came from the paper.
-- If paper context is insufficient, say what is missing before using web context.
-- If web search was unavailable or empty, do not pretend you searched.
+- If the paper context is insufficient, say what is missing instead of guessing.
 - For methods/results questions, include the specific mechanism, dataset, metric, number, or comparison when the evidence provides it.
 - Use concise sections: "Answer", "Evidence", "What this means", and "Limits / what to verify" when helpful.
 - Answer directly in 180 to 320 words. Do not include hidden reasoning or long deliberation.
@@ -970,9 +890,6 @@ Response requirements:
 Paper evidence:
 {paper_context}
 
-Web context:
-{web_context}
-
 Question: {question_text}
 """.strip()
 
@@ -980,25 +897,14 @@ Question: {question_text}
         try:
             answer = await generate(prompt, temperature=0.1, model=payload.model)
         except Exception as exc:
-            return {
-                **_model_failure_payload(exc),
-                "used_web_search": used_web_search,
-                "web_results": web_results,
-            }
+            return _model_failure_payload(exc)
     else:
         answer = ""
 
     if not answer:
         if ollama_up:
-            return {
-                **_error_payload("The local model returned an empty answer. Try again."),
-                "used_web_search": used_web_search,
-                "web_results": web_results,
-            }
+            return _error_payload("The local model returned an empty answer. Try again.")
         answer = _extractive_tutor_answer(payload.message, selected) if selected else ""
-        web_answer = _extractive_web_answer(web_results)
-        if web_answer:
-            answer = f"{answer}\n\n{web_answer}".strip()
 
     answer, citations = _normalize_evidence_citations(answer, evidence_items)
     if not citations and evidence_items:
@@ -1017,7 +923,5 @@ Question: {question_text}
     return {
         "answer": answer,
         "citations": citations,
-        "web_results": web_results,
-        "used_web_search": used_web_search,
         "model": payload.model or OLLAMA_MODEL,
     }
