@@ -59,7 +59,7 @@ of its own. We evaluate retrieval, answer faithfulness, visual grounding, and
 cross-document localization on labeled benchmarks. On 51 cases, the generated answers
 stay grounded in their retrieved context with a mean score of 0.971, no answer atom
 contradicts its source, and 94\% of inline citations are fully supported with none
-unsupported. BM25-primary retrieval reaches Recall@5 of 0.929, and figure and table
+unsupported. BM25-primary retrieval reaches Recall@5 of 0.93 across 25 papers, and figure and table
 questions route to the correct visual element in all 18 pilot cases. Cross-document
 localization sits at or below a random-guess floor, which we report as our clearest
 open problem. We also contribute a 100-case benchmark across 25 papers spanning text,
@@ -343,7 +343,7 @@ retrieval benchmark with labeled relevant chunks, a 51-case faithfulness benchma
 with oracle claims and a supporting chunk, an 18-case visual-grounding pilot, and an
 18-case multi-document benchmark of which 10 have an arXiv-resolvable target. These
 support the automated metrics that need ground-truth chunk labels, and they are
-small: the labeled benchmarks cover three papers between them.
+small: the hand-labeled benchmarks cover three papers between them.
 
 The second is a 100-case benchmark spanning 25 papers, built to broaden coverage
 and reduce the memorization advantage a model has on very famous papers. It contains
@@ -351,8 +351,15 @@ and reduce the memorization advantage a model has on very famous papers. It cont
 a real passage or caption by a local model and then kept only if the required
 answer facts appear, on a word or number boundary, in the source passage; questions
 from benchmark-dataset papers, reference lists, and worked examples were filtered
-out. This diverse benchmark is the dataset for the human evaluation
-(Section~\ref{sec:humaneval}).
+out. Because each case carries exact substrings copied from its source passage, we
+recover a gold supporting chunk for every case at no extra labeling cost: it is the
+chunk that contains those substrings, disambiguated by the recorded page. This yields
+a 100-case, 25-paper labeled set for retrieval and retrieval-support faithfulness, an
+order of magnitude larger and eight times more papers than the hand-labeled set. The
+labels are weaker than hand annotation, and the questions, being mined from passages,
+carry lexical overlap that can favor lexical retrieval; we therefore report the scaled
+set alongside the 3-paper hand-labeled set rather than in place of it. This diverse
+benchmark is also the dataset for the human evaluation (Section~\ref{sec:humaneval}).
 
 % -----------------------------------------------------------------------
 \section{Automated Evaluation}
@@ -360,61 +367,68 @@ out. This diverse benchmark is the dataset for the human evaluation
 % -----------------------------------------------------------------------
 
 \subsection{Retrieval}
-Table~\ref{tab:retrieval} reports retrieval on the 14-case benchmark. BM25-primary
-reaches Recall@5 of 0.929 and MRR of 0.788, improving on the keyword-overlap
-baseline by 10.1 points of MRR. On this small benchmark the reranking heuristics and
-page hints leave the aggregate metrics unchanged, so the gain over the keyword
-baseline comes from BM25 itself. A single-pass dense-only configuration scores
-highest here (Recall@5 1.000, MRR 0.881), counter to the general BEIR
-finding~\citep{thakur2021beir}; we attribute this to the small size and paraphrased
-queries of the benchmark, and at faithfulness scale it is hybrid retrieval, not
-dense-only, that wins (Section~\ref{sec:auto-faith}).
+Table~\ref{tab:retrieval} reports retrieval on the scaled benchmark of 100
+auto-labeled cases across 25 papers. BM25-primary reaches Recall@5 of 0.93 and MRR of
+0.861; plain BM25 is within noise at 0.94 and 0.863, so the reranking heuristics and
+page hints again leave the aggregate unchanged. The clear shift from the 3-paper
+anchor is dense-only: it led there (Recall@5 1.000, MRR 0.881) but trails every
+lexical configuration on the diverse pool (MRR 0.572), the expected BEIR
+outcome~\citep{thakur2021beir} once the corpus is not three heavily studied papers. We
+read the size of BM25's margin cautiously, because the mined queries share lexical
+surface with their source passages, but the direction, lexical over single-pass dense
+at scale, is the one the BM25-primary design assumes.
 
 \begin{table}[t]
   \centering
-  \caption{Retrieval on 14 manually annotated cases across 3 papers.}
+  \caption{Retrieval on the scaled benchmark: 100 auto-labeled cases across 25 papers,
+           with NDCG@5 over the gold chunks. On the 3-paper hand-labeled anchor
+           (14 cases) dense-only instead leads (R@5 1.000, MRR 0.881).}
   \label{tab:retrieval}
-  \setlength{\tabcolsep}{4pt}
-  \begin{tabular}{lcccc}
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabular}{lccccc}
     \toprule
-    \textbf{System} & \textbf{R@1} & \textbf{R@3} & \textbf{R@5} & \textbf{MRR} \\
+    \textbf{System} & \textbf{R@1} & \textbf{R@3} & \textbf{R@5} & \textbf{MRR} & \textbf{NDCG@5} \\
     \midrule
-    Keyword Overlap & 0.571 & 0.786 & 0.929 & 0.687 \\
-    BM25-Only       & 0.714 & 0.857 & 0.929 & 0.788 \\
-    BM25+Rerank     & 0.714 & 0.857 & 0.929 & 0.788 \\
-    Dense-Only      & 0.786 & 1.000 & 1.000 & 0.881 \\
+    Keyword         & 0.670 & 0.860 & 0.950 & 0.779 & 0.762 \\
+    BM25-Only       & 0.810 & 0.910 & 0.940 & 0.863 & 0.828 \\
+    BM25+Rerank     & 0.810 & 0.910 & 0.930 & 0.861 & 0.824 \\
+    Dense-Only      & 0.470 & 0.650 & 0.740 & 0.572 & 0.523 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \subsection{Retrieval-Support Faithfulness}
 \label{sec:auto-faith}
-Table~\ref{tab:faith} reports the retrieval-support CFS on the 51-case benchmark,
-comparing the BM25-primary retriever with the hybrid BM25+Dense+RRF retriever.
-Hybrid reaches Combined CFS 0.827 versus 0.807, and improves the supporting-chunk
-hit rate at depth 5 (SCHR@5) from 0.824 to 0.922. Under the strict
-$\mathrm{CFS}{\geq}0.55$ cutoff, BM25-primary classifies 48 of 51 cases and hybrid
-49 of 51 as faithful. This metric measures whether retrieval surfaces support for a
+Table~\ref{tab:faith} reports the retrieval-support CFS on the scaled 100-case set.
+BM25-primary and the hybrid BM25+Dense+RRF retriever land within 0.003 of each other
+(Combined CFS 0.785 versus 0.782), and BM25-primary has the higher supporting-chunk
+hit rate at depth 5 (SCHR@5 0.86 versus 0.75) and one more faithful case (93 versus 92
+of 100 under the $\mathrm{CFS}{\geq}0.55$ cutoff). The narrow hybrid edge on the
+3-paper anchor (Combined CFS 0.827 versus 0.807, SCHR@5 0.922) does not survive at
+scale: fusing a single-pass dense encoder that is itself weak on diverse papers, as
+the retrieval results above show, adds nothing here, which is why BM25-primary is the
+production default. This metric measures whether retrieval surfaces support for a
 known claim, not whether the generated answer is faithful; the latter is
 Section~\ref{sec:auto-gen}.
 
 \begin{table}[t]
   \centering
-  \caption{Retrieval-support faithfulness on 51 oracle-claim cases. NLI is the
-           entailment fraction; SCR is whole-claim cosine; KFP is key-fact recall;
-           SCHR@5 is the supporting-chunk hit rate at depth 5.}
+  \caption{Retrieval-support faithfulness on the scaled 100-case set (25 papers). NLI
+           is the entailment fraction; SCR is whole-claim cosine; KFP is key-fact
+           recall; SCHR@5 is the supporting-chunk hit rate at depth 5. On the 3-paper
+           anchor (51 oracle-claim cases) hybrid narrowly leads (CFS 0.827 vs 0.807).}
   \label{tab:faith}
   \setlength{\tabcolsep}{5pt}
   \begin{tabular}{lcc}
     \toprule
     \textbf{Metric} & \textbf{BM25-primary} & \textbf{Hybrid+RRF} \\
     \midrule
-    NLI (entailment)     & 0.941 & 0.961 \\
-    SCR (cosine)         & 0.484 & 0.508 \\
-    KFP (key-fact recall)& 0.956 & 0.969 \\
-    Combined CFS         & 0.807 & 0.827 \\
-    SCHR@5               & 0.824 & 0.922 \\
-    Faithful ($\geq0.55$)& 48/51 & 49/51 \\
+    NLI (entailment)     & 0.925 & 0.915 \\
+    SCR (cosine)         & 0.433 & 0.438 \\
+    KFP (key-fact recall)& 0.966 & 0.966 \\
+    Combined CFS         & 0.785 & 0.782 \\
+    SCHR@5               & 0.860 & 0.750 \\
+    Faithful ($\geq0.55$)& 93/100 & 92/100 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -532,14 +546,15 @@ auditable, and in which the generated answers are measurably grounded, with no
 contradictions and no unsupported citations on the studied set. The limits of that
 evidence set the agenda for the rest of this section.
 
-The labeled automated benchmarks cover three papers and are small (10 to 51 cases),
-so their point estimates carry no variance or significance testing, and several
-deltas fall within noise. The 100-case, 25-paper diverse benchmark broadens coverage,
-but we lean on it only lightly for automated metrics, since its cases are not labeled
-with ground-truth chunks; its main role is to back the human study. The
-generation-faithfulness metric rewards grounding to retrieved context and the absence
-of contradiction, which leaves it insensitive to subtle unfaithfulness, and that gap
-is exactly what the human evaluation exists to close.
+The retrieval and retrieval-support benchmarks now span 100 cases across 25 papers,
+but their gold chunks are auto-derived from mined facts rather than hand-labeled, and
+the mined queries carry lexical overlap that likely flatters lexical retrieval; the
+3-paper hand-labeled sets remain the higher-precision anchor. The visual (18 cases)
+and multi-document (10 to 18 cases) benchmarks are still small and hand-labeled on
+three papers, so several of their deltas fall within noise and carry no significance
+testing. The generation-faithfulness metric rewards grounding to retrieved context and
+the absence of contradiction, which leaves it insensitive to subtle unfaithfulness,
+and that gap is exactly what the human evaluation exists to close.
 
 We do not run a head-to-head comparison against OpenScholar, PaperQA2, or SciRAG.
 Those systems depend on cloud-hosted models and large datastores, so a fair
@@ -558,7 +573,7 @@ scientific document comprehension that combines page-preserving chunking with
 indirect citation grounding and extends to visual and multi-document questions. On
 51 cases the system's generated answers are grounded with a mean score of 0.971, no
 contradictions, and 94\% fully supported citations with none unsupported; retrieval
-reaches Recall@5 of 0.929; and figure and table routing is correct in all 18 pilot
+reaches Recall@5 of 0.93 across 25 papers; and figure and table routing is correct in all 18 pilot
 cases. Cross-document localization is at or below chance and is our clearest open
 problem. We contribute a 100-case, 25-paper text, math, and figure benchmark and a
 model-agnostic human-evaluation protocol over four local models, whose expert scoring

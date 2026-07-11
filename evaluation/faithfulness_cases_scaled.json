@@ -1,0 +1,802 @@
+[
+  {
+    "id": "mine_text_001",
+    "paper_id": "2006.11239",
+    "query": "What is the NLL for 'Ours (L, fixed isotropic Σ)' on CIFAR10?",
+    "expected_claim": "7.67±0.13",
+    "supporting_chunk_id": "chunk_005",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_002",
+    "paper_id": "1810.04805",
+    "query": "What is the difference in pre-training model architectures between BERT and OpenAI GPT?",
+    "expected_claim": "BERT uses a bidirectional Transformer, while OpenAI GPT uses a left-to-right Transformer.",
+    "supporting_chunk_id": "chunk_013",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_003",
+    "paper_id": "2005.11401",
+    "query": "What is the difference between the RAG-Sequence and RAG-Token models in terms of how they treat the retrieved document?",
+    "expected_claim": "RAG-Sequence treats the retrieved document as a single latent variable that is marginalized to get the seq2seq probability p(y|x) via a top-K approximation, while RAG-Token can draw a different latent document for each target token and marginalize accordingly.",
+    "supporting_chunk_id": "chunk_003",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_004",
+    "paper_id": "1409.0473",
+    "query": "What was the size of the minibatch used for each SGD update direction?",
+    "expected_claim": "Each SGD update direction was computed with a minib batch of 80 sentences.",
+    "supporting_chunk_id": "chunk_015",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_005",
+    "paper_id": "2005.14165",
+    "query": "What is the total number of tokens used to train all models listed in Table 2.1?",
+    "expected_claim": "All models were trained for a total of 300 billion tokens.",
+    "supporting_chunk_id": "chunk_008",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_006",
+    "paper_id": "2001.08361",
+    "query": "What is the critical batch size Bcrit(L) defined as in relation to Emin and Smin?",
+    "expected_claim": "Bcrit(L) ≡Emin / Smin",
+    "supporting_chunk_id": "chunk_013",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_007",
+    "paper_id": "2111.00364",
+    "query": "What specific components of an AI model's life cycle must be accounted for according to the passage?",
+    "expected_claim": "Data, Experimentaion, Training, Deployment",
+    "supporting_chunk_id": "chunk_010",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_008",
+    "paper_id": "2201.11903",
+    "query": "What is the performance of 'equation only' prompting for the MAWPS dataset?",
+    "expected_claim": "The performance of \"equation only\" prompting for the MAWPS dataset is 50.1 ±1.0.",
+    "supporting_chunk_id": "chunk_023",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_009",
+    "paper_id": "2010.11929",
+    "query": "What is the performance of ViT-L/16 (I21k) on the Clevr-Dist task?",
+    "expected_claim": "The performance of ViT-L/16 (I21k) on the Clevr-Dist task is 70.3.",
+    "supporting_chunk_id": "chunk_022",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_010",
+    "paper_id": "2203.02155",
+    "query": "What were the completion results for GPT-3 175B when it received a labeler-written prompt?",
+    "expected_claim": "Bake, uncovered, at 350° for 20-25 minutes or until zucchini is tender and cheese is melted.",
+    "supporting_chunk_id": "chunk_067",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_011",
+    "paper_id": "2010.00133",
+    "query": "What is the threshold for displaying a warning message regarding the Levenshtein distance between two sentences in the HIT design?",
+    "expected_claim": "The threshold is greater than 13.",
+    "supporting_chunk_id": "chunk_013",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_012",
+    "paper_id": "2107.03374",
+    "query": "What is the second word's definition of vowels?",
+    "expected_claim": "Vowels in this case are ’a’, ’e’, ’i’, ’o’, ’u’. Here, ’y’ is also a vowel, but only when it is at the end of the gi",
+    "supporting_chunk_id": "chunk_021",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_013",
+    "paper_id": "2201.08239",
+    "query": "What is the definition of an 'utterance'?",
+    "expected_claim": "An \"utterance\" is one statement in a conversation.",
+    "supporting_chunk_id": "chunk_026",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_014",
+    "paper_id": "2005.11401",
+    "query": "What is the ratio of distinct to total tri-grams for the RAG-Seq. model on the Jeopardy QGen task?",
+    "expected_claim": "The RAG-Seq. model has a ratio of 83.5% distinct to total tri-grams for the Jeopardy QGen task.",
+    "supporting_chunk_id": "chunk_008",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_015",
+    "paper_id": "1409.0473",
+    "query": "What is the formula for calculating the conditional probability of a word given its preceding words and context vector?",
+    "expected_claim": "p(yt | {y1, · · · , yt−1} , c) = g(yt−1, st, c)",
+    "supporting_chunk_id": "chunk_003",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_016",
+    "paper_id": "1810.04805",
+    "query": "What is the difference in how BERT and OpenAI GPT architectures differ in their pre-training?",
+    "expected_claim": "BERT uses a bidirectional Transformer. OpenAI GPT uses a left-to-right Transformer.",
+    "supporting_chunk_id": "chunk_013",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_017",
+    "paper_id": "2010.11929",
+    "query": "What are the specific model names and counts of the ResNet variants used in the scaling study?",
+    "expected_claim": "The model set includes 7 ResNets: R50x1, R50x2, R101x1, R152x1, R152x2, pre-trained for 7 epochs, plus R152x2 and R200x3 pre-trained for 14 epochs.",
+    "supporting_chunk_id": "chunk_008",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_018",
+    "paper_id": "1910.10683",
+    "query": "What was the number of bacterial and archaeal taxa identified in a study of 40 North Carolina homes?",
+    "expected_claim": "More than 8,000 bacterial and archaeal taxa.",
+    "supporting_chunk_id": "chunk_046",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_019",
+    "paper_id": "1901.02860",
+    "query": "What is the threshold for relative gain to determine the RECL?",
+    "expected_claim": "The threshold for relative gain to determine the RECL is 0.01.",
+    "supporting_chunk_id": "chunk_014",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_020",
+    "paper_id": "2009.11462",
+    "query": "What percentage of documents are considered toxic if they have higher proportions of toxic content relative to all subreddits in OWTC?",
+    "expected_claim": "In this figure, we consider a document toxic if it",
+    "supporting_chunk_id": "chunk_021",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_021",
+    "paper_id": "2005.11401",
+    "query": "What specific types of tasks did the BART and T5 models use bi-directional attention to achieve stronger performance on?",
+    "expected_claim": "BART and T5 used bi-directional attention to achieve stronger performance on discriminative and generative tasks.",
+    "supporting_chunk_id": "chunk_009",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_022",
+    "paper_id": "1706.03762",
+    "query": "What is the complexity of a separable convolution with kernel width k = n?",
+    "expected_claim": "The complexity of a separable convolution with even with k = n, however, the complexity of a separable convolution is equal to the combination of a self-attention layer and a point-wise feed-forward layer.",
+    "supporting_chunk_id": "chunk_007",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_023",
+    "paper_id": "1409.0473",
+    "query": "What was the difference in translation quality between the RNNencsdec-50 and the RNNsearch-50 models?",
+    "expected_claim": "The RNNsearch-50 generated the correct translation, preserving the whole meaning of the input sentence without omitting any details.",
+    "supporting_chunk_id": "chunk_008",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_024",
+    "paper_id": "2112.11446",
+    "query": "What are the specific words associated with 'Atheist' in the second instance of the Attribute Pair Adjectives category?",
+    "expected_claim": "atheist, religious, christian, bible, god, intelligent, wrong",
+    "supporting_chunk_id": "chunk_101",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_025",
+    "paper_id": "2006.11239",
+    "query": "What is the difference in FID scores for LSUN Church samples and LSUN Bedroom samples?",
+    "expected_claim": "The FID score for LSUN Church samples is 7.89, while the FID score for LSUN Bedroom samples is 4.90.",
+    "supporting_chunk_id": "chunk_006",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_026",
+    "paper_id": "1810.04805",
+    "query": "What is the difference between BERT and OpenAI GPT in terms of pre-training model architectures?",
+    "expected_claim": "BERT uses a bidirectional Transformer. OpenAI GPT uses a left-to-right Transformer.",
+    "supporting_chunk_id": "chunk_013",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_027",
+    "paper_id": "2107.03374",
+    "query": "What is the second and third completion option provided for the code snippet 'add_elements'?",
+    "expected_claim": "The second completion option is: \n\nfor i in range(0, k): if len(str(arr[i])) < 3: k = k - 1\ncontinue else: return arr[i]\n\nThe third completion option is:\n\nsum_ = 0\ni = 0\nwhile k > 0 and i < len(arr):\nif len(str(arr[i])) <= 2: sum_ += arr[i]\nk -= 1\ni += 1\nreturn sum_",
+    "supporting_chunk_id": "chunk_021",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_028",
+    "paper_id": "2009.11462",
+    "query": "What are the page numbers for the paper 'Social biases in NLP models as barriers for persons with disabilities'?",
+    "expected_claim": "5491–5501",
+    "supporting_chunk_id": "chunk_012",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_029",
+    "paper_id": "2005.11401",
+    "query": "What is the difference between RAG-Sequence and RAG-Token models in terms of how they handle retrieved documents?",
+    "expected_claim": "RAG-Sequence uses the same document to predict each target token, while RAG-Token can predict each target token based on a different document.",
+    "supporting_chunk_id": "chunk_003",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_030",
+    "paper_id": "2005.14165",
+    "query": "What is the format for zero-shot learning in this paper's dataset?",
+    "expected_claim": "The format for zero-shot learning is \"Q: What is the {language} translation of {sentence} A: {translation}\".",
+    "supporting_chunk_id": "chunk_060",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_031",
+    "paper_id": "1712.00409",
+    "query": "What are the three types of scaling limits encountered when projecting forward on learning curves?",
+    "expected_claim": "The three types of scaling limits are: training data is too small, computation is too slow, or irreducible error.",
+    "supporting_chunk_id": "chunk_012",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_032",
+    "paper_id": "1909.08053",
+    "query": "What are the structural components of the flower?",
+    "expected_claim": "The structural components of the flower are the petals and sepals, which are the reproductive organs, the hypanthium, which forms the base of the flower, and the calyx, which is the stigma.",
+    "supporting_chunk_id": "chunk_013",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_033",
+    "paper_id": "1910.10683",
+    "query": "What is the processed target for the D.14 CNN/Daily Mail dataset?",
+    "expected_claim": "stable D.14 CNN/Daily Mail",
+    "supporting_chunk_id": "chunk_052",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_034",
+    "paper_id": "1901.02860",
+    "query": "What are some additional interesting properties of Transformer-XL demonstrated in Example 2?",
+    "expected_claim": "After finishing the last paragraph of the seed context, both the reference and generated text start a new topic (i.e., Wikipedia page), as marked by the single \"= title =\" line. This suggests the model has the ability of identifying the end of a topic / page, and randomly starting with a new topic.",
+    "supporting_chunk_id": "chunk_020",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_035",
+    "paper_id": "2010.00133",
+    "query": "What score did RoBERTa achieve on the stereotype examples?",
+    "expected_claim": "RoBERTa's bias score is nearly perfect on the anti-stereotype examples with a score of 51.4, but only achieves a score of 66.3 on the stereotype examples.",
+    "supporting_chunk_id": "chunk_007",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_036",
+    "paper_id": "2107.03374",
+    "query": "What is the purpose of sharing the hazard analysis?",
+    "expected_claim": "To encourage a norm of performing detailed impact analysis as part of major machine learning research projects.",
+    "supporting_chunk_id": "chunk_011",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_037",
+    "paper_id": "1409.0473",
+    "query": "What is the size of a minibatch used for each SGD update?",
+    "expected_claim": "Each SGD update direction was computed with a minib_batch of 80 sentences.",
+    "supporting_chunk_id": "chunk_015",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_038",
+    "paper_id": "2005.14165",
+    "query": "What section number does 'SuperGLUE' fall under?",
+    "expected_claim": "SuperGLUE falls under section 3.7.",
+    "supporting_chunk_id": "chunk_002",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_039",
+    "paper_id": "2111.00364",
+    "query": "What is the percentage reduction in operational energy footprint over the two-year period?",
+    "expected_claim": "The iterative optimization process has led to a 28.5% operational energy footprint reduction over the two-year time period.",
+    "supporting_chunk_id": "chunk_006",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_040",
+    "paper_id": "1810.04805",
+    "query": "What is the difference in how BERT and OpenAI GPT models are fine-tuned?",
+    "expected_claim": "BERT and OpenAI GPT are fine-tuning approaches.",
+    "supporting_chunk_id": "chunk_013",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_041",
+    "paper_id": "2201.11903",
+    "query": "What are the two toy tasks used in the evaluation of symbolic reasoning?",
+    "expected_claim": "The two toy tasks are Last letter concatenation and Coin flip.",
+    "supporting_chunk_id": "chunk_008",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_042",
+    "paper_id": "2203.02155",
+    "query": "What is the specific value for the pretraining loss coefficient (γ) that seems to work well across model sizes from 1.3B to 175B parameter count?",
+    "expected_claim": "A single value of 27.8.",
+    "supporting_chunk_id": "chunk_053",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_043",
+    "paper_id": "2010.00133",
+    "query": "What is the maximum Levenshtein distance between two sentences before a warning message is displayed on the HIT?",
+    "expected_claim": "A warning message is displayed if the Levenshtein distance between the two sentences is greater than 13.",
+    "supporting_chunk_id": "chunk_013",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_044",
+    "paper_id": "2107.03374",
+    "query": "What are the correct completions of the code snippet provided in the passage?",
+    "expected_claim": "COMPLETION 4, COMPLETION 5, and COMPLETION 6.",
+    "supporting_chunk_id": "chunk_023",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_045",
+    "paper_id": "1909.12673",
+    "query": "What is the purpose of the term $\\eta$ in equation (5)?",
+    "expected_claim": "The simple pole at $\\eta$ controls the transition point from the initial random-1guess level $\\epsilon_0$ as $(m, n)$ increase.",
+    "supporting_chunk_id": "chunk_006",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_046",
+    "paper_id": "1712.00409",
+    "query": "What is the size of the language's vocabulary (C) for character language models?",
+    "expected_claim": "The vocabulary size |C| = 98 after including special symbols like the end-of-sentence token.",
+    "supporting_chunk_id": "chunk_017",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_047",
+    "paper_id": "2006.11239",
+    "query": "What is the NLL of 'Ours (L, fixed isotropic Σ)' on CIFAR10?",
+    "expected_claim": "7.67±0.13",
+    "supporting_chunk_id": "chunk_005",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_048",
+    "paper_id": "2111.00364",
+    "query": "What is the power capacity breakdown of AI infrastructures at Facebook for the three key phases (Experimented, Training, and Inference)?",
+    "expected_claim": "At Facebook, we observe a rough power capacity breakdown of 10:20:70 for AI infrastructures devoted to the three key phases — Experimentation, Training, and Inference.",
+    "supporting_chunk_id": "chunk_003",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_049",
+    "paper_id": "2201.11990",
+    "query": "How many NVIDIA Mellanox 200Gbps HDR Infiniband HCAs are there per node for application communication?",
+    "expected_claim": "Each node has eight NVIDIA Mellanox 200Gbps HDR Infiniband HCAs for application communication.",
+    "supporting_chunk_id": "chunk_007",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_text_050",
+    "paper_id": "2010.11929",
+    "query": "What are the specific pre-training epochs for the Vision Transformers (ViT) models included in the study?",
+    "expected_claim": "The Vision Transformers include ViT-B/32, B/16, L/32, L/16, pre-trained for 7 epochs, plus L/16 and H/14 pre-trained for 14 epochs.",
+    "supporting_chunk_id": "chunk_008",
+    "claim_type": "single_doc_text"
+  },
+  {
+    "id": "mine_math_001",
+    "paper_id": "2010.00133",
+    "query": "What is the method used to calculate the conditional pseudo-log-likelihood of each sentence?",
+    "expected_claim": "The method involves iterating over the sentence, masking a single token at a time, measuring its log likelihood, and accumulating the result in a sum.",
+    "supporting_chunk_id": "chunk_004",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_002",
+    "paper_id": "2203.02155",
+    "query": "What is the RM score's role in selecting models based on the passage?",
+    "expected_claim": "The RM score was more predictive of human preference results compared to validation loss.",
+    "supporting_chunk_id": "chunk_041",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_003",
+    "paper_id": "2005.11401",
+    "query": "What is the formula for pRAG-Sequence(y|x) approximately equal to?",
+    "expected_claim": "pRAG-Sequence(y|x) ≈ \\sum_{z\\in top-k} p_η(z|x)p_θ(y|x, z) = \\sum_{z\\in top-k} p_η(z|x) \\prod_{i=1}^N p_θ(yi|x, z, y_1:i-1)",
+    "supporting_chunk_id": "chunk_003",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_004",
+    "paper_id": "1909.08053",
+    "query": "What is the formula for the first part of the MLP block?",
+    "expected_claim": "Y = GeLU(XA)",
+    "supporting_chunk_id": "chunk_004",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_005",
+    "paper_id": "1909.12673",
+    "query": "What is the formula for the relation summarizing the two observations related to model scaling?",
+    "expected_claim": "ϵ(m, n) ≈b(n)m^{−β(n)} + cm(n)",
+    "supporting_chunk_id": "chunk_005",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_006",
+    "paper_id": "1706.03762",
+    "query": "What is the formula for Scaled Dot-Product Attention?",
+    "expected_claim": "Attention(Q, K, V) = softmax(QK^T / sqrt(dk))V",
+    "supporting_chunk_id": "chunk_004",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_007",
+    "paper_id": "2009.11462",
+    "query": "How is the effective batch size calculated?",
+    "expected_claim": "By multiplying the batch size by the number of gradient accumulation steps.",
+    "supporting_chunk_id": "chunk_017",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_008",
+    "paper_id": "2010.00133",
+    "query": "What is the calculation method for the conditional pseudo-log-likelihood of each sentence?",
+    "expected_claim": "To calculate the conditional pseudo-log-likelihood of each sentence, we iterate over the sentence, masking a single token at a time, measuring its log likelihood, and accumulating the result in a sum.",
+    "supporting_chunk_id": "chunk_004",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_009",
+    "paper_id": "2201.08239",
+    "query": "What is a limitation mentioned in the paper regarding the safety metric?",
+    "expected_claim": "It leaves little room for disentangling different objectives, or weighting objectives differently.",
+    "supporting_chunk_id": "chunk_017",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_010",
+    "paper_id": "2107.03374",
+    "query": "What is the formula used to calculate the sum of products of digits in Completion 2?",
+    "expected_claim": "sum(a*b for a, b in zip(str(a), str(b)))",
+    "supporting_chunk_id": "chunk_022",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_011",
+    "paper_id": "2010.00133",
+    "query": "What is the method for calculating the conditional pseudo-log-likelihood of each sentence?",
+    "expected_claim": "The method involves iterating over the sentence, masking a single token at a time, measuring its log likelihood, and accumulating the result in a sum.",
+    "supporting_chunk_id": "chunk_004",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_012",
+    "paper_id": "2107.03374",
+    "query": "What is the calculation of curr_sum for a digit and its corresponding digit_2?",
+    "expected_claim": "curr_sum = digit * digit_2 + carry",
+    "supporting_chunk_id": "chunk_022",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_013",
+    "paper_id": "1910.10683",
+    "query": "What is the suggested approach for unsupervised pre-training to be more computationally efficient?",
+    "expected_claim": "We suggest using objectives that produce short target sequences so that unsupervised pre-training is more computationally efficient.",
+    "supporting_chunk_id": "chunk_042",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_014",
+    "paper_id": "2201.11990",
+    "query": "What is the score for a document based on the classifier's output?",
+    "expected_claim": "The probability of the positive label was taken as the score for the document.",
+    "supporting_chunk_id": "chunk_009",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_015",
+    "paper_id": "2005.14165",
+    "query": "What is the number of examples provided to GPT-3 in the few-shot setting for the SuperGLUE tasks?",
+    "expected_claim": "GPT-3 few-shot is given a total of 32 examples within the context of each task and performs no gradient updates.",
+    "supporting_chunk_id": "chunk_019",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_016",
+    "paper_id": "2107.03374",
+    "query": "What is the calculation for curr_sum?",
+    "expected_claim": "curr_sum = digit * digit_2 + carry",
+    "supporting_chunk_id": "chunk_022",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_017",
+    "paper_id": "2201.11903",
+    "query": "What is the standard deviation for 'equation only' ablation in the MAWPS dataset?",
+    "expected_claim": "The standard deviation for 'equation only' ablation in the MAWPS dataset is 1.0.",
+    "supporting_chunk_id": "chunk_023",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_018",
+    "paper_id": "1706.03762",
+    "query": "What is the value of dk and dv for each head in the multi-head attention mechanism?",
+    "expected_claim": "For each of these we use dk = dv = dmodel/h = 64.",
+    "supporting_chunk_id": "chunk_005",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_019",
+    "paper_id": "1910.10683",
+    "query": "What are the dimensions and number of heads for the '3B' variant model?",
+    "expected_claim": "The '3B' variant uses dff = 16,384 with 32-headed attention.",
+    "supporting_chunk_id": "chunk_037",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_020",
+    "paper_id": "2006.11239",
+    "query": "What is the difference between the true variational bound and the simplified objective in terms of sample quality?",
+    "expected_claim": "The simplified objective yields the better sample quality.",
+    "supporting_chunk_id": "chunk_006",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_021",
+    "paper_id": "1901.02860",
+    "query": "What is the formula for calculating the relative perplexity reduction $g_i(c, c')$?",
+    "expected_claim": "The formula is $g_i(c, c') = \\frac{\\exp f_i(c, c) - \\exp f_i(c, c')}{\\exp f_i(c, c)}$",
+    "supporting_chunk_id": "chunk_014",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_022",
+    "paper_id": "2005.14165",
+    "query": "What is the performance metric used to measure the scaling of performance with compute?",
+    "expected_claim": "cross-entropy validation loss",
+    "supporting_chunk_id": "chunk_011",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_023",
+    "paper_id": "2005.11401",
+    "query": "What is the formula for pRAG-Sequence(y|x) or its approximation?",
+    "expected_claim": "pRAG-Sequence(y|x) ≈ \\sum_{z №top-k} pη(z|x)pθ(y|x, z) = \\sum_{z №top-k} pη(z|x) \\prod_{i=1}^{N} pθ(yi|x, z, y1:i-1)",
+    "supporting_chunk_id": "chunk_003",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_024",
+    "paper_id": "1910.10683",
+    "query": "What was the calculated average span length when processing a sequence of 500 tokens with 15% corruption and 25 total spans?",
+    "expected_claim": "The average span length would be 75/25 = 3.",
+    "supporting_chunk_id": "chunk_024",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_math_025",
+    "paper_id": "1706.03762",
+    "query": "What is the value of dk and dv for each of the 8 parallel attention layers?",
+    "expected_claim": "For each of these we use dk = dv = dmodel/h = 64.",
+    "supporting_chunk_id": "chunk_005",
+    "claim_type": "math"
+  },
+  {
+    "id": "mine_figure_001",
+    "paper_id": "2302.13971",
+    "query": "What is reported for TruthfulQA?",
+    "expected_claim": "The fraction of truth-",
+    "supporting_chunk_id": "chunk_014",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_002",
+    "paper_id": "2201.11903",
+    "query": "What are the math word problem benchmarks used in this paper?",
+    "expected_claim": "The benchmarks are summarized in the figure/table, and some examples are included.",
+    "supporting_chunk_id": "chunk_003",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_003",
+    "paper_id": "2010.11929",
+    "query": "What are the models being shown in the figure/table?",
+    "expected_claim": "The models are those that were trained with different hyperparameters.",
+    "supporting_chunk_id": "chunk_004",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_004",
+    "paper_id": "2512.24601",
+    "query": "What does a Recursive Language Model (RLM) treat prompts as?",
+    "expected_claim": "A Recursive Language Model (RLM) treats prompts as part of the environment.",
+    "supporting_chunk_id": "chunk_002",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_005",
+    "paper_id": "2006.11239",
+    "query": "What do the coarse-to-fine interpolations vary?",
+    "expected_claim": "They vary the number of diffusion steps prior to latent mixing.",
+    "supporting_chunk_id": "chunk_016",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_006",
+    "paper_id": "2302.13971",
+    "query": "What is shown in the figure/table?",
+    "expected_claim": "Training loss over train tokens for the 7B.",
+    "supporting_chunk_id": "chunk_003",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_007",
+    "paper_id": "1512.03385",
+    "query": "What is the source of the detection results?",
+    "expected_claim": "The detection results are on the PASCAL VOC 2012 test set.",
+    "supporting_chunk_id": "chunk_011",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_008",
+    "paper_id": "2201.11903",
+    "query": "What are some examples of correct and incorrect chains of thought produced by LaMDA 137B on Sports?",
+    "expected_claim": "LaMDA 137B produced several examples of correct and incorrect chains of thought on Sports.",
+    "supporting_chunk_id": "chunk_004",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_009",
+    "paper_id": "2010.11929",
+    "query": "What does the figure or table decompose the VTAB tasks into?",
+    "expected_claim": "The figure or table decomposes the VTAB tasks into their respective groups.",
+    "supporting_chunk_id": "chunk_006",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_010",
+    "paper_id": "2512.24601",
+    "query": "What are the statistics plotted for the RLM trajectories on LongBenchPro?",
+    "expected_claim": "The statistics are for the RLM trajectories on LongBenchPro that were collected and filtered.",
+    "supporting_chunk_id": "chunk_008",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_011",
+    "paper_id": "2006.11239",
+    "query": "What is the directed graphical model being used in this study?",
+    "expected_claim": "The directed graphical model considered in this work.",
+    "supporting_chunk_id": "chunk_002",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_012",
+    "paper_id": "2302.13971",
+    "query": "What are the components of the model information provided in the table?",
+    "expected_claim": "Model sizes, architectures, and optimization hyper-parameters.",
+    "supporting_chunk_id": "chunk_003",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_013",
+    "paper_id": "2201.11903",
+    "query": "What are the few-shot exemplars used for in the SayCan robot planning tasks?",
+    "expected_claim": "They are used for a full chain of thought prompt.",
+    "supporting_chunk_id": "chunk_034",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_014",
+    "paper_id": "2010.11929",
+    "query": "What are the image sets used to evaluate the models?",
+    "expected_claim": "The image sets used to evaluate the models are Ima-",
+    "supporting_chunk_id": "chunk_019",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_015",
+    "paper_id": "1512.03385",
+    "query": "What happens to the situation when residual learning is used?",
+    "expected_claim": "The situation is reversed with residual learning.",
+    "supporting_chunk_id": "chunk_005",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_016",
+    "paper_id": "1706.03762",
+    "query": "What does the summary of results compare?",
+    "expected_claim": "The summary of results compares your translation quality and training costs to other models.",
+    "supporting_chunk_id": "chunk_008",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_017",
+    "paper_id": "2201.11903",
+    "query": "What are some examples of correct and incorrect chains of thought produced by LaMDA 137B on Date?",
+    "expected_claim": "The figure shows examples of correct and incorrect chains ofthought thought produced by LaMDA 137B on Date.",
+    "supporting_chunk_id": "chunk_023",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_018",
+    "paper_id": "2005.11401",
+    "query": "What are the results for RAG along with other models?",
+    "expected_claim": "The figure shows results for RAG along with state-of-the-art models.",
+    "supporting_chunk_id": "chunk_001",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_019",
+    "paper_id": "2302.13971",
+    "query": "What is the accuracy of the MMLU task based on the number of shots?",
+    "expected_claim": "The MMLU task has a five-shot accuracy.",
+    "supporting_chunk_id": "chunk_007",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_020",
+    "paper_id": "1512.03385",
+    "query": "What are the error rates for single-model results on the ImageNet?",
+    "expected_claim": "The error rates (%) of single-model results on the ImageNet.",
+    "supporting_chunk_id": "chunk_006",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_021",
+    "paper_id": "1706.03762",
+    "query": "What does the Transformer generalize well to?",
+    "expected_claim": "English constituency parsing",
+    "supporting_chunk_id": "chunk_001",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_022",
+    "paper_id": "2005.11401",
+    "query": "What does the figure/table show regarding RAG-Token and R-Sequence?",
+    "expected_claim": "RAG-Token performs better than RAG-Sequence on Jeopardy question generation.",
+    "supporting_chunk_id": "chunk_006",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_023",
+    "paper_id": "2010.11929",
+    "query": "What does the left part of the figure show?",
+    "expected_claim": "It shows how many images one core can handle per second, across various input sizes.",
+    "supporting_chunk_id": "chunk_019",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_024",
+    "paper_id": "2512.24601",
+    "query": "What is being compared in the figure/table?",
+    "expected_claim": "A comparison of GPT-5 and a corresponding RLM(recursion depth=1) using GPT-5.",
+    "supporting_chunk_id": "chunk_001",
+    "claim_type": "visual"
+  },
+  {
+    "id": "mine_figure_025",
+    "paper_id": "2302.13971",
+    "query": "What are the data mixtures used for pre-training?",
+    "expected_claim": "Data mixtures used for pre-training.",
+    "supporting_chunk_id": "chunk_002",
+    "claim_type": "visual"
+  }
+]

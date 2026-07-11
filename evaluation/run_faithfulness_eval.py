@@ -366,6 +366,17 @@ def write_report(bm25: list[dict], hybrid: list[dict],
 
 # ── entry point ───────────────────────────────────────────────────────
 def main() -> None:
+    global CASES_PATH, RESULTS_JSON, REPORT_MD
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--cases", default=str(CASES_PATH), help="path to a faithfulness cases JSON")
+    ap.add_argument("--tag", default="", help="output suffix, e.g. 'scaled'")
+    args = ap.parse_args()
+    CASES_PATH = Path(args.cases)
+    if args.tag:
+        RESULTS_JSON = RESULTS_DIR / f"faithfulness_eval_results_{args.tag}.json"
+        REPORT_MD = RESULTS_DIR / f"faithfulness_eval_report_{args.tag}.md"
+
     cases = json.loads(CASES_PATH.read_text())
     n = len(cases)
     print(f"\n{'='*65}", flush=True)

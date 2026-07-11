@@ -120,6 +120,15 @@ def rank_of_first_relevant(retrieved: list[dict[str, Any]], relevant_ids: set[st
     return None
 
 
+def ndcg_at_k(retrieved_ids: list[Any], relevant_ids: set[str], k: int = 5) -> float:
+    """Binary-relevance NDCG@k over the (possibly multiple) gold chunks."""
+    import math
+    dcg = sum(1.0 / math.log2(i + 2) for i, cid in enumerate(retrieved_ids[:k]) if cid in relevant_ids)
+    ideal = min(len(relevant_ids), k)
+    idcg = sum(1.0 / math.log2(i + 2) for i in range(ideal))
+    return round(dcg / idcg, 4) if idcg else 0.0
+
+
 def evaluate_case(case: dict[str, Any], retriever_name: str) -> dict[str, Any]:
     chunks = load_chunks(case["paper_id"])
     preferred_pages = extract_page_hints(case["query"])
@@ -142,6 +151,7 @@ def evaluate_case(case: dict[str, Any], retriever_name: str) -> dict[str, Any]:
         "recall_at_3": 1 if rank is not None and rank <= 3 else 0,
         "recall_at_5": 1 if rank is not None and rank <= 5 else 0,
         "reciprocal_rank": 0.0 if rank is None else 1.0 / rank,
+        "ndcg_at_5": ndcg_at_k(retrieved_ids, relevant_ids, 5),
     }
 
 
@@ -156,6 +166,7 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "recall_at_3": round(sum(row["recall_at_3"] for row in subset) / total, 3),
             "recall_at_5": round(sum(row["recall_at_5"] for row in subset) / total, 3),
             "mrr": round(sum(row["reciprocal_rank"] for row in subset) / total, 3),
+            "ndcg_at_5": round(sum(row["ndcg_at_5"] for row in subset) / total, 3),
         }
     return summary
 
@@ -191,7 +202,8 @@ def current_system_case_table(rows: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def write_report(cases: list[dict[str, Any]], rows: list[dict[str, Any]], summary: dict[str, Any]) -> None:
+def write_report(cases: list[dict[str, Any]], rows: list[dict[str, Any]], summary: dict[str, Any],
+                 report_path: Path = REPORT_MD) -> None:
     current = summary["bm25_primary_with_page_hints"]
     bm25 = summary["bm25_only"]
     keyword = summary["keyword_overlap"]
@@ -299,12 +311,21 @@ To make this stronger for a conference-style submission, the benchmark should be
 - Raw results: `evaluation/results/retrieval_eval_results.json`
 - This report: `evaluation/results/retrieval_eval_report.md`
 """
-    REPORT_MD.write_text(report, encoding="utf-8")
+    report_path.write_text(report, encoding="utf-8")
 
 
 def main() -> None:
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--cases", default=str(CASES_PATH), help="path to a benchmark cases JSON")
+    ap.add_argument("--tag", default="", help="output suffix, e.g. 'scaled' -> retrieval_eval_results_scaled.json")
+    args = ap.parse_args()
+    suffix = f"_{args.tag}" if args.tag else ""
+    results_json = RESULTS_DIR / f"retrieval_eval_results{suffix}.json"
+    report_md = RESULTS_DIR / f"retrieval_eval_report{suffix}.md"
+
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    cases = read_json(CASES_PATH)
+    cases = read_json(Path(args.cases))
     rows: list[dict[str, Any]] = []
     for case in cases:
         for retriever in RETRIEVERS:
@@ -329,12 +350,12 @@ def main() -> None:
         "summary": summary,
         "rows": rows,
     }
-    RESULTS_JSON.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    write_report(cases, rows, summary)
+    results_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    write_report(cases, rows, summary, report_md)
 
     print(markdown_table(summary))
-    print(f"\nWrote {RESULTS_JSON}")
-    print(f"Wrote {REPORT_MD}")
+    print(f"\nWrote {results_json}")
+    print(f"Wrote {report_md}")
 
 
 if __name__ == "__main__":
