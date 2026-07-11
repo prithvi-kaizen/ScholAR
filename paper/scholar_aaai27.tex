@@ -490,6 +490,44 @@ ranking on these questions. This is the clearest open problem in the system, and
 echoes M3SciQA's finding that even large models struggle at cross-paper
 localization~\citep{li2024m3sciqa}.
 
+\subsection{Comparison with Local Baselines}
+\label{sec:auto-compare}
+To place ScholAR against alternatives under its own local constraint, we reimplement
+three baselines on the same model (qwen3.5:9b) and the same cases (51 labeled and 40
+diverse): long-context PDF-chat, which puts the whole paper in the model's context;
+vanilla RAG, with fixed cross-page chunks and dense retrieval; and a local
+reimplementation of the rerank-and-summarize step of PaperQA2~\citep{lala2024paperqa2}.
+Table~\ref{tab:compare} shows ScholAR is strongest on the two axes that matter most,
+generation faithfulness (0.892) and answer correctness (0.563), narrowly ahead of the
+PaperQA2-style system and well ahead of long-context PDF-chat, which is worst at
+answering correctly (0.267): retrieval beats putting the whole document in context.
+ScholAR is not best on every axis, since the terser baselines reach higher citation
+precision by citing less, but it leads where grounding and correctness are concerned,
+with a simpler pipeline than the rerank-and-summarize baseline and page citations that
+are valid by construction. We compare against local reimplementations, not the hosted
+OpenScholar, PaperQA2, or SciRAG, which depend on cloud models and large datastores;
+this is a resource-matched local comparison, not a claim to frontier-scale quality.
+
+\begin{table}[t]
+  \centering
+  \caption{ScholAR versus local baselines on the shared model (qwen3.5:9b) and cases
+           (51 labeled + 40 diverse). Faith. is generation faithfulness; Correct. is
+           must-include recall; Cite-F1 is ALCE-style citation F1. Every emitted page
+           citation is valid (invalid-page rate 0 for all systems).}
+  \label{tab:compare}
+  \setlength{\tabcolsep}{5pt}
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{System} & \textbf{Faith.} & \textbf{Correct.} & \textbf{Cite-F1} \\
+    \midrule
+    PDF-chat (long-context)      & 0.801 & 0.267 & 0.742 \\
+    Vanilla RAG                  & 0.860 & 0.340 & 0.802 \\
+    PaperQA2-style (RCS, local)  & 0.872 & 0.550 & 0.782 \\
+    ScholAR                      & 0.892 & 0.563 & 0.760 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
 % -----------------------------------------------------------------------
 \section{Human Evaluation (In Progress)}
 \label{sec:humaneval}
@@ -556,14 +594,15 @@ testing. The generation-faithfulness metric rewards grounding to retrieved conte
 the absence of contradiction, which leaves it insensitive to subtle unfaithfulness,
 and that gap is exactly what the human evaluation exists to close.
 
-We do not run a head-to-head comparison against OpenScholar, PaperQA2, or SciRAG.
-Those systems depend on cloud-hosted models and large datastores, so a fair
-comparison would require either a cloud run, contradicting our local-only design, or
-crippling them to an untested local backend. We leave a resource-matched external
-comparison, for example PaperQA2 on a local backend, to future work. Finally,
-cross-document localization is at or below a random floor and the oracle result
-suggests a within-paper ranking difficulty on these questions, which is our clearest
-open problem.
+Our comparison (Section~\ref{sec:auto-compare}) is against local reimplementations of
+PDF-chat, vanilla RAG, and PaperQA2's rerank-and-summarize step, not against the
+hosted OpenScholar, PaperQA2, or SciRAG. Those systems depend on cloud-hosted models
+and large datastores, so a head-to-head would require either a cloud run, contradicting
+our local-only design, or crippling them to an untested backend; the honest scope of
+our result is therefore resource-matched local systems, not frontier-scale quality.
+Finally, cross-document localization is at or below a random floor and the oracle
+result suggests a within-paper ranking difficulty on these questions, which is our
+clearest open problem.
 
 % -----------------------------------------------------------------------
 \section{Conclusion}
