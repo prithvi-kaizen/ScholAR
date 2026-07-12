@@ -528,6 +528,40 @@ this is a resource-matched local comparison, not a claim to frontier-scale quali
   \end{tabular}
 \end{table}
 
+\subsection{Abstention on Unanswerable Questions}
+\label{sec:abstention}
+A grounded system should decline when the answer is not present rather than invent one. Every
+case above is answerable, so we built a complementary set of 20 provably-unanswerable questions:
+each paper-specific question is posed against a different paper in which the queried fact is
+provably absent (verified by exact substring over that paper's text), so the correct response is
+to abstain. Table~\ref{tab:abstention} reports how often each model declines. All four abstain on
+the large majority of cases: qwen3.5:9b and llama3.1:8b decline on every question, gemma4:12b on
+19 of 20, and mistral:7b on 18 of 20. The few non-abstentions are not free invention but a benign
+overlap: on a question about minibatch size, the wrongly paired paper independently reports a
+minibatch size, so the model surfaces a real but off-target value. The indirect-evidence prompt,
+not any one model, drives this behavior. The set is small and synthetic, and abstention is scored
+by a refusal-phrase detector that we validated by reading every model output, so we read this as
+evidence that grounding induces abstention rather than as a precise rate.
+
+\begin{table}[t]
+  \centering
+  \caption{Abstention on 20 provably-unanswerable questions, where the retrieved paper does not
+           contain the queried fact. Abstain is the fraction correctly declined; Fabricate is the
+           remainder (an answer asserted about absent content).}
+  \label{tab:abstention}
+  \setlength{\tabcolsep}{6pt}
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{Model} & \textbf{Abstain} & \textbf{Fabricate} \\
+    \midrule
+    qwen3.5:9b   & 1.00 & 0.00 \\
+    llama3.1:8b  & 1.00 & 0.00 \\
+    gemma4:12b   & 0.95 & 0.05 \\
+    mistral:7b   & 0.90 & 0.10 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
 \subsection{Local Deployability}
 \label{sec:efficiency}
 Because ScholAR targets a single local machine, we also measured what a query costs

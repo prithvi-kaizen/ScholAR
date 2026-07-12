@@ -1,0 +1,225 @@
+[
+  {
+    "id": "abst_01",
+    "source_case_id": "mine_text_005",
+    "source_paper": "2005.14165",
+    "target_paper": "2107.03374",
+    "capability": "single_doc_text",
+    "question": "What is the total number of tokens used to train all models listed in Table 2.1?",
+    "absent_facts": [
+      "all models"
+    ]
+  },
+  {
+    "id": "abst_02",
+    "source_case_id": "mine_figure_022",
+    "source_paper": "2005.11401",
+    "target_paper": "1909.08053",
+    "capability": "visual",
+    "question": "What does the figure/table show regarding RAG-Token and R-Sequence?",
+    "absent_facts": [
+      "RAG-Token"
+    ]
+  },
+  {
+    "id": "abst_03",
+    "source_case_id": "mine_text_038",
+    "source_paper": "2005.14165",
+    "target_paper": "1512.03385",
+    "capability": "single_doc_text",
+    "question": "What section number does 'SuperGLUE' fall under?",
+    "absent_facts": [
+      "SuperGLUE"
+    ]
+  },
+  {
+    "id": "abst_04",
+    "source_case_id": "mine_figure_001",
+    "source_paper": "2302.13971",
+    "target_paper": "2010.11929",
+    "capability": "visual",
+    "question": "What is reported for TruthfulQA?",
+    "absent_facts": [
+      "TruthfulQA"
+    ]
+  },
+  {
+    "id": "abst_05",
+    "source_case_id": "mine_text_011",
+    "source_paper": "2010.00133",
+    "target_paper": "1810.04805",
+    "capability": "single_doc_text",
+    "question": "What is the threshold for displaying a warning message regarding the Levenshtein distance between two sentences in the HIT design?",
+    "absent_facts": [
+      "Levenshtein distance"
+    ]
+  },
+  {
+    "id": "abst_06",
+    "source_case_id": "mine_text_037",
+    "source_paper": "1409.0473",
+    "target_paper": "2203.02155",
+    "capability": "single_doc_text",
+    "question": "What is the size of a minibatch used for each SGD update?",
+    "absent_facts": [
+      "each SGD update"
+    ]
+  },
+  {
+    "id": "abst_07",
+    "source_case_id": "mine_text_004",
+    "source_paper": "1409.0473",
+    "target_paper": "2201.11903",
+    "capability": "single_doc_text",
+    "question": "What was the size of the minibatch used for each SGD update direction?",
+    "absent_facts": [
+      "SGD update"
+    ]
+  },
+  {
+    "id": "abst_08",
+    "source_case_id": "mine_math_002",
+    "source_paper": "2203.02155",
+    "target_paper": "2009.11462",
+    "capability": "math",
+    "question": "What is the RM score's role in selecting models based on the passage?",
+    "absent_facts": [
+      "RM score"
+    ]
+  },
+  {
+    "id": "abst_09",
+    "source_case_id": "mine_text_020",
+    "source_paper": "2009.11462",
+    "target_paper": "2006.11239",
+    "capability": "single_doc_text",
+    "question": "What percentage of documents are considered toxic if they have higher proportions of toxic content relative to all subreddits in OWTC?",
+    "absent_facts": [
+      "higher proportions of toxic content"
+    ]
+  },
+  {
+    "id": "abst_10",
+    "source_case_id": "mine_figure_013",
+    "source_paper": "2201.11903",
+    "target_paper": "2512.24601",
+    "capability": "visual",
+    "question": "What are the few-shot exemplars used for in the SayCan robot planning tasks?",
+    "absent_facts": [
+      "SayCan robot planning tasks"
+    ]
+  },
+  {
+    "id": "abst_11",
+    "source_case_id": "mine_text_003",
+    "source_paper": "2005.11401",
+    "target_paper": "2201.11903",
+    "capability": "single_doc_text",
+    "question": "What is the difference between the RAG-Sequence and RAG-Token models in terms of how they treat the retrieved document?",
+    "absent_facts": [
+      "RAG-Sequence",
+      "RAG-Token"
+    ]
+  },
+  {
+    "id": "abst_12",
+    "source_case_id": "mine_text_028",
+    "source_paper": "2009.11462",
+    "target_paper": "2512.24601",
+    "capability": "single_doc_text",
+    "question": "What are the page numbers for the paper 'Social biases in NLP models as barriers for persons with disabilities'?",
+    "absent_facts": [
+      "Social biases in NLP models as barriers for persons with disabilities"
+    ]
+  },
+  {
+    "id": "abst_13",
+    "source_case_id": "mine_math_023",
+    "source_paper": "2005.11401",
+    "target_paper": "1706.03762",
+    "capability": "math",
+    "question": "What is the formula for pRAG-Sequence(y|x) or its approximation?",
+    "absent_facts": [
+      "pRAG-Sequence(y|x)"
+    ]
+  },
+  {
+    "id": "abst_14",
+    "source_case_id": "mine_figure_009",
+    "source_paper": "2010.11929",
+    "target_paper": "2302.13971",
+    "capability": "visual",
+    "question": "What does the figure or table decompose the VTAB tasks into?",
+    "absent_facts": [
+      "VTAB tasks"
+    ]
+  },
+  {
+    "id": "abst_15",
+    "source_case_id": "mine_text_018",
+    "source_paper": "1910.10683",
+    "target_paper": "1909.12673",
+    "capability": "single_doc_text",
+    "question": "What was the number of bacterial and archaeal taxa identified in a study of 40 North Carolina homes?",
+    "absent_facts": [
+      "bacterial and archaeal taxa"
+    ]
+  },
+  {
+    "id": "abst_16",
+    "source_case_id": "mine_text_008",
+    "source_paper": "2201.11903",
+    "target_paper": "2005.14165",
+    "capability": "single_doc_text",
+    "question": "What is the performance of 'equation only' prompting for the MAWPS dataset?",
+    "absent_facts": [
+      "equation only"
+    ]
+  },
+  {
+    "id": "abst_17",
+    "source_case_id": "mine_text_039",
+    "source_paper": "2111.00364",
+    "target_paper": "2010.00133",
+    "capability": "single_doc_text",
+    "question": "What is the percentage reduction in operational energy footprint over the two-year period?",
+    "absent_facts": [
+      "over the two-year",
+      "reduction"
+    ]
+  },
+  {
+    "id": "abst_18",
+    "source_case_id": "mine_figure_020",
+    "source_paper": "1512.03385",
+    "target_paper": "2009.11462",
+    "capability": "visual",
+    "question": "What are the error rates for single-model results on the ImageNet?",
+    "absent_facts": [
+      "single-model",
+      "ImageNet"
+    ]
+  },
+  {
+    "id": "abst_19",
+    "source_case_id": "mine_figure_005",
+    "source_paper": "2006.11239",
+    "target_paper": "2201.08239",
+    "capability": "visual",
+    "question": "What do the coarse-to-fine interpolations vary?",
+    "absent_facts": [
+      "Coarse-to-fine"
+    ]
+  },
+  {
+    "id": "abst_20",
+    "source_case_id": "mine_math_012",
+    "source_paper": "2107.03374",
+    "target_paper": "1706.03762",
+    "capability": "math",
+    "question": "What is the calculation of curr_sum for a digit and its corresponding digit_2?",
+    "absent_facts": [
+      "digit_2"
+    ]
+  }
+]

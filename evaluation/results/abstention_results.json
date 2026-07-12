@@ -1,0 +1,599 @@
+{
+  "generated_at": "2026-07-12T19:16:21",
+  "summary": {
+    "mistral:7b": {
+      "n": 20,
+      "abstention_rate": 0.9,
+      "fabrication_rate": 0.1,
+      "fabricated_with_citation": 2
+    },
+    "llama3.1:8b": {
+      "n": 20,
+      "abstention_rate": 1.0,
+      "fabrication_rate": 0.0,
+      "fabricated_with_citation": 0
+    },
+    "qwen3.5:9b": {
+      "n": 20,
+      "abstention_rate": 1.0,
+      "fabrication_rate": 0.0,
+      "fabricated_with_citation": 0
+    },
+    "gemma4:12b": {
+      "n": 20,
+      "abstention_rate": 0.95,
+      "fabrication_rate": 0.05,
+      "fabricated_with_citation": 1
+    }
+  },
+  "raw": {
+    "mistral:7b": [
+      {
+        "id": "abst_01",
+        "target_paper": "2107.03374",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The evidence provided does not contain information about the total number of tokens used to train all models listed in Table 2.1. However, it does provide details about several individual models such as GPT-Neo, GPT-J, TabNine, and Codex with different sizes (e.g., 125M, 1.3B, 2.7B, 6B, 12B, etc.). Without additional information, it is not possible to determine the total number of tokens used for all models listed in Table 2.1."
+      },
+      {
+        "id": "abst_02",
+        "target_paper": "1909.08053",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain any information about RAG-Token or R-Sequence."
+      },
+      {
+        "id": "abst_03",
+        "target_paper": "1512.03385",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not mention 'SuperGLUE'. Therefore, it is impossible to determine the section number where 'SuperGLUE' falls based on the given information."
+      },
+      {
+        "id": "abst_04",
+        "target_paper": "2010.11929",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not mention any information about \"TruthfulQA\". Therefore, I cannot answer the question as it pertains to TruthfulQA based on the given evidence."
+      },
+      {
+        "id": "abst_05",
+        "target_paper": "1810.04805",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The text does not provide information about a specific threshold for displaying a warning message regarding the Levenshtein distance between two sentences in the HIT (Human Intelligence Task) design."
+      },
+      {
+        "id": "abst_06",
+        "target_paper": "2203.02155",
+        "abstained": false,
+        "answered_with_citation": true,
+        "answer": "According to [E2], a single batch could contain up to 64 × K^2 ≤ 2,304 comparisons. However, the final models used a minibatch size of 64 during training, as stated in [E1]. Therefore, for each SGD update, the minibatch size is 64."
+      },
+      {
+        "id": "abst_07",
+        "target_paper": "2201.11903",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The evidence does not provide information about the size of the minibatch used for each SGD update direction. The provided evidence focuses on math word problems, language models, and their performance in solving these problems. There is no mention or indication of a minibatch size related to SGD updates."
+      },
+      {
+        "id": "abst_08",
+        "target_paper": "2009.11462",
+        "abstained": false,
+        "answered_with_citation": true,
+        "answer": "The RM (RealToxicityPrompts) score's role, as per the provided evidence, is not to select models based on the passage. Instead, it is used for creating prompts that consistently cause all models to generate toxicity [E2]. These created prompts are then used for analysis and investigation into the issue of toxicity in neural language generation and web text corpora."
+      },
+      {
+        "id": "abst_09",
+        "target_paper": "2006.11239",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The text provided does not contain information about a dataset named OWTC or any analysis related to toxic content in documents. Therefore, it is impossible to determine the percentage of documents considered toxic based on the given evidence."
+      },
+      {
+        "id": "abst_10",
+        "target_paper": "2512.24601",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The text does not provide specific information about the few-shot exemplars used in the SayCan robot planning tasks. However, it does mention that in other experiments, they use a language model (LM) to perform summarization by chunking up context larger than its model context window [E1]. Additionally, they fix prompts for each method across all tasks, including a Recursive Language Model (RLM) and an alternate scaffold with standard design choices [E2]. The RLM algorithm takes a prompt as input and generates a response through recursive steps involving LLM M and sub-RLMs [E3]. Without more context, it's difficult to determine if the few-shot exemplars used in SayCan are similar to these language model prompts."
+      },
+      {
+        "id": "abst_11",
+        "target_paper": "2201.11903",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The text does not provide explicit information about the RAG-Sequence and RAG-Token models. However, it does mention chain-of-thought prompting [E2], which is a method used to improve the reasoning abilities of large language models. This method involves generating a series of intermediate reasoning steps [E2]. The text also mentions that these reasoning steps may not always be factual [E4].\n\nWithout more context, it's impossible to determine how the RAG-Sequence and RAG-Token models treat retrieved documents specifically. However, it can be inferred that these models might use chain-of-thought prompting, and as such, they may generate a series of reasoning steps for a given document, some of which may not always be factual."
+      },
+      {
+        "id": "abst_12",
+        "target_paper": "2512.24601",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain any information about a paper titled \"Social biases in NLP models as barriers for persons with disabilities\". Therefore, I cannot determine the page numbers for this paper."
+      },
+      {
+        "id": "abst_13",
+        "target_paper": "1706.03762",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain information about a specific formula for pRAG-Sequence(y|x). The texts discuss the Law, attention mechanisms, and sequence modeling, but there's no mention of a probabilistic model named pRAG-Sequence."
+      },
+      {
+        "id": "abst_14",
+        "target_paper": "2302.13971",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain a figure or table that decomposes the VTAB (Vision and Text Adaptability Benchmark) tasks. However, it does mention several quantitative reasoning datasets [E2] and a Massive Multitask Language Understanding (MMLU) benchmark [E3], but these are not explicitly identified as parts of the VTAB tasks."
+      },
+      {
+        "id": "abst_15",
+        "target_paper": "1909.12673",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain information about a study of 40 North Carolina homes identifying bacterial and archaeal taxa."
+      },
+      {
+        "id": "abst_16",
+        "target_paper": "2005.14165",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain information about the performance of 'equation only' prompting for the MAWPS (Math Word Problem Solving) dataset. The evidence focuses on GPT-3's performance on TriviaQA, Natural Questions, and language modeling datasets, as well as its bias in descriptive words and scaling with compute."
+      },
+      {
+        "id": "abst_17",
+        "target_paper": "2010.00133",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The given evidence does not provide information about an operational energy footprint or a two-year period, so it's impossible to determine the percentage reduction in this context."
+      },
+      {
+        "id": "abst_18",
+        "target_paper": "2009.11462",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain information about the error rates for single-model results on the ImageNet. The data presented pertains to the toxicity of text generated by various models and the reliability of web texts in OWTC and OPENAI-WT, but there is no mention of ImageNet or error rates related to it."
+      },
+      {
+        "id": "abst_19",
+        "target_paper": "2201.08239",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The coarse-to-fine interpolations in the context provided [E1] do not have explicit information about what they vary. However, based on the example conversation from LaMDA Music User [E2], it can be inferred that these interpolations might vary in terms of music genres (sci-fi, pop, soothing, electronic) and specific songs within those genres (Interstellar soundtrack, Happy by Pharrell Williams, Moonlight Sonata by Beethoven, Without Me by Eminem, Deadmau5 - Strobe, Infected Mushroom - Return to the Sauce)."
+      },
+      {
+        "id": "abst_20",
+        "target_paper": "1706.03762",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Based on the provided evidence, there is no explicit information about the calculation of `curr_sum` for a digit and its corresponding `digit_2`. The evidence mainly discusses the concept of attention mechanisms in neural networks, particularly Multi-Head Attention and Scaled Dot-Product Attention. However, it does not provide details about how these mechanisms are applied to specific data points like digits or their relationships. Therefore, I cannot answer the question directly with the given information."
+      }
+    ],
+    "llama3.1:8b": [
+      {
+        "id": "abst_01",
+        "target_paper": "2107.03374",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Unfortunately, I can't provide a numerical answer to your question as it requires information not present in the provided evidence. The evidence only lists specific models and their performance metrics but does not include the total number of tokens used to train them."
+      },
+      {
+        "id": "abst_02",
+        "target_paper": "1909.08053",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "There is no information about \"RAG-Token\" or \"R-Sequence\" in the provided evidence. The question cannot be answered based on the given text."
+      },
+      {
+        "id": "abst_03",
+        "target_paper": "1512.03385",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "There is no mention of \"SuperGLUE\" in the provided evidence. The text only discusses object detection baselines, residual learning, and image classification models such as VGG-16 and ResNet-101. Therefore, it is not possible to determine which section number \"SuperGLUE\" falls under based on the given information."
+      },
+      {
+        "id": "abst_04",
+        "target_paper": "2010.11929",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "There is no information about TruthfulQA in the provided evidence. The evidence only mentions various models and datasets such as ResNet50, ResNet152x2, ImageNet, CIFAR10, CIFAR100, Oxford-IIIT Pets, Oxford Flowers-102, VTAB, and Vision Transformer (ViT) variants, but not TruthfulQA."
+      },
+      {
+        "id": "abst_05",
+        "target_paper": "1810.04805",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "There is no information about the Levenshtein distance or a warning message in the provided evidence. The text discusses BERT and its input representation, but does not mention any specific threshold for displaying warnings related to sentence similarity."
+      },
+      {
+        "id": "abst_06",
+        "target_paper": "2203.02155",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "According to [E2], a single batch could contain up to 64 × K^2 ≤ 2,304 comparisons. However, this does not directly answer the question about the size of a minibatch used for each SGD update.\n\nUnfortunately, there is no direct evidence in the provided list that answers the question about the size of a minibatch used for each SGD update."
+      },
+      {
+        "id": "abst_07",
+        "target_paper": "2201.11903",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "There is no evidence in the provided list that answers the question about the size of the minibatch used for each SGD update direction. The evidence only mentions various topics such as math word problems, language models, and chain-of-thought prompting, but does not provide any information related to minibatches or SGD updates."
+      },
+      {
+        "id": "abst_08",
+        "target_paper": "2009.11462",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "There is no mention of an \"RM score\" in the provided evidence. The passage discusses toxicity in neural language generation and web text corpora, but does not mention a scoring system or model selection process related to an \"RM score\"."
+      },
+      {
+        "id": "abst_09",
+        "target_paper": "2006.11239",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "There is no information about the percentage of documents being considered toxic based on their proportion of toxic content. The provided evidence does not mention anything related to Reddit or the Open Web Toxicity Corpus (OWTC). It appears to be discussing a research paper on diffusion probabilistic models and their applications in image generation."
+      },
+      {
+        "id": "abst_10",
+        "target_paper": "2512.24601",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "There is no mention of the SayCan robot planning tasks or the use of few-shot exemplars in the provided evidence. The text only discusses summarization, language models, and code-based question answering tasks."
+      },
+      {
+        "id": "abst_11",
+        "target_paper": "2201.11903",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "There is no information about the RAG-Sequence and RAG-Token models in the provided evidence. The text only discusses chain-of-thought prompting for math word problems, a paper's abstract, and a checklist for authors."
+      },
+      {
+        "id": "abst_12",
+        "target_paper": "2512.24601",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "There is no evidence to answer this question. The provided evidence does not mention the paper \"Social biases in NLP models as barriers for persons with disabilities\" or its page numbers."
+      },
+      {
+        "id": "abst_13",
+        "target_paper": "1706.03762",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Unfortunately, there is no evidence provided that mentions a formula for pRAG-Sequence(y|x) or its approximation. The given evidence appears to be related to machine translation and sequence modeling, but it does not provide any information about the specific formula in question."
+      },
+      {
+        "id": "abst_14",
+        "target_paper": "2302.13971",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Unfortunately, there is no evidence that directly answers what the figure or table decomposes the VTAB tasks into. The provided evidence only mentions tables and figures related to model performance on specific datasets (e.g., MATH +maj1@k GSM8k, Table 7) and other metrics like CrowS-Pairs bias scores (Table 12)."
+      },
+      {
+        "id": "abst_15",
+        "target_paper": "1909.12673",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "There is no evidence to answer this question as it does not appear anywhere in the provided list of evidence. The text appears to be about machine learning, specifically conference papers published at ICLR 2020, and discusses topics such as language modeling tasks, datasets, models, and error landscapes. There is no mention of bacterial or archaeal taxa or any study related to North Carolina homes."
+      },
+      {
+        "id": "abst_16",
+        "target_paper": "2005.14165",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "There is no information in the provided evidence about the performance of \"equation only\" prompting for the MAWPS dataset. The evidence mentions various datasets and models, but not this specific scenario."
+      },
+      {
+        "id": "abst_17",
+        "target_paper": "2010.00133",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "There is no evidence provided that addresses the question of a percentage reduction in operational energy footprint over a two-year period. The evidence appears to be related to natural language processing and bias detection, but does not mention energy or operational efficiency."
+      },
+      {
+        "id": "abst_18",
+        "target_paper": "2009.11462",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "There is no evidence related to the ImageNet dataset or single-model results on it. The provided evidence only discusses various models' performance and toxicity metrics on different datasets, such as REALTOXICITYPROMPTS, OWTC (OPENAI-WT), and others. Therefore, there are no error rates for single-model results on the ImageNet to report."
+      },
+      {
+        "id": "abst_19",
+        "target_paper": "2201.08239",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "There is no information in the provided evidence about coarse-to-fine interpolations varying. The evidence discusses challenges in adversarial testing for large language models and a conversation between a user and LaMDA Music, but does not mention interpolations at all."
+      },
+      {
+        "id": "abst_20",
+        "target_paper": "1706.03762",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "There is no evidence provided that addresses the question about the calculation of curr_sum for a digit and its corresponding digit_2. The provided evidence appears to be related to natural language processing, neural networks, and attention mechanisms, but does not contain any information about curr_sum or digit_2. Therefore, I cannot provide an answer based on the given evidence."
+      }
+    ],
+    "qwen3.5:9b": [
+      {
+        "id": "abst_01",
+        "target_paper": "2107.03374",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain information regarding the total number of tokens used to train any model. Evidence [E3] lists performance metrics for various models including GPT-Neo, Codex (ranging from 12M to 12B parameters), TabNine, and others on the HumanEval dataset, but it omits training token counts entirely. Similarly, while Evidence [E4] discusses sampling temperatures and parameter efficiency between Codex-S and Codex, it does not specify training data volume or token usage for any model listed in Table 3 (referred to as Table 2.1 in the question). Consequently, based strictly on the provided text, this value cannot be determined."
+      },
+      {
+        "id": "abst_02",
+        "target_paper": "1909.08053",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence contains no information regarding \"RAG-Token\" or \"R-Sequence.\" The text discusses Megatron-LM, model parallelism configurations for GPT-2 (Table 2), zero-shot results on Wikitext103 and LAMBADA (Table 3), training hyperparameters like learning rates [E3], and FLOPS calculations using GPU counts [E1]. Consequently, no factual claims can be made about the requested terms based solely on the supplied evidence."
+      },
+      {
+        "id": "abst_03",
+        "target_paper": "1512.03385",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence contains no mention of \"SuperGLUE.\" The text discusses object detection baselines like Faster R-CNN, ResNet architectures, ImageNet localization errors, and MS COCO performance metrics [E1][E2][E3]. It also briefly mentions deep residual learning concepts but does not reference SuperGLUE or any section number associated with it in the given excerpts. Therefore, based strictly on the provided evidence, there is no information to answer what section number 'SuperGLUE' falls under."
+      },
+      {
+        "id": "abst_04",
+        "target_paper": "2010.11929",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain any information regarding \"TruthfulQA.\" The documents discuss Vision Transformers (ViT), ResNet models, datasets like ImageNet and CIFAR-10, and benchmarks such as VTAB [E2][E4], but there is no mention of TruthfulQA performance or results in the text. Consequently, it is impossible to report what was found for TruthfulQA based solely on the given evidence."
+      },
+      {
+        "id": "abst_05",
+        "target_paper": "1810.04805",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain any information regarding a threshold for displaying a warning message about Levenshtein distance or specific details of an \"HIT design.\" The text focuses on BERT's architecture, hyperparameters like learning rates and epochs [E1], input representations using WordPiece embeddings [E2], pre-training objectives involving left and right context [E3], and the composition of token, segment, and position embeddings illustrated in Figure 2 descriptions [E4]. Consequently, it is impossible to answer your question based solely on the supplied evidence."
+      },
+      {
+        "id": "abst_06",
+        "target_paper": "2203.02155",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not state the specific minibatch size used for *each* SGD update, but rather discusses optimal sizes in different contexts. Evidence [E1] notes that \"a minibatch size of 32 to be optimal and is slightly better than 64,\" yet clarifies that \"our ﬁnal models used a minibatch size of 64\" because it offered better GPU utilization [E1]. While this suggests the final training utilized batches of 64, the text does not explicitly define the update frequency or confirm if smaller batches were rotated for every single SGD step. Evidence [E2] mentions that \"a single batch could contain up to 64 × K^2 ≤ 2,304 comparisons\" but refers to comparison counts rather than defining a fixed per-update minibatch size across all training steps [E2]. Therefore, based strictly on the text, only the final model configuration using a size of 64 is explicitly confirmed."
+      },
+      {
+        "id": "abst_07",
+        "target_paper": "2201.11903",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain information regarding the size of the minibatch used for each SGD update direction. The text discusses math word problems [E1], language model scaling and performance on benchmarks like GSM8K [E2], semantic understanding errors in wire cutting calculations [E3], and chain-of-thought prompting techniques [E4]. None of these sections mention stochastic gradient descent (SGD) or minibatch sizes. Therefore, the question cannot be answered using only the given evidence."
+      },
+      {
+        "id": "abst_08",
+        "target_paper": "2009.11462",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not mention an \"RM score\" or its specific role in model selection. The text discusses toxicity analysis using metrics like TOXICITY scores [E2], analyzes training corpora such as OPENAI-WT and OWTC [E1, E3], and evaluates steering methods against toxic prompts [E2]. It notes that even with reduction efforts, models can still generate highly toxic content [E3] and highlights the prevalence of toxicity in both neural language generation and web text corpora [E1]. No information regarding an RM score's function is present in the supplied excerpts."
+      },
+      {
+        "id": "abst_09",
+        "target_paper": "2006.11239",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain any information regarding the \"OWTC\" dataset, \"subreddits,\" or metrics for determining what constitutes a \"toxic document.\" The text exclusively discusses diffusion probabilistic models, variational inference, Markov chains, and performance results on CIFAR10 using metrics like NLL, IS, and FID [E3][E4]. It also mentions connections to energy-based models and autoregressive models but offers no data related to toxicity or Reddit content analysis [E2]. Consequently, it is impossible to answer the question about toxic document percentages based solely on the provided evidence."
+      },
+      {
+        "id": "abst_10",
+        "target_paper": "2512.24601",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain any information regarding \"SayCan\" robot planning tasks or the use of few-shot exemplars within that specific context. The text focuses on language model agents (GPT-5, Qwen3-Coder), summarization processes [E1], prompt engineering for sub-LM calls [E2], recursive algorithm designs involving code execution and REPL states [E4], and cost analysis on tasks like BrowseComp-Plus and CodeQA [E3]. Consequently, it is impossible to answer the question about few-shot exemplars in SayCan using only the supplied evidence."
+      },
+      {
+        "id": "abst_11",
+        "target_paper": "2201.11903",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain information regarding \"RAG-Sequence\" or \"RAG-Token\" models, nor does it describe differences in how these models treat retrieved documents. The text focuses on chain-of-thought prompting for math word problems [E1], the emergence of reasoning abilities in large language models via such prompting [E2], references to other papers by Wei et al. and Wiegreffe et al. regarding emergent abilities and explainable NLP datasets [E3], and a checklist confirming that limitations (such as generated chain-of-thought not always being factual) were discussed but without mentioning RAG architectures or specific model comparisons involving retrieved documents [E4]. Therefore, the question cannot be answered using only the provided evidence."
+      },
+      {
+        "id": "abst_12",
+        "target_paper": "2512.24601",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain any information regarding a paper titled \"Social biases in NLP models as barriers for persons with disabilities.\" The available text discusses technical details about RLMs, coding agents like Claude Code and OpenCode [E2], orchestration strategies involving 'llm_batch' sub-agents [E3], context chunking methods using GPT-5-nano versus Qwen3-Coder [E4], and lists of author names on pages 11, 7, 26, and 24 without mentioning the specific paper title or its page numbers. Therefore, no answer can be derived from the given evidence."
+      },
+      {
+        "id": "abst_13",
+        "target_paper": "1706.03762",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain any information regarding a formula for $p\\text{RAG-Sequence}(y|x)$ or its approximation. The text discusses legal applications of law [E1], attention head behaviors in neural networks [E2, E4], and computational performance improvements involving self-attention restrictions on sequence neighborhoods to increase path length complexity from linear to logarithmic scales ($O(n/r)$) for long sequences [E3]. None of these sections define the specific probability distribution or mathematical formula requested. Therefore, based strictly on the provided evidence, no such formula can be identified."
+      },
+      {
+        "id": "abst_14",
+        "target_paper": "2302.13971",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence contains no information regarding \"VTAB\" tasks. The text includes tables detailing model performance on quantitative reasoning datasets [E2], MMLU benchmarks across various domains like Humanities and STEM [E3], and bias evaluations using CrowS-Pairs categories such as gender and religion [E4]. Additionally, the document discusses training approaches involving large transformers and textual data sources [E1]. Consequently, there is no evidence to support how VTAB tasks are decomposed."
+      },
+      {
+        "id": "abst_15",
+        "target_paper": "1909.12673",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain any information regarding bacterial or archaeal taxa, nor does it mention studies involving 40 North Carolina homes. The text exclusively discusses extrapolation results for language modeling tasks (e.g., PTB, WikiText-2) and image classification datasets (e.g., ImageNet, CIFAR10), along with limitations in scaling frameworks [E1][E2][E3]. Additionally, it presents data on estimated versus actual test loss or error rates for these specific machine learning models but offers no biological or environmental science findings related to the query. Therefore, based solely on the provided evidence, this question cannot be answered."
+      },
+      {
+        "id": "abst_16",
+        "target_paper": "2005.14165",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain any information regarding \"equation only\" prompting or the MAWPS dataset. The text discusses GPT-3's zero-shot and few-shot performance on TriviaQA [E2] and Natural Questions [E2], scaling laws with compute [E3], training curves showing minimal overfitting gaps [E4], and biased descriptive words in a 175B model [E1]. Consequently, it is impossible to answer the question about MAWPS performance using only the supplied evidence."
+      },
+      {
+        "id": "abst_17",
+        "target_paper": "2010.00133",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain any information regarding an \"operational energy footprint\" or a \"two-year period.\" Consequently, no percentage reduction can be calculated from the text. The available documents discuss bias metrics for language models [E1], sentence masking techniques [E2], model confidence distributions on stereo datasets [E3], and examples of biased sentences related to race, gender, sexual orientation, and religion [E4]. None of these sources mention energy consumption or operational footprints. Therefore, the question cannot be answered using only the provided evidence."
+      },
+      {
+        "id": "abst_18",
+        "target_paper": "2009.11462",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain any information regarding error rates, models tested on ImageNet, or performance metrics related to that dataset. The documents exclusively discuss toxicity statistics, perplexity scores on web text test sets (OPENAI-WT), and comparisons between GPT-2 variants using steering mechanisms like DAPT and VOCAB-SHIFT [E1][E3][E4]. Consequently, it is impossible to answer the question about ImageNet error rates based solely on the supplied evidence."
+      },
+      {
+        "id": "abst_19",
+        "target_paper": "2201.08239",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain information regarding \"coarse-to-fine interpolations\" or what they vary. The text discusses adversarial testing challenges in large language models [E1] and specific music recommendation interactions with LaMDA, such as suggesting soundtracks for *Interstellar* or songs by Pharrell Williams and Eminem [E2]. Neither section mentions interpolation methods or their variations. Therefore, no answer can be derived from the given evidence."
+      },
+      {
+        "id": "abst_20",
+        "target_paper": "1706.03762",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain any information regarding the calculation of `curr_sum` for a digit and its corresponding `digit_2`. The text discusses legal applications [E1, E2], attention mechanisms in neural networks like Scaled Dot-Product Attention [E3], and recurrent neural networks used for sequence modeling [E4]. None of these sections describe specific arithmetic operations involving variables named `curr_sum`, `digit`, or `digit_2`. Therefore, the question cannot be answered using only the given evidence."
+      }
+    ],
+    "gemma4:12b": [
+      {
+        "id": "abst_01",
+        "target_paper": "2107.03374",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain information regarding the total number of tokens used to train the models listed in Table 2.1 [E1, E2, E3, E4]."
+      },
+      {
+        "id": "abst_02",
+        "target_paper": "1909.08053",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Based on the provided evidence, there is no mention of \"RAG-Token\" or \"R-Sequence\" in any of the figures or tables. [E1, E2, E3, E4]"
+      },
+      {
+        "id": "abst_03",
+        "target_paper": "1512.03385",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Based on the provided evidence, there is no mention of \"SuperGLUE\" in any of the sections."
+      },
+      {
+        "id": "abst_04",
+        "target_paper": "2010.11929",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Based on the provided evidence, there is no mention of \"TruthfulQA\" in any of the documents [E1, E2, E3, E4]."
+      },
+      {
+        "id": "abst_05",
+        "target_paper": "1810.04805",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Based on the provided evidence, there is no information regarding a threshold for displaying a warning message concerning the Levenshtein distance between two sentences in the HIT design."
+      },
+      {
+        "id": "abst_06",
+        "target_paper": "2203.02155",
+        "abstained": false,
+        "answered_with_citation": true,
+        "answer": "The final models used a minibatch size of 64 [E1]. While a minibatch size of 32 was found to be optimal and slightly better than 64, the larger size was chosen because it provided better GPU utilization [E1]."
+      },
+      {
+        "id": "abst_07",
+        "target_paper": "2201.11903",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Based on the provided evidence, there is no information regarding the size of the minibatch used for each SGD update direction."
+      },
+      {
+        "id": "abst_08",
+        "target_paper": "2009.11462",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Based on the provided evidence, there is no mention of an \"RM score\" or its role in selecting models."
+      },
+      {
+        "id": "abst_09",
+        "target_paper": "2006.11239",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Based on the provided evidence, there is no information regarding \"toxic\" content, percentages of documents, or \"OWTC.\""
+      },
+      {
+        "id": "abst_10",
+        "target_paper": "2512.24601",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Based on the provided evidence, there is no information regarding \"SayCan robot planning tasks\" or the use of \"few-shot exemplars.\""
+      },
+      {
+        "id": "abst_11",
+        "target_paper": "2201.11903",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Based on the provided evidence, there is no information regarding \"RAG-Sequence\" or \"RAG-Token\" models."
+      },
+      {
+        "id": "abst_12",
+        "target_paper": "2512.24601",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Based on the provided evidence, there is no mention of a paper titled \"Social biases in NLP models as barriers for persons with disabilities.\""
+      },
+      {
+        "id": "abst_13",
+        "target_paper": "1706.03762",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Based on the provided evidence, there is no information regarding a formula for pRAG-Sequence(y|x) or its approximation."
+      },
+      {
+        "id": "abst_14",
+        "target_paper": "2302.13971",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain information regarding a \"VTAB\" task or its decomposition."
+      },
+      {
+        "id": "abst_15",
+        "target_paper": "1909.12673",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Based on the provided evidence, there is no information regarding a study of 40 North Carolina homes or the number of bacterial and archaeal taxa identified [E1, E2, E3, E4]."
+      },
+      {
+        "id": "abst_16",
+        "target_paper": "2005.14165",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Based on the provided evidence, there is no information regarding \"equation only\" prompting or the MAWPS dataset."
+      },
+      {
+        "id": "abst_17",
+        "target_paper": "2010.00133",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Based on the provided evidence, there is no information regarding the percentage reduction in operational energy footprint."
+      },
+      {
+        "id": "abst_18",
+        "target_paper": "2009.11462",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Based on the provided evidence, there is no information regarding error rates for single-model results on the ImageNet."
+      },
+      {
+        "id": "abst_19",
+        "target_paper": "2201.08239",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "The provided evidence does not contain information regarding what coarse-to-fine interpolations vary."
+      },
+      {
+        "id": "abst_20",
+        "target_paper": "1706.03762",
+        "abstained": true,
+        "answered_with_citation": false,
+        "answer": "Based on the provided evidence, there is no information regarding the calculation of \"curr_sum\" for a digit or \"digit_2.\""
+      }
+    ]
+  }
+}
