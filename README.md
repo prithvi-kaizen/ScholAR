@@ -73,28 +73,51 @@ Claims are labeled FAITHFUL (CFS ≥ 0.55), PARTIAL (≥ 0.35), or UNFAITHFUL.
 
 ## Evaluation Results
 
-### Retrieval Benchmark (14 annotated cases, 3 papers)
+### Retrieval Benchmark — primary (100 cases, 25 papers, auto-labeled)
+
+| System | Recall@1 | Recall@3 | Recall@5 | MRR | NDCG@5 |
+|---|---:|---:|---:|---:|---:|
+| `keyword_overlap` | 0.67 | 0.86 | 0.95 | 0.779 | 0.762 |
+| `bm25_only` | 0.81 | 0.91 | 0.94 | 0.863 | 0.828 |
+| `bm25_primary` | 0.81 | 0.91 | 0.93 | 0.861 | 0.824 |
+| `dense_only` | 0.47 | 0.65 | 0.74 | 0.572 | 0.523 |
+
+At scale **BM25 beats dense** (MRR 0.863 vs 0.572), reversing the 3-paper anchor below and vindicating the BM25-primary design (aligned with BEIR). Gold chunks here are auto-derived from mined facts (weaker than hand labels), and mined queries carry lexical overlap that likely flatters lexical retrieval, so the 3-paper hand-labeled set is kept as the higher-precision anchor.
+
+### Retrieval Benchmark — anchor (14 annotated cases, 3 papers)
 
 | System | Recall@1 | Recall@3 | Recall@5 | MRR |
 |---|---:|---:|---:|---:|
 | `keyword_overlap` | 0.571 | 0.786 | 0.929 | 0.687 |
 | `bm25_only` | 0.714 | 0.857 | 0.929 | 0.788 |
-| `bm25_primary_no_page_hints` | 0.714 | 0.857 | 0.929 | 0.788 |
 | `bm25_primary_with_page_hints` | 0.714 | 0.857 | 0.929 | 0.788 |
-| `dense_only` (single-pass MiniLM cosine, no BM25/rerank/page-hints) | **0.786** | **1.000** | **1.000** | **0.881** |
+| `dense_only` (single-pass MiniLM cosine) | **0.786** | **1.000** | **1.000** | **0.881** |
 
-Dense-only beats every lexical config on this 14-case benchmark — a genuine, small-N finding (see the paper's Discussion). It doesn't change the production choice: on the larger 51-case faithfulness benchmark below, hybrid (not dense-only) wins.
+Dense-only tops this tiny set — a genuine small-N artifact that the scaled result above overturns.
 
-### Faithfulness Benchmark (51 oracle-claim cases, 3 papers, 8 claim types)
+### Faithfulness Benchmark (oracle-claim cases, BM25 vs hybrid)
 
 | System | Combined CFS | SCHR@5 | Faithful |
 |---|---:|---:|---:|
-| BM25-primary | 0.807 | 0.824 | 48 / 51 |
-| Hybrid BM25 + Dense + RRF | 0.827 | 0.922 | 49 / 51 |
+| BM25-primary (scaled, 100 cases / 25 papers) | 0.785 | 0.860 | 93 / 100 |
+| Hybrid BM25 + Dense + RRF (scaled) | 0.782 | 0.750 | 92 / 100 |
+| BM25-primary (anchor, 51 cases / 3 papers) | 0.807 | 0.824 | 48 / 51 |
+| Hybrid BM25 + Dense + RRF (anchor) | 0.827 | 0.922 | 49 / 51 |
+
+On the scaled set BM25-primary and hybrid land within 0.003 (0.785 vs 0.782), so the reranking heuristics add nothing at scale — another reason ScholAR keeps BM25 primary.
 
 ### Baseline Scope
 
-Retrieval/faithfulness baselines above are internal ablations (lexical → dense → hybrid), matching the BEIR-standard comparison framework. We do **not** benchmark against the *hosted* OpenScholar, PaperQA2, or SciRAG: all three depend on cloud-hosted frontier LLM backends (and, for OpenScholar, a tens-of-millions-of-papers datastore), incompatible with ScholAR's local-only constraint. Instead, `run_comparison_eval.py` runs a **resource-matched local comparison** — ScholAR vs long-context PDF-chat, vanilla RAG, and a local reimplementation of PaperQA2's rerank+summarize (RCS) step — all on the same local model and cases (in progress). See the paper's Discussion for the full reasoning.
+Retrieval/faithfulness baselines above are internal ablations (lexical → dense → hybrid), matching the BEIR-standard comparison framework. We do **not** benchmark against the *hosted* OpenScholar, PaperQA2, or SciRAG: all three depend on cloud-hosted frontier LLM backends (and, for OpenScholar, a tens-of-millions-of-papers datastore), incompatible with ScholAR's local-only constraint. Instead, `run_comparison_eval.py` runs a **resource-matched local comparison** — ScholAR vs long-context PDF-chat, vanilla RAG, and a local reimplementation of PaperQA2's rerank+summarize (RCS) step — all on the same local model (`qwen3.5:9b`) and 91 shared cases:
+
+| System | Gen. Faithfulness | Answer Correctness | Citation F1 |
+|---|---:|---:|---:|
+| PDF-chat (long-context) | 0.801 | 0.267 | 0.742 |
+| Vanilla RAG | 0.860 | 0.340 | 0.802 |
+| PaperQA2-style (RCS, local) | 0.872 | 0.550 | 0.782 |
+| **ScholAR** | **0.892** | **0.563** | 0.760 |
+
+ScholAR leads on the two axes that matter most (faithfulness, correctness) with a simpler pipeline and page citations valid by construction; the terser baselines reach higher citation precision by citing less. This is a resource-matched local comparison, not a claim to frontier-scale quality. See the paper's Discussion for the full reasoning.
 
 Spans *Attention Is All You Need*, *RAG*, and *LLaMA* across 8 claim types: `result_number` (13), `technical_claim` (11), `architecture_detail` (10), `training_detail` (8), `conceptual_claim` (5), `human_eval` (2), `formula` (1), `environmental_claim` (1).
 
@@ -115,6 +138,30 @@ Spans *Attention Is All You Need*, *RAG*, and *LLaMA* across 8 claim types: `res
 | Random-guess floor (R@5) | 0.625 |
 
 A chunk-ID collision bug (fixed) had inflated an earlier version of these numbers (R@5 0.80, MRR 0.356) — the corrected result is at or below the random-guessing floor on this small benchmark. See the paper's Discussion for the full writeup and the oracle-bound analysis.
+
+### Abstention Benchmark (20 provably-unanswerable questions)
+
+Each paper-specific question is posed against a *different* paper in which the queried fact is provably absent (exact-substring check), so the correct response is to decline. A grounded system should abstain, not fabricate.
+
+| Model | Abstain | Fabricate |
+|---|---:|---:|
+| `qwen3.5:9b` | 1.00 | 0.00 |
+| `llama3.1:8b` | 1.00 | 0.00 |
+| `gemma4:12b` | 0.95 | 0.05 |
+| `mistral:7b` | 0.90 | 0.10 |
+
+The few non-abstentions are a benign overlap (the wrongly paired paper independently reports a minibatch size), not free invention. Abstention is scored by a refusal detector validated against a manual read of every output. Small and synthetic, so read it as a tendency, not a precise rate.
+
+### Efficiency (per query, Apple Silicon 18 GB)
+
+| Model | Mem (GB) | Tok/s | Latency mean / p95 (s) |
+|---|---:|---:|---:|
+| `mistral:7b` | 6.5 | 24.9 | 6.1 / 8.4 |
+| `llama3.1:8b` | 6.9 | 26.9 | 6.3 / 17.8 |
+| `qwen3.5:9b` | 6.1 | 21.9 | 11.4 / 14.6 |
+| `gemma4:12b` | 8.1 | 16.3 | 8.8 / 14.2 |
+
+BM25 retrieval is ~40 ms and model-independent, so latency is generation-bound. Every model fits the 18 GB budget and answers in single-digit to ~11 s — no cloud, no GPU cluster.
 
 ### Human Evaluation Pipeline (built, ready to run)
 
@@ -160,13 +207,20 @@ ScholAR/
 │   ├── run_generation_faithfulness_eval.py    # faithfulness of GENERATED answers (single model)
 │   ├── run_generation_faithfulness_matrix.py  # 4-model automated faithfulness matrix
 │   ├── run_comparison_eval.py      # ScholAR vs local baselines (pdfchat/vanilla-RAG/PaperQA2-RCS)
+│   ├── run_efficiency_eval.py      # Per-model latency / throughput / memory footprint
+│   ├── run_abstention_eval.py      # Abstention vs fabrication on unanswerable questions
 │   ├── run_visual_eval.py          # 18-case visual grounding benchmark
 │   ├── run_visual_caption_ablation.py         # caption-only vs full-vision ablation
 │   ├── run_multidoc_eval.py        # Multi-doc locality benchmark
 │   ├── run_multidoc_bounds_eval.py # Multi-doc oracle / random-floor bounds
 │   ├── mine_cases.py               # Mines + source-verifies the diverse 100-case benchmark
-│   ├── benchmark_cases.json        # Retrieval ground truth
-│   ├── faithfulness_cases.json     # Faithfulness oracle claims
+│   ├── build_scaled_benchmark.py   # Auto-labels the 100-case set into scaled retrieval + faithfulness
+│   ├── build_abstention_benchmark.py           # Builds 20 provably-unanswerable cross-paper negatives
+│   ├── benchmark_cases.json        # Retrieval ground truth (3-paper anchor)
+│   ├── benchmark_cases_scaled.json # Retrieval ground truth (25-paper, auto-labeled)
+│   ├── faithfulness_cases.json     # Faithfulness oracle claims (3-paper anchor)
+│   ├── faithfulness_cases_scaled.json          # Faithfulness claims (25-paper, auto-labeled)
+│   ├── abstention_cases.json       # Provably-unanswerable negatives
 │   ├── visual_benchmark.json       # Figure-grounded QA cases
 │   ├── human_eval/                 # Human-evaluation pipeline (see below)
 │   │   ├── HUMAN_EVAL_DESIGN.md     # Instrument design, grounded in SciRAG/OpenScholar/PaperQA2

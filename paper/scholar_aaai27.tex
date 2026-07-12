@@ -62,7 +62,11 @@ contradicts its source, and 94\% of inline citations are fully supported with no
 unsupported. BM25-primary retrieval reaches Recall@5 of 0.93 across 25 papers, and figure and table
 questions route to the correct visual element in all 18 pilot cases. Cross-document
 localization sits at or below a random-guess floor, which we report as our clearest
-open problem. We also contribute a 100-case benchmark across 25 papers spanning text,
+open problem. Against local reimplementations of PDF-chat, vanilla RAG, and a
+PaperQA2-style pipeline, ScholAR leads on answer correctness and faithfulness, and
+when a question's answer is absent from the retrieved paper the local models decline
+rather than fabricate on 90 to 100\% of a provably-unanswerable set, each within an
+18\,GB single-machine budget. We also contribute a 100-case benchmark across 25 papers spanning text,
 mathematical, and figure questions, and a model-agnostic human-evaluation protocol
 over four local models whose expert scoring is pending.
 \end{abstract}
@@ -659,7 +663,9 @@ the mined queries carry lexical overlap that likely flatters lexical retrieval; 
 3-paper hand-labeled sets remain the higher-precision anchor. The visual (18 cases)
 and multi-document (10 to 18 cases) benchmarks are still small and hand-labeled on
 three papers, so several of their deltas fall within noise and carry no significance
-testing. The generation-faithfulness metric rewards grounding to retrieved context and
+testing. The abstention probe is likewise small and synthetic (20 auto-constructed
+cross-paper negatives scored by a validated refusal detector), so its near-total
+abstention rates indicate a tendency rather than a guarantee. The generation-faithfulness metric rewards grounding to retrieved context and
 the absence of contradiction, which leaves it insensitive to subtle unfaithfulness,
 and that gap is exactly what the human evaluation exists to close.
 
@@ -682,8 +688,10 @@ indirect citation grounding and extends to visual and multi-document questions. 
 51 cases the system's generated answers are grounded with a mean score of 0.971, no
 contradictions, and 94\% fully supported citations with none unsupported; retrieval
 reaches Recall@5 of 0.93 across 25 papers; and figure and table routing is correct in all 18 pilot
-cases. Cross-document localization is at or below chance and is our clearest open
-problem. We contribute a 100-case, 25-paper text, math, and figure benchmark and a
+cases. Against local baselines ScholAR leads on answer correctness and faithfulness,
+and on unanswerable questions the local models decline rather than fabricate 90 to
+100\% of the time. Cross-document localization is at or below chance and is our
+clearest open problem. We contribute a 100-case, 25-paper text, math, and figure benchmark and a
 model-agnostic human-evaluation protocol over four local models, whose expert scoring
 is in progress and will replace the placeholders reported here.
 
