@@ -515,7 +515,7 @@ this is a resource-matched local comparison, not a claim to frontier-scale quali
            must-include recall; Cite-F1 is ALCE-style citation F1. Every emitted page
            citation is valid (invalid-page rate 0 for all systems).}
   \label{tab:compare}
-  \setlength{\tabcolsep}{5pt}
+  \setlength{\tabcolsep}{3pt}
   \begin{tabular}{lccc}
     \toprule
     \textbf{System} & \textbf{Faith.} & \textbf{Correct.} & \textbf{Cite-F1} \\
@@ -524,6 +524,41 @@ this is a resource-matched local comparison, not a claim to frontier-scale quali
     Vanilla RAG                  & 0.860 & 0.340 & 0.802 \\
     PaperQA2-style (RCS, local)  & 0.872 & 0.550 & 0.782 \\
     ScholAR                      & 0.892 & 0.563 & 0.760 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Local Deployability}
+\label{sec:efficiency}
+Because ScholAR targets a single local machine, we also measured what a query costs
+there. On the same laptop (Apple Silicon, 18\,GB), we timed the answering path (BM25
+retrieval, then generation) over 20 questions for each of the four local models.
+Retrieval is not the bottleneck: BM25 over one paper's chunks returns in about 40\,ms
+regardless of model, so end-to-end latency is set almost entirely by generation. Every
+model fits within the 18\,GB budget (roughly 6 to 8\,GB loaded, weights plus KV cache)
+and answers in single-digit to low-double-digit seconds (Table~\ref{tab:efficiency}).
+The text-only 7 to 8 billion parameter models (mistral:7b, llama3.1:8b) are fastest, at
+about 6 seconds and 25 tokens per second; the larger multimodal models cost more per
+token but stay interactive. No cloud call and no GPU cluster: one consumer laptop runs
+the whole loop.
+
+\begin{table}[t]
+  \centering
+  \caption{Single-query cost of the ScholAR answering path (BM25 retrieval plus
+           generation) on the evaluation laptop (Apple Silicon, 18\,GB), over 20
+           questions per model. Mem. is the loaded model footprint (weights plus KV
+           cache); latency is end-to-end (mean / p95). Retrieval adds about 40\,ms for
+           every model.}
+  \label{tab:efficiency}
+  \setlength{\tabcolsep}{5pt}
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Model} & \textbf{Mem.\,(GB)} & \textbf{Tok/s} & \textbf{Latency\,(s)} \\
+    \midrule
+    mistral:7b   & 6.5 & 24.9 & 6.1 / 8.4 \\
+    llama3.1:8b  & 6.9 & 26.9 & 6.3 / 17.8 \\
+    qwen3.5:9b   & 6.1 & 21.9 & 11.4 / 14.6 \\
+    gemma4:12b   & 8.1 & 16.3 & 8.8 / 14.2 \\
     \bottomrule
   \end{tabular}
 \end{table}
