@@ -17,23 +17,29 @@ You are given, for each question, a reference answer and a list of required fact
 Use the whole scale. Anchors are given for 1, 3, and 5; use 2 and 4 for in-between cases.
 
 ### Q1. Relevance: does the answer stay on topic and directly address the question?
+
 - 1: Does not address the question, or is off-topic.
 - 3: Partially addresses the question but drifts or omits the core ask.
 - 5: Stays tightly focused on exactly what was asked, with appropriate depth.
 
 ### Q2. Coverage: does the answer capture the key facts the question requires?
+
 Use the reference answer and the "must include" list.
+
 - 1: Misses most of the required facts.
 - 3: Captures some required facts but omits at least one important item.
 - 5: Captures all the required facts.
 
 ### Q3. Faithfulness: is every statement supported by the paper, with no fabrication or overstatement?
+
 This is the most important rating. Judge whether the content is true to the paper, independent of how well written it is.
+
 - 1: Contains clear fabrication, or a claim that contradicts the paper.
 - 3: Mostly grounded, but includes at least one unsupported or overstated claim.
 - 5: Every statement is directly supported by the paper, with no fabrication or overstatement.
 
 ### Q4. Usefulness: overall, how useful is this answer for understanding the paper?
+
 - 1: Confusing or unhelpful; would not help a researcher.
 - 3: Somewhat helpful but incomplete or hard to follow.
 - 5: Clear, complete, and genuinely helpful for understanding the paper.
@@ -43,12 +49,15 @@ This is the most important rating. Judge whether the content is true to the pape
 Citations appear in the answer as bracketed numbers such as [1], [2]. Each one is shown with its page number and the exact sentence it quotes from the paper.
 
 ### Q5. For each citation, label whether it supports the claim it is attached to.
+
 Read the claim in the answer that carries the citation, then read the quoted evidence, and choose:
+
 - Supported: the cited evidence directly and fully supports the claim.
 - Partial: the cited evidence is related and supports the claim in part, but does not fully establish it. For example it backs one part of a multi-part claim, or it is on the right topic but does not contain the specific number or detail the claim states.
 - Unsupported: the cited evidence does not support the claim. For example it is on the wrong page or figure, is topically unrelated, or contradicts the claim. This is a citation error.
 
 ### Q6. Missing citations.
+
 List any statement in the answer that makes a specific, checkable, paper-specific factual claim but carries no citation. If there are none, leave it blank. A general framing sentence does not need a citation; a specific factual assertion does.
 
 ## Worked citation examples

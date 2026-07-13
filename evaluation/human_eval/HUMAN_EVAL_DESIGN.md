@@ -37,7 +37,7 @@ ScholAR therefore uses multiple 1-5 dimension questions plus per-citation gradin
 Each question is answered by 4 local models. The retrieval, chunking, page-preserving segmentation, and indirect citation grounding are identical across all four; only the generation LLM that writes the final answer changes. This isolates the effect of model choice on answer quality and citation faithfulness.
 
 - **Models**: qwen3.5:9b, gemma4:12b, llama3.1:8b, mistral:7b. Four vendors (Alibaba, Google, Meta, Mistral) spanning 7-12B, all run one at a time on the 18GB target hardware. Confirm the exact set with the professor before building.
-- **Visual cases**: only qwen3.5:9b and gemma4:12b are natively multimodal, so the 4-model comparison runs on the 80 text cases. The 20 visual cases are human-evaluated with the 2 vision-capable models using the same instrument, which also upgrades the paper's existing 2-model visual comparison from an automated proxy to human judgment.
+- **Visual cases**: only qwen3.5:9b and gemma4:12b are natively multimodal, so the 4-model comparison runs on the 75 text and mathematical cases. The 25 visual cases are human-evaluated with the 2 vision-capable models using the same instrument, which also upgrades the paper's existing 2-model visual comparison from an automated proxy to human judgment.
 - **Model-agnostic claim**: supported if the 4 models show low variance on Faithfulness and citation-support even if fluency or usefulness varies. Any real gap is reported honestly rather than hidden.
 
 ## 5. Why ScholAR's citation grounding fits the claim-level scheme exactly
@@ -97,21 +97,20 @@ The raw label distribution (percent Supported / Partial / Unsupported) is also r
 
 ## 7. The 100 curated cases
 
-The set spreads across ScholAR's four evaluated capabilities so the human evaluation covers the whole system.
+The set spans 25 papers and three query types, mined from the prepared corpus by a local model and source-verified (every gold fact was checked to appear verbatim in its source passage) by `evaluation/mine_cases.py`. The earlier hand-curated 3-paper set is preserved as `cases_curated_3paper.json`.
 
 | Capability | Count | Models that answer | Source pattern |
 |---|---|---|---|
-| Single-document text QA | 40 | all 4 | Reuse and extend the existing 51-case `faithfulness_cases.json`, keeping the claim-type spread (result_number, architecture_detail, training_detail, conceptual_claim, formula) |
-| Visual grounding | 20 | 2 multimodal (qwen, gemma) | Figure and table questions, in the style of `visual_benchmark.json` |
-| Multi-document citation-chasing | 20 | all 4 | Cross-paper questions in the style of `multidoc_benchmark.json`, where the answer lives in a cited reference |
-| Hard-retrieval | 20 | all 4 | Questions whose answer is not in the abstract and requires reading the body; single-source and specific. Borrows LitQA2's design principle (arXiv:2409.13740) as a cited methodology, not its data |
+| Single-document text QA | 50 | all 4 | Body-level factual questions mined and source-verified across the 25-paper corpus |
+| Mathematical | 25 | all 4 | Questions over equations, derivations, and numerical results |
+| Visual grounding | 25 | 2 multimodal (qwen, gemma) | Figure and table questions, in the style of `visual_benchmark.json` |
 
 ### Case schema (JSON)
 
 ```json
 {
   "case_id": "he_001",
-  "capability": "single_doc_text | visual | multi_doc | hard_retrieval",
+  "capability": "single_doc_text | math | visual",
   "paper_id": "1706.03762",
   "secondary_paper_ids": [],
   "question": "The user-facing question, phrased as a real researcher would ask it.",
@@ -127,8 +126,8 @@ The `gold_answer` and `must_include` fields are the evaluator's ground truth. Th
 
 ## 8. Volume and annotation protocol
 
-- **Full volume**: 80 text cases x 4 models = 320 text answers, plus 20 visual cases x 2 models = 40 visual answers, for 360 human-scored answers. Each text answer takes Q1-Q6; each question adds one Q7 ranking.
-- **Reduced protocol** if the PhD evaluator is time-limited: a stratified sample (for example 40 text cases x 4 + 10 visual x 2 = 180 answers) still exceeds the scale of SciRAG (90) and OpenScholar (108).
+- **Full volume**: 75 text and mathematical cases x 4 models = 300 answers, plus 25 visual cases x 2 models = 50 visual answers, for **350 human-scored answers** carrying 788 citations in total (mean 2.3 per answer). Each answer takes Q1-Q6; each question adds one Q7 ranking.
+- **Reduced protocol** if an evaluator is time-limited: a stratified sample (for example 20 text + 10 math cases x 4 models, plus 10 visual x 2 = 140 answers) still exceeds the scale of SciRAG (90) and OpenScholar (108 questions, ~25 instances per annotator).
 - **Blinding and order**: the evaluator sees only the question and the answers with their citations, never the model identity, and the 4 answers appear in randomized order per question.
 - **Inter-annotator agreement**: a 20-answer overlap subset is scored independently by at least two evaluators. Report Cohen's kappa on the three-way citation labels and Krippendorff's alpha (or Pearson) on the Likert dimensions, matching how OpenScholar (kappa 0.68) and SciRAG (~0.87) report agreement.
 - **Worked examples**: the evaluator instruction sheet includes one worked Supported, one Partial, and one Unsupported citation.
