@@ -211,32 +211,48 @@ application rather than by the model.
 \resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[
   font=\footnotesize,
-  box/.style={draw, rounded corners, align=center, inner sep=3pt, minimum height=11mm, minimum width=20mm, fill=blue!4},
-  ev/.style={draw, rounded corners, align=center, inner sep=3pt, minimum height=11mm, minimum width=20mm, fill=green!7},
-  vis/.style={draw, rounded corners, align=center, inner sep=3pt, minimum height=9mm, fill=orange!10},
+  box/.style={draw, rounded corners, align=center, inner sep=3pt, minimum height=11mm, minimum width=19mm, fill=blue!4},
+  ev/.style={draw, rounded corners, align=left, inner sep=4pt, minimum height=11mm, fill=green!8},
+  bad/.style={draw, rounded corners, align=left, inner sep=4pt, minimum height=11mm, fill=red!6},
+  vis/.style={draw, rounded corners, align=center, inner sep=3pt, minimum height=8mm, fill=orange!12},
+  hd/.style={font=\footnotesize\itshape, anchor=west},
   >={Stealth[length=2mm]},
   node distance=6mm and 6mm,
 ]
-\node[box] (pdf) {Scientific\\PDF};
-\node[box, right=of pdf] (chunk) {Page-preserving\\chunking\\{\scriptsize 1 chunk $=$ 1 page}};
+% ---------------- (a) the problem ----------------
+\node[hd] (ha) at (0,1.35) {(a) Free-form citation: the page number is itself model output.};
+\node[box] (a1) at (1.1,0) {Retrieved\\text};
+\node[box, right=of a1] (a2) {LLM writes the answer\\\emph{and} the page number};
+\node[bad, right=of a2] (a3) {``\dots\ a minibatch of 80 sentences \textbf{[p.\,5]}''\\[1pt]
+  {\scriptsize the page is generated, not resolved: nothing binds it to the text the model saw}};
+\draw[->] (a1)--(a2); \draw[->] (a2)--(a3);
+
+% ---------------- (b) ScholAR ----------------
+\node[hd] (hb) at (0,-1.85) {(b) ScholAR: indirect citation grounding. The model may cite only $[E_i]$; the application resolves the page.};
+\node[box] (pdf) at (1.1,-3.5) {Scientific\\PDF};
+\node[box, right=of pdf] (chunk) {Page-preserving\\chunking\\{\scriptsize 1 chunk $\subseteq$ 1 page}};
 \node[box, right=of chunk] (bm25) {BM25-primary\\retrieval};
-\node[ev, right=of bm25] (ev) {Evidence IDs\\{$[E_1]\,[E_2]\cdots[E_k]$}\\{\scriptsize each tied to a page}};
-\node[box, right=of ev] (llm) {Local multimodal\\LLM cites $[E_i]$\\{\scriptsize never a page number}};
-\node[box, right=of llm] (map) {Indirect citation\\rewrite $[E_i]\!\to\![n]$\\{\scriptsize $\to$ page (deterministic)}};
+\node[ev, right=of bm25] (ev) {$[E_1]$ (p.\,5): ``Each SGD update direction is\\computed using a minibatch of 80 sentences.''\\[1pt]
+  {\scriptsize each $E_i$ is bound to the page of the chunk it came from}};
+\node[box, right=of ev] (llm) {Local LLM\\cites $[E_1]$\\{\scriptsize cannot emit a page}};
+\node[box, right=of llm] (map) {App rewrites\\$[E_1]\!\to\![1]\!\to$ p.\,5\\{\scriptsize deterministic lookup}};
 \node[box, right=of map] (hl) {Highlighted\\PDF page};
-\node[vis, below=7mm of bm25] (vision) {figure / table query\\{\scriptsize $\to$ vision (crop @ $3\times$)}};
+\node[vis, below=6mm of ev] (vision) {figure / table query $\to$ same local model, cropped image @ $3\times$ zoom};
 \draw[->] (pdf)--(chunk); \draw[->] (chunk)--(bm25); \draw[->] (bm25)--(ev);
 \draw[->] (ev)--(llm); \draw[->] (llm)--(map); \draw[->] (map)--(hl);
-\draw[->] (bm25)--(vision);
+\draw[->] (bm25) |- (vision);
 \draw[->] (vision) -| (llm);
 \end{tikzpicture}%
 }
-\caption{The ScholAR pipeline. Page-preserving chunking keeps every retrieved unit
-inside one PDF page. The model may cite only evidence identifiers $[E_i]$, which the
-application rewrites into numbered references and maps deterministically to a page;
-the model never writes a page number, so page-citation hallucination is prevented by
-construction. Figure and table queries route to the same local multimodal model with
-a cropped, $3\times$-zoomed image.}
+\caption{ScholAR's indirect citation grounding, contrasted with free-form citation.
+(a) When the model writes the page number itself, the number is generated text: nothing
+ties it to the passage the model was actually shown. (b) ScholAR keeps every retrieved
+unit inside one PDF page, exposes the retrieved chunks as evidence identifiers $[E_i]$
+that each carry their own page, and permits the model to cite only those identifiers.
+The application, not the model, rewrites $[E_i]$ into a numbered reference and resolves
+it to a page, so a cited page is correct by construction. Figure and table queries route
+to the same local multimodal model with a cropped, $3\times$-zoomed image. The evidence
+shown is the real chunk retrieved for this question.}
 \label{fig:pipeline}
 \end{figure*}
 
@@ -364,6 +380,43 @@ labels are weaker than hand annotation, and the questions, being mined from pass
 carry lexical overlap that can favor lexical retrieval; we therefore report the scaled
 set alongside the 3-paper hand-labeled set rather than in place of it. This diverse
 benchmark is also the dataset for the human evaluation (Section~\ref{sec:humaneval}).
+Table~\ref{tab:benchstats} summarizes the corpus and the benchmarks built on it.
+
+\begin{table}[t]
+  \centering
+  \caption{Key statistics of the ScholAR corpus and benchmarks. Page-preserving chunking
+           yields close to one chunk per page, because a typical page holds fewer words
+           than the chunk window.}
+  \label{tab:benchstats}
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{lr}
+    \toprule
+    \textbf{Statistic} & \textbf{Value} \\
+    \midrule
+    \multicolumn{2}{l}{\emph{Corpus}} \\
+    Papers                              & 25 \\
+    Pages per paper (mean)              & 34.5 \\
+    Chunks per paper (mean)             & 34.8 \\
+    Words per paper (mean)              & 17{,}694 \\
+    \midrule
+    \multicolumn{2}{l}{\emph{Diverse benchmark (mined, source-verified)}} \\
+    Questions                           & 100 \\
+    \quad text / mathematical / visual  & 50 / 25 / 25 \\
+    Question length (words, mean)       & 12.9 \\
+    Gold facts per question (mean)      & 2.8 \\
+    \midrule
+    \multicolumn{2}{l}{\emph{Labeled benchmarks (hand-labeled / auto-labeled)}} \\
+    Retrieval                           & 14 / 100 \\
+    Retrieval-support faithfulness      & 51 / 100 \\
+    Visual / multi-document             & 18 / 18 \\
+    Unanswerable (abstention)           & 20 \\
+    \midrule
+    \multicolumn{2}{l}{\emph{Generated answers (4 local models)}} \\
+    Answers collected                   & 350 \\
+    Inline citations (mean per answer)  & 788 (2.3) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 % -----------------------------------------------------------------------
 \section{Automated Evaluation}
@@ -381,6 +434,36 @@ outcome~\citep{thakur2021beir} once the corpus is not three heavily studied pape
 read the size of BM25's margin cautiously, because the mined queries share lexical
 surface with their source passages, but the direction, lexical over single-pass dense
 at scale, is the one the BM25-primary design assumes.
+
+Aggregates hide where retrieval actually struggles, so Table~\ref{tab:bycap} breaks the
+same run down by question type. Both retrievers degrade monotonically from text to
+mathematical to figure and table questions, and the drop is steepest for the visual
+cases (BM25-primary Recall@5 falls from 0.98 to 0.84). This is the expected weakness of
+a lexical signal: a question about a figure shares little surface form with the caption
+and body text that surround it, which is also why ScholAR routes figure and table
+questions to a vision model rather than trusting retrieval alone. BM25-primary
+nonetheless leads dense-only in every category, by the widest margin on exactly the
+visual cases where dense retrieval is often assumed to help.
+
+\begin{table}[t]
+  \centering
+  \caption{Retrieval by question type on the same 100 scaled cases. Both retrievers
+           degrade from text to mathematical to visual questions; BM25-primary leads
+           dense-only in every category.}
+  \label{tab:bycap}
+  \setlength{\tabcolsep}{5pt}
+  \begin{tabular}{lcccc}
+    \toprule
+    & \multicolumn{2}{c}{\textbf{BM25-primary}} & \multicolumn{2}{c}{\textbf{Dense-only}} \\
+    \cmidrule(lr){2-3}\cmidrule(lr){4-5}
+    \textbf{Question type} & \textbf{R@5} & \textbf{MRR} & \textbf{R@5} & \textbf{MRR} \\
+    \midrule
+    Text ($n{=}50$)         & 0.98 & 0.904 & 0.82 & 0.680 \\
+    Mathematical ($n{=}25$) & 0.92 & 0.853 & 0.76 & 0.507 \\
+    Visual ($n{=}25$)       & 0.84 & 0.781 & 0.56 & 0.423 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \begin{table}[t]
   \centering
@@ -538,7 +621,7 @@ A grounded system should decline when the answer is not present rather than inve
 case above is answerable, so we built a complementary set of 20 provably-unanswerable questions:
 each paper-specific question is posed against a different paper in which the queried fact is
 provably absent (verified by exact substring over that paper's text), so the correct response is
-to abstain. Table~\ref{tab:abstention} reports how often each model declines. All four abstain on
+to abstain. Table~\ref{tab:permodel} reports how often each model declines. All four abstain on
 the large majority of cases: qwen3.5:9b and llama3.1:8b decline on every question, gemma4:12b on
 19 of 20, and mistral:7b on 18 of 20. The few non-abstentions are not free invention but a benign
 overlap: on a question about minibatch size, the wrongly paired paper independently reports a
@@ -549,19 +632,57 @@ evidence that grounding induces abstention rather than as a precise rate.
 
 \begin{table}[t]
   \centering
-  \caption{Abstention on 20 provably-unanswerable questions, where the retrieved paper does not
-           contain the queried fact. Abstain is the fraction correctly declined; Fabricate is the
-           remainder (an answer asserted about absent content).}
-  \label{tab:abstention}
-  \setlength{\tabcolsep}{6pt}
-  \begin{tabular}{lcc}
+  \caption{Per-model behavior of the unmodified ScholAR pipeline: only the generation model
+           changes. Abstain / Fabricate are measured on the 20 provably-unanswerable questions
+           (Abstain is the fraction correctly declined). Mem.\ is the loaded footprint in GB
+           (weights plus KV cache) and latency is end-to-end in seconds (mean / p95) over 20
+           questions on the evaluation laptop; retrieval adds about 40\,ms for every model.}
+  \label{tab:permodel}
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabular}{lccccc}
     \toprule
-    \textbf{Model} & \textbf{Abstain} & \textbf{Fabricate} \\
+    & \multicolumn{2}{c}{\textbf{Unanswerable}} & \multicolumn{3}{c}{\textbf{Cost per query}} \\
+    \cmidrule(lr){2-3}\cmidrule(lr){4-6}
+    \textbf{Model} & \textbf{Abst.} & \textbf{Fabr.} & \textbf{Mem.} & \textbf{Tok/s} & \textbf{Lat.} \\
     \midrule
-    qwen3.5:9b   & 1.00 & 0.00 \\
-    llama3.1:8b  & 1.00 & 0.00 \\
-    gemma4:12b   & 0.95 & 0.05 \\
-    mistral:7b   & 0.90 & 0.10 \\
+    qwen3.5:9b   & 1.00 & 0.00 & 6.1 & 21.9 & 11.4/14.6 \\
+    gemma4:12b   & 0.95 & 0.05 & 8.1 & 16.3 & 8.8/14.2 \\
+    llama3.1:8b  & 1.00 & 0.00 & 6.9 & 26.9 & 6.3/17.8 \\
+    mistral:7b   & 0.90 & 0.10 & 6.5 & 24.9 & 6.1/8.4 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \caption{One question, run through the unmodified pipeline. Asked of the paper that
+           contains the answer, the cited page resolves to the exact supporting sentence;
+           asked of a paper that does not, the model declines. The middle row is a real
+           failure we do not hide: the answer is right, but a surplus citation points at a
+           sentence that does not support the claim, which is what keeps citation precision
+           below 1.0 in Table~\ref{tab:compare}. Text is verbatim from the logged runs.}
+  \label{tab:example}
+  \small
+  \begin{tabular}{@{}p{0.96\columnwidth}@{}}
+    \toprule
+    \textbf{Question:} What is the size of a minibatch used for each SGD update? \\
+    \textbf{Gold fact:} ``a minibatch of 80 sentences'' \citep{bahdanau2015nmt}, p.\,5 \\
+    \midrule
+    \emph{(i) Asked of the paper that contains the answer} \\[1pt]
+    gemma4:12b: ``The training process utilized a minibatch size of 80 sentences
+    for calculating each SGD update direction~[1].'' \\[1pt]
+    \quad$[1]\rightarrow$ p.\,5: ``Each SGD update direction is computed using a
+    minibatch of 80 sentences.''\hfill \textbf{supported} \\
+    \midrule
+    \emph{(ii) The same pipeline, a surplus citation} \\[1pt]
+    qwen3.5:9b: same correct answer, but additionally cites p.\,2: ``In this paper, we
+    show that the proposed approach of jointly learning to align and
+    translate\ldots''\hfill \textbf{unsupported} \\
+    \midrule
+    \emph{(iii) Asked of a paper that does not contain the answer} \\[1pt]
+    qwen3.5:9b: ``The provided evidence does not state the specific minibatch size used
+    for each SGD update, but rather discusses optimal sizes in different
+    contexts.''\hfill \textbf{abstains} \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -574,32 +695,11 @@ retrieval, then generation) over 20 questions for each of the four local models.
 Retrieval is not the bottleneck: BM25 over one paper's chunks returns in about 40\,ms
 regardless of model, so end-to-end latency is set almost entirely by generation. Every
 model fits within the 18\,GB budget (roughly 6 to 8\,GB loaded, weights plus KV cache)
-and answers in single-digit to low-double-digit seconds (Table~\ref{tab:efficiency}).
+and answers in single-digit to low-double-digit seconds (Table~\ref{tab:permodel}).
 The text-only 7 to 8 billion parameter models (mistral:7b, llama3.1:8b) are fastest, at
 about 6 seconds and 25 tokens per second; the larger multimodal models cost more per
 token but stay interactive. No cloud call and no GPU cluster: one consumer laptop runs
 the whole loop.
-
-\begin{table}[t]
-  \centering
-  \caption{Single-query cost of the ScholAR answering path (BM25 retrieval plus
-           generation) on the evaluation laptop (Apple Silicon, 18\,GB), over 20
-           questions per model. Mem. is the loaded model footprint (weights plus KV
-           cache); latency is end-to-end (mean / p95). Retrieval adds about 40\,ms for
-           every model.}
-  \label{tab:efficiency}
-  \setlength{\tabcolsep}{5pt}
-  \begin{tabular}{lccc}
-    \toprule
-    \textbf{Model} & \textbf{Mem.\,(GB)} & \textbf{Tok/s} & \textbf{Latency\,(s)} \\
-    \midrule
-    mistral:7b   & 6.5 & 24.9 & 6.1 / 8.4 \\
-    llama3.1:8b  & 6.9 & 26.9 & 6.3 / 17.8 \\
-    qwen3.5:9b   & 6.1 & 21.9 & 11.4 / 14.6 \\
-    gemma4:12b   & 8.1 & 16.3 & 8.8 / 14.2 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
 
 % -----------------------------------------------------------------------
 \section{Human Evaluation (In Progress)}
