@@ -28,20 +28,29 @@
       "mean_pool": 47.9
     },
     "vision_bm25::qwen3.5:9b": {
-      "n": 4,
-      "mrr": 0.875,
-      "recall@1": 0.75,
-      "recall@5": 1.0,
-      "recall@10": 1.0,
-      "random_mrr": 0.105,
-      "mean_pool": 41.0
+      "n": 297,
+      "mrr": 0.474,
+      "recall@1": 0.34,
+      "recall@5": 0.606,
+      "recall@10": 0.7,
+      "random_mrr": 0.121,
+      "mean_pool": 47.9
+    },
+    "vision_bm25::gemma4:12b": {
+      "n": 297,
+      "mrr": 0.455,
+      "recall@1": 0.327,
+      "recall@5": 0.572,
+      "recall@10": 0.673,
+      "random_mrr": 0.121,
+      "mean_pool": 47.9
     }
   },
   "raw": {
     "vision_bm25::qwen3.5:9b": [
       {
         "case_id": "m3_000",
-        "entity": "GPT-3.5",
+        "entity": "GPT-3.5 (HVI=53), Dolly (49).",
         "rank": 1
       },
       {
@@ -56,10 +65,2962 @@
       },
       {
         "case_id": "m3_003",
-        "entity": "Alpaca (65B) and OPT (175B).",
+        "entity": "OPT (48) and Alpaca (40).",
         "rank": 2
+      },
+      {
+        "case_id": "m3_004",
+        "entity": "T5 - Large",
+        "rank": 5
+      },
+      {
+        "case_id": "m3_005",
+        "entity": "T5 - Large",
+        "rank": 38
+      },
+      {
+        "case_id": "m3_006",
+        "entity": "T5 - Large",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_007",
+        "entity": "TFN*",
+        "rank": 7
+      },
+      {
+        "case_id": "m3_008",
+        "entity": "TFN* (or TFN) is the method corresponding to the first row.",
+        "rank": 9
+      },
+      {
+        "case_id": "m3_009",
+        "entity": "TFN* (34.9) and LMF* (33.2). Second is TFN*.",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_010",
+        "entity": "ALMT",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_011",
+        "entity": "DPObeta=0.5 (DPO) shows highest Reward Acc at 0.532.",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_012",
+        "entity": "DPObeta=0.5",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_013",
+        "entity": "Transformer base (BLEU=27.3)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_014",
+        "entity": "Transformer base",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_015",
+        "entity": "MoA base",
+        "rank": 8
+      },
+      {
+        "case_id": "m3_016",
+        "entity": "Transformer (Keysers et al., 2019)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_017",
+        "entity": "UT with halting (ours)",
+        "rank": 8
+      },
+      {
+        "case_id": "m3_018",
+        "entity": "FSMT (Ng et al., 2020)",
+        "rank": 33
+      },
+      {
+        "case_id": "m3_019",
+        "entity": "SODA (Kim et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_020",
+        "entity": "MolXPT",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_021",
+        "entity": "GEM",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_022",
+        "entity": "MolXPT",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_023",
+        "entity": "BERT (Fully Sup.)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_024",
+        "entity": "MProto",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_025",
+        "entity": "Ana-CL (Liang et al., 2022)",
+        "rank": 29
+      },
+      {
+        "case_id": "m3_026",
+        "entity": "Ana-CL (Liang et al., 2022)",
+        "rank": 19
+      },
+      {
+        "case_id": "m3_027",
+        "entity": "Ana-CL (Liang et al., 2022)",
+        "rank": 17
+      },
+      {
+        "case_id": "m3_028",
+        "entity": "Self-Consistency (Wang et al., 2022b)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_029",
+        "entity": "Self-Consistency (Wang et al., 2022b)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_030",
+        "entity": "Elastic (Zhang and Moshfeghi, 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_031",
+        "entity": "Elastic (Zhang and Moshfeghi, 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_032",
+        "entity": "Self-Consistency\u2020(2022b)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_033",
+        "entity": "DPT",
+        "rank": 17
+      },
+      {
+        "case_id": "m3_034",
+        "entity": "DPT",
+        "rank": 38
+      },
+      {
+        "case_id": "m3_035",
+        "entity": "DPT",
+        "rank": 38
+      },
+      {
+        "case_id": "m3_036",
+        "entity": "DPT (SOTA) Model",
+        "rank": 27
+      },
+      {
+        "case_id": "m3_037",
+        "entity": "DPT (0.8173\u00b10.2308)",
+        "rank": 32
+      },
+      {
+        "case_id": "m3_038",
+        "entity": "P+CFd and DANN have scores between 0.815 and 0.82.",
+        "rank": 7
+      },
+      {
+        "case_id": "m3_039",
+        "entity": "DPT",
+        "rank": 30
+      },
+      {
+        "case_id": "m3_040",
+        "entity": "LLaMA-30B",
+        "rank": 35
+      },
+      {
+        "case_id": "m3_041",
+        "entity": "LLaMA-30B",
+        "rank": 35
+      },
+      {
+        "case_id": "m3_042",
+        "entity": "LLaMA-30B",
+        "rank": 37
+      },
+      {
+        "case_id": "m3_043",
+        "entity": "StarCoder",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_044",
+        "entity": "StarCoder",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_045",
+        "entity": "GPT-3.5-Turbo (67%), StarCoder (45%).",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_046",
+        "entity": "GPT-3.5-Turbo has highest; StarCoder is next (second).",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_047",
+        "entity": "LLaMA-7B",
+        "rank": 37
+      },
+      {
+        "case_id": "m3_048",
+        "entity": "LLaMA-7B",
+        "rank": 36
+      },
+      {
+        "case_id": "m3_049",
+        "entity": "LLaMA-30B",
+        "rank": 38
+      },
+      {
+        "case_id": "m3_050",
+        "entity": "LLaMA-30B",
+        "rank": 32
+      },
+      {
+        "case_id": "m3_051",
+        "entity": "StarCoder (or GPT-3.5-Turbo) depending on pattern direction.",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_052",
+        "entity": "RoBERTaBASE (Liu et al., 2019)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_053",
+        "entity": "PL-Marker (Ye et al., 2022)",
+        "rank": 8
+      },
+      {
+        "case_id": "m3_054",
+        "entity": "PIQN (Shen et al., 2022)",
+        "rank": 11
+      },
+      {
+        "case_id": "m3_055",
+        "entity": "LSFS (Ma et al., 2022a)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_056",
+        "entity": "Few-shot Method LSFS (Ma et al., 2022a)",
+        "rank": 11
+      },
+      {
+        "case_id": "m3_057",
+        "entity": "SEQ2SEQ (Shridhar et al., 2020)",
+        "rank": 33
+      },
+      {
+        "case_id": "m3_058",
+        "entity": "SEQ2SEQ (Shridhar et al., 2020)",
+        "rank": 39
+      },
+      {
+        "case_id": "m3_059",
+        "entity": "SEQ2SEQ (Shridhar et al., 2020)",
+        "rank": 34
+      },
+      {
+        "case_id": "m3_060",
+        "entity": "MOCA (Singh et al., 2021)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_061",
+        "entity": "MOCA (Singh et al., 2021)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_062",
+        "entity": "EmBERT (Suglia et al., 2021)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_063",
+        "entity": "EmBERT (Suglia et al., 2021)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_064",
+        "entity": "EmBERT (Suglia et al., 2021)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_065",
+        "entity": "EmBERT (Suglia et al., 2021)",
+        "rank": 25
+      },
+      {
+        "case_id": "m3_066",
+        "entity": "E.T.(Pashevich et al., 2021)",
+        "rank": 11
+      },
+      {
+        "case_id": "m3_067",
+        "entity": "E.T.(Pashevich et al.,2021)",
+        "rank": 12
+      },
+      {
+        "case_id": "m3_068",
+        "entity": "Mintaka",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_069",
+        "entity": "Mintaka",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_070",
+        "entity": "Mintaka",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_071",
+        "entity": "UniEval",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_072",
+        "entity": "UniEval shows the highest fluctuation among models shown.",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_073",
+        "entity": "VALHALLA (Li et al., 2022b)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_074",
+        "entity": "OURS (A) and OURS (S).",
+        "rank": 8
+      },
+      {
+        "case_id": "m3_075",
+        "entity": "VALHALLA (Li et al., 2022b)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_076",
+        "entity": "SentiEval",
+        "rank": 10
+      },
+      {
+        "case_id": "m3_077",
+        "entity": "SentiEval",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_078",
+        "entity": "SentiEval",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_079",
+        "entity": "AfriSenti",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_080",
+        "entity": "SPARROW (with a bird icon).",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_081",
+        "entity": "AfriSenti",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_082",
+        "entity": "NaijaSenti",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_083",
+        "entity": "NaijaSenti",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_084",
+        "entity": "Nusax",
+        "rank": 30
+      },
+      {
+        "case_id": "m3_085",
+        "entity": "GSM8K",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_086",
+        "entity": "GSM8K and SVAMP datasets exhibit the highest Method 1 accuracy.",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_087",
+        "entity": "GSM8K and SVAMP datasets exhibit the highest accuracy for Method 2.",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_088",
+        "entity": "Vanilla Transformer",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_089",
+        "entity": "Vanilla Transformer",
+        "rank": 10
+      },
+      {
+        "case_id": "m3_090",
+        "entity": "T5",
+        "rank": 21
+      },
+      {
+        "case_id": "m3_091",
+        "entity": "Vanilla Transformer",
+        "rank": 12
+      },
+      {
+        "case_id": "m3_092",
+        "entity": "T5",
+        "rank": 26
+      },
+      {
+        "case_id": "m3_093",
+        "entity": "T5",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_094",
+        "entity": "MVQG-VL-T5 and T5-Base achieve a score of 3.84 in Grounding.",
+        "rank": 15
+      },
+      {
+        "case_id": "m3_095",
+        "entity": "MVQG-VL-T5 fine-tuned",
+        "rank": 19
+      },
+      {
+        "case_id": "m3_096",
+        "entity": "MVQG-VL-T5 and T5-Base have scores below 3.80.",
+        "rank": 17
+      },
+      {
+        "case_id": "m3_097",
+        "entity": "MVQG-VL-T5",
+        "rank": 21
+      },
+      {
+        "case_id": "m3_098",
+        "entity": "SALAM on BBQ-Lite under Zero-Shot CoT setting.",
+        "rank": 26
+      },
+      {
+        "case_id": "m3_099",
+        "entity": "SALAM (few-shot)",
+        "rank": 23
+      },
+      {
+        "case_id": "m3_100",
+        "entity": "SALAM",
+        "rank": 30
+      },
+      {
+        "case_id": "m3_101",
+        "entity": "EARL (Entity Alignment via Relation Learning)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_102",
+        "entity": "EARL",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_103",
+        "entity": "EARL on FB15k-237 maintains constant MRR as entropy rises.",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_104",
+        "entity": "EARL Quantization",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_105",
+        "entity": "EARL Quantization",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_106",
+        "entity": "EARL quantization.",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_107",
+        "entity": "EQG (Equation Generation) Model.",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_108",
+        "entity": "EQG has the highest Self-BLEU score of 0.9425.",
+        "rank": 19
+      },
+      {
+        "case_id": "m3_109",
+        "entity": "EQG",
+        "rank": 12
+      },
+      {
+        "case_id": "m3_110",
+        "entity": "EQG architecture under TellMeWhy framework.",
+        "rank": 25
+      },
+      {
+        "case_id": "m3_111",
+        "entity": "PTQ4ViT(Yuan et al., 2022).",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_112",
+        "entity": "PTQ4ViT(Yuan et al., 2022).",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_113",
+        "entity": "MinMax FP Quant(E3M2).",
+        "rank": 23
+      },
+      {
+        "case_id": "m3_114",
+        "entity": "GPT-4",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_115",
+        "entity": "GPT-4",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_116",
+        "entity": "BERT (Noise=\u00d7, Images=\u00d7)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_117",
+        "entity": "BERT (84.1) and OCR+BERT (71.7).",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_118",
+        "entity": "BERT (without noise/images)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_119",
+        "entity": "Spider-DK has the highest execution accuracy of 95%.",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_120",
+        "entity": "BIRD",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_121",
+        "entity": "longformer",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_122",
+        "entity": "longformer",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_123",
+        "entity": "PCP (Zhou et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_124",
+        "entity": "PCP (Zhou et al., 2022)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_125",
+        "entity": "PCP (Zhou et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_126",
+        "entity": "GOLF (Jiang et al., 2022)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_127",
+        "entity": "GOLF (Jiang et al., 2022)",
+        "rank": 13
+      },
+      {
+        "case_id": "m3_128",
+        "entity": "GOLF (Jiang et al., 2022)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_129",
+        "entity": "PEGASUS+NTM (Nguyen et al., 2021)",
+        "rank": 16
+      },
+      {
+        "case_id": "m3_130",
+        "entity": "PEGASUS+NTM (Nguyen et al., 2021)",
+        "rank": 16
+      },
+      {
+        "case_id": "m3_131",
+        "entity": "PEGASUS+NTM (Nguyen et al., 2021)",
+        "rank": 11
+      },
+      {
+        "case_id": "m3_132",
+        "entity": "UniTAB (Yang et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_133",
+        "entity": "UniTAB (Yang et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_134",
+        "entity": "UniTAB (Yang et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_135",
+        "entity": "OFA-base (Wang et al., 2022b)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_136",
+        "entity": "OFA-base (Wang et al., 2022b)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_137",
+        "entity": "OFA-base (Wang et al., 2022b)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_138",
+        "entity": "ViTCAP (Fang et al., 2022)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_139",
+        "entity": "AoANet(Huang et al., 2019)",
+        "rank": 49
+      },
+      {
+        "case_id": "m3_140",
+        "entity": "ViTCAP (Fang et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_141",
+        "entity": "PVI (Ethayarajh et al., 2022).",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_142",
+        "entity": "TracIn (Garima et al., 2020)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_143",
+        "entity": "ChatGPT (Ouyang et al., 2022)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_144",
+        "entity": "ChatGPT (Ouyang et al., 2022)",
+        "rank": 15
+      },
+      {
+        "case_id": "m3_145",
+        "entity": "OASUM (Yang et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_146",
+        "entity": "OASUM (Yang et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_147",
+        "entity": "OASUM (Yang et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_148",
+        "entity": "WikiAsp (Hayashi et al., 2021)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_149",
+        "entity": "WikiAsp (Hayashi et al., 2021)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_150",
+        "entity": "+MSG\u00b2 (Jang et al., 2023)",
+        "rank": 20
+      },
+      {
+        "case_id": "m3_151",
+        "entity": "BC and MSG\u00b2 achieve scores between No Graph and TOD-Flow.",
+        "rank": 9
+      },
+      {
+        "case_id": "m3_152",
+        "entity": "+MSG\u00b2 (Jang et al., 2023)",
+        "rank": 12
+      },
+      {
+        "case_id": "m3_153",
+        "entity": "GRIT",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_154",
+        "entity": "GRIT",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_155",
+        "entity": "GRIT",
+        "rank": 11
+      },
+      {
+        "case_id": "m3_156",
+        "entity": "GIT (Generative Image-Text)",
+        "rank": 37
+      },
+      {
+        "case_id": "m3_157",
+        "entity": "GRIT",
+        "rank": 6
+      },
+      {
+        "case_id": "m3_158",
+        "entity": "UniKGQA (Jiang et al., 2022b)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_159",
+        "entity": "UniKGQA (Jiang et al., 2022b)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_160",
+        "entity": "TransferNet (Shi et al., 2021)",
+        "rank": 9
+      },
+      {
+        "case_id": "m3_161",
+        "entity": "SR+NSM+E2E (Zhang et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_162",
+        "entity": "SR+NSM+E2E (Zhang et al., 2022)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_163",
+        "entity": "UniKGQA",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_164",
+        "entity": "UniKGQA",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_165",
+        "entity": "UniKGQA",
+        "rank": 5
+      },
+      {
+        "case_id": "m3_166",
+        "entity": "UniKGQA",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_167",
+        "entity": "Okapi Dataset (Lai et al., 2023)",
+        "rank": 7
+      },
+      {
+        "case_id": "m3_168",
+        "entity": "Okapi Dataset (Lai et al., 2023)",
+        "rank": 7
+      },
+      {
+        "case_id": "m3_169",
+        "entity": "Guanaco Dataset (Attardi, 2023)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_170",
+        "entity": "Multialpaca (Wei et al., 2023a)",
+        "rank": 5
+      },
+      {
+        "case_id": "m3_171",
+        "entity": "SpecialFT on FlanT5-XL backbone.",
+        "rank": 31
+      },
+      {
+        "case_id": "m3_172",
+        "entity": "DecomDistill (Shridhar et al., 2022)",
+        "rank": 28
+      },
+      {
+        "case_id": "m3_173",
+        "entity": "PaLM (Chowdhery et al., 2022)",
+        "rank": 27
+      },
+      {
+        "case_id": "m3_174",
+        "entity": "MSP (without p_out) and MSP (with p_out).",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_175",
+        "entity": "MSP",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_176",
+        "entity": "BBH (Big-Bench Hard) Benchmark.",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_177",
+        "entity": "BBH (Big-Bench Hard) Benchmark.",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_178",
+        "entity": "BBH (Big-Bench Hard) Benchmark.",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_179",
+        "entity": "BBH (Big-Bench Hard) Benchmark",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_180",
+        "entity": "BBH (Big-Bench Hard) Benchmark",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_181",
+        "entity": "Tensor Fusion (TFN) and Ours have low MAEs.",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_182",
+        "entity": "SRS (Zero-shot)",
+        "rank": 24
+      },
+      {
+        "case_id": "m3_183",
+        "entity": "CSN-word (Zhu et al., 2021)",
+        "rank": 19
+      },
+      {
+        "case_id": "m3_184",
+        "entity": "CSN-word (Zhu et al., 2021)",
+        "rank": 19
+      },
+      {
+        "case_id": "m3_185",
+        "entity": "CEAR (Zhao et al., 2023)",
+        "rank": 14
+      },
+      {
+        "case_id": "m3_186",
+        "entity": "CEAR (Zhao et al., 2023)",
+        "rank": 13
+      },
+      {
+        "case_id": "m3_187",
+        "entity": "RationaleCL (Zhao et al., 2023)",
+        "rank": 13
+      },
+      {
+        "case_id": "m3_188",
+        "entity": "CEAR (Zhao et al., 2023)",
+        "rank": 15
+      },
+      {
+        "case_id": "m3_189",
+        "entity": "CEAR (Zhao et al., 2023)",
+        "rank": 13
+      },
+      {
+        "case_id": "m3_190",
+        "entity": "PromptPG (Lu et al., 2023)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_191",
+        "entity": "PromptPG (Lu et al., 2023)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_192",
+        "entity": "PromptPG (Lu et al., 2023)",
+        "rank": 9
+      },
+      {
+        "case_id": "m3_193",
+        "entity": "KATE (Liu et al., 2022a)",
+        "rank": 43
+      },
+      {
+        "case_id": "m3_194",
+        "entity": "KATE (Liu et al., 2022a)",
+        "rank": 44
+      },
+      {
+        "case_id": "m3_195",
+        "entity": "KATE (Liu et al., 2022a)",
+        "rank": 42
+      },
+      {
+        "case_id": "m3_196",
+        "entity": "ELLE (Qin et al., 2022)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_197",
+        "entity": "K-Adapter (Wang et al., 2021)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_198",
+        "entity": "CMR (Lin et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_199",
+        "entity": "IC-Retrieval (Si et al., 2023)",
+        "rank": 109
+      },
+      {
+        "case_id": "m3_200",
+        "entity": "IRCoT (Trivedi et al., 2022)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_201",
+        "entity": "Internet-Fewshot (Lazaridou et al., 2022)",
+        "rank": 72
+      },
+      {
+        "case_id": "m3_202",
+        "entity": "Knowledge Solver (Feng et al., 2023)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_203",
+        "entity": "MeLLO (Zhong et al., 2023)",
+        "rank": 5
+      },
+      {
+        "case_id": "m3_204",
+        "entity": "GRACE (Hartvigsen et al., 2023)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_205",
+        "entity": "DuConv (Wu et al., 2019)",
+        "rank": 6
+      },
+      {
+        "case_id": "m3_206",
+        "entity": "DuConv (Wu et al., 2019)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_207",
+        "entity": "TG-ReDial (Zhou et al., 2020)",
+        "rank": 8
+      },
+      {
+        "case_id": "m3_208",
+        "entity": "DSM (Guo et al., 2022)",
+        "rank": 31
+      },
+      {
+        "case_id": "m3_209",
+        "entity": "DSM (Guo et al., 2022)",
+        "rank": 30
+      },
+      {
+        "case_id": "m3_210",
+        "entity": "DSM (Guo et al., 2022)",
+        "rank": 30
+      },
+      {
+        "case_id": "m3_211",
+        "entity": "DSM (Guo et al., 2022)",
+        "rank": 22
+      },
+      {
+        "case_id": "m3_212",
+        "entity": "Q-TOD (T5-Large) and Ours_ctr (Large).",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_213",
+        "entity": "Q-TOD (T5-Large)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_214",
+        "entity": "SimCTG shows the highest BLEU-1 score of 23.8.",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_215",
+        "entity": "SimCTG",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_216",
+        "entity": "SimCTG",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_217",
+        "entity": "LADAN and CTM exhibit an accuracy of 79.44%.",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_218",
+        "entity": "LADAN (Xu et al., 2020)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_219",
+        "entity": "LADAN (Xu et al., 2020)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_220",
+        "entity": "GeDi",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_221",
+        "entity": "GeDi",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_222",
+        "entity": "GeDi",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_223",
+        "entity": "GeDi",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_224",
+        "entity": "DExperts",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_225",
+        "entity": "DExperts",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_226",
+        "entity": "PPLM",
+        "rank": 7
+      },
+      {
+        "case_id": "m3_227",
+        "entity": "PPLM",
+        "rank": 6
+      },
+      {
+        "case_id": "m3_228",
+        "entity": "PPLM",
+        "rank": 6
+      },
+      {
+        "case_id": "m3_229",
+        "entity": "PPLM",
+        "rank": 17
+      },
+      {
+        "case_id": "m3_230",
+        "entity": "MAPPO",
+        "rank": 28
+      },
+      {
+        "case_id": "m3_231",
+        "entity": "MAPPO",
+        "rank": 6
+      },
+      {
+        "case_id": "m3_232",
+        "entity": "MAPPO",
+        "rank": 28
+      },
+      {
+        "case_id": "m3_233",
+        "entity": "SPADE (Hwang et al., 2021)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_234",
+        "entity": "SPADE (Hwang et al., 2021)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_235",
+        "entity": "SPADE (Hwang et al., 2021)",
+        "rank": 5
+      },
+      {
+        "case_id": "m3_236",
+        "entity": "Doc2Graph (Gemelli et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_237",
+        "entity": "Doc2Graph (Gemelli et al., 2022)",
+        "rank": 5
+      },
+      {
+        "case_id": "m3_238",
+        "entity": "LayoutXLM (Xu et al., 2021b)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_239",
+        "entity": "LayoutXLM (Xu et al., 2021b)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_240",
+        "entity": "SERA (Zhang et al., 2021)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_241",
+        "entity": "SERA (Zhang et al., 2021)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_242",
+        "entity": "MSAU-PAF (Dang et al., 2021)",
+        "rank": 8
+      },
+      {
+        "case_id": "m3_243",
+        "entity": "SERA (Zhang et al., 2021)",
+        "rank": 13
+      },
+      {
+        "case_id": "m3_244",
+        "entity": "ViHOS",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_245",
+        "entity": "ViHOS",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_246",
+        "entity": "ViHOS",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_247",
+        "entity": "ViHOS",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_248",
+        "entity": "UIT-HSD and SA-VLSP2016 have no Dev Set Samples.",
+        "rank": 22
+      },
+      {
+        "case_id": "m3_252",
+        "entity": "XSumFaith and FRANKCNN have Val=1250 (or -).",
+        "rank": 33
+      },
+      {
+        "case_id": "m3_253",
+        "entity": "SummEval (850) is between CoGenSum and FactCC in sample size.",
+        "rank": 16
+      },
+      {
+        "case_id": "m3_254",
+        "entity": "XSumFaith",
+        "rank": 29
+      },
+      {
+        "case_id": "m3_255",
+        "entity": "HyperDecoder\u2020",
+        "rank": 20
+      },
+      {
+        "case_id": "m3_256",
+        "entity": "HyperDecoder\u2020",
+        "rank": 24
+      },
+      {
+        "case_id": "m3_257",
+        "entity": "HyperDecoder\u2020",
+        "rank": 17
+      },
+      {
+        "case_id": "m3_258",
+        "entity": "Hyperformer++",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_259",
+        "entity": "Shared-Adapter\u2020",
+        "rank": 10
+      },
+      {
+        "case_id": "m3_260",
+        "entity": "MPT\u2020 (Meta-Parameter Tuning)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_261",
+        "entity": "MPT (Meta-Parameter Tuning)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_262",
+        "entity": "SPoT\u2020 (or SPOT)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_263",
+        "entity": "SPoT\u2020 (or HF\u2020)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_264",
+        "entity": "Naive LongT5-Base-SS (Inan et al., 2022)",
+        "rank": 36
+      },
+      {
+        "case_id": "m3_265",
+        "entity": "Naive LongT5-Base-SS (Inan et al., 2022)",
+        "rank": 36
+      },
+      {
+        "case_id": "m3_266",
+        "entity": "Seq-ELECTRA-Base (Zhang et al., 2021)\u2020",
+        "rank": 41
+      },
+      {
+        "case_id": "m3_267",
+        "entity": "AMRBART under AMR BART section for AMR 3.0",
+        "rank": 18
+      },
+      {
+        "case_id": "m3_268",
+        "entity": "AMRBART on AMR BART (with 200K extra data).",
+        "rank": 14
+      },
+      {
+        "case_id": "m3_269",
+        "entity": "Tet (Hu et al., 2022a)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_270",
+        "entity": "TET (Hu et al., 2022a) on FB15kET dataset.",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_271",
+        "entity": "RGCN (Pan et al., 2021) on FB15kET dataset.",
+        "rank": 7
+      },
+      {
+        "case_id": "m3_272",
+        "entity": "RGCN (Pan et al., 2021)",
+        "rank": 7
+      },
+      {
+        "case_id": "m3_273",
+        "entity": "MetaBINK (Li et al., 2022b)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_274",
+        "entity": "BM25 (mention words) and BM25 (mention context).",
+        "rank": 5
+      },
+      {
+        "case_id": "m3_275",
+        "entity": "MetaBINK (Li et al., 2022b)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_276",
+        "entity": "CoT Fine-tuned (Magister et al., 2023)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_277",
+        "entity": "CoT Fine-tuned (Magister et al., 2023)",
+        "rank": 5
+      },
+      {
+        "case_id": "m3_278",
+        "entity": "LLM-Adapter (Hu et al., 2023)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_279",
+        "entity": "CoT Fine-tuned (Magister et al., 2023)",
+        "rank": 7
+      },
+      {
+        "case_id": "m3_280",
+        "entity": "DialoGPT Large",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_281",
+        "entity": "DialoGPT Large",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_282",
+        "entity": "GPT-Neo 1.3B",
+        "rank": 28
+      },
+      {
+        "case_id": "m3_283",
+        "entity": "GPT-2 Small, GPT-2 Medium and GPT-Neo 1.3B",
+        "rank": 17
+      },
+      {
+        "case_id": "m3_284",
+        "entity": "SpanBERT",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_285",
+        "entity": "SpanBERT",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_286",
+        "entity": "Composition (Narayan et al., 2022a) on SQuAD /1",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_287",
+        "entity": "Composition (Narayan et al., 2022a)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_288",
+        "entity": "Composition (Narayan et al., 2022a)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_289",
+        "entity": "GWLAN",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_290",
+        "entity": "GWLAN",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_291",
+        "entity": "GWLAN",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_292",
+        "entity": "ConCN clusters (Li et al., 2023a)",
+        "rank": 6
+      },
+      {
+        "case_id": "m3_293",
+        "entity": "ConCN clusters (Li et al., 2023a)",
+        "rank": 8
+      },
+      {
+        "case_id": "m3_294",
+        "entity": "MMA (purple square) represents a specific method/model/system.",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_295",
+        "entity": "MMA (purple line) represents the square marker.",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_296",
+        "entity": "MMA",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_297",
+        "entity": "Discup (Zhang and Song, 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_298",
+        "entity": "Discup (Zhang and Song, 2022)",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_299",
+        "entity": "Discup (Zhang and Song, 2022)",
+        "rank": 1
+      }
+    ],
+    "vision_bm25::gemma4:12b": [
+      {
+        "case_id": "m3_000",
+        "entity": "None.",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_001",
+        "entity": "GPT-4",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_002",
+        "entity": "GPT-4",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_003",
+        "entity": "BLOOM",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_004",
+        "entity": "T5- Large",
+        "rank": 5
+      },
+      {
+        "case_id": "m3_005",
+        "entity": "T5- Large",
+        "rank": 38
+      },
+      {
+        "case_id": "m3_006",
+        "entity": "T5- Large",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_007",
+        "entity": "TFN*",
+        "rank": 7
+      },
+      {
+        "case_id": "m3_008",
+        "entity": "TFN*",
+        "rank": 9
+      },
+      {
+        "case_id": "m3_009",
+        "entity": "LMf*",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_010",
+        "entity": "Self-MM$^\\dagger$",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_011",
+        "entity": "DPO_beta=0.5",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_012",
+        "entity": "DPO_beta=0.5",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_013",
+        "entity": "Transformer base",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_014",
+        "entity": "Transformer base",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_015",
+        "entity": "MoA base",
+        "rank": 8
+      },
+      {
+        "case_id": "m3_016",
+        "entity": "Transformer (Keysers et al., 2019)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_017",
+        "entity": "UT with halting",
+        "rank": 8
+      },
+      {
+        "case_id": "m3_018",
+        "entity": "FSMT",
+        "rank": 33
+      },
+      {
+        "case_id": "m3_019",
+        "entity": "SODA (Kim et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_020",
+        "entity": "MolXPT",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_021",
+        "entity": "MolXPT",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_022",
+        "entity": "MolXPT",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_023",
+        "entity": "BERT (Fully Sup.)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_024",
+        "entity": "MProto",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_025",
+        "entity": "Ana-CL",
+        "rank": 29
+      },
+      {
+        "case_id": "m3_026",
+        "entity": "Ana-CL",
+        "rank": 19
+      },
+      {
+        "case_id": "m3_027",
+        "entity": "Ana-CL",
+        "rank": 17
+      },
+      {
+        "case_id": "m3_028",
+        "entity": "Self-Consistency",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_029",
+        "entity": "Self-Consistency",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_030",
+        "entity": "Elastic",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_031",
+        "entity": "Elastic $\\clubsuit$",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_032",
+        "entity": "Self-Consistency\u2020(2022b)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_033",
+        "entity": "None.",
+        "rank": 17
+      },
+      {
+        "case_id": "m3_034",
+        "entity": "DPT",
+        "rank": 38
+      },
+      {
+        "case_id": "m3_035",
+        "entity": "DPT",
+        "rank": 38
+      },
+      {
+        "case_id": "m3_036",
+        "entity": "DPT (SOTA)",
+        "rank": 32
+      },
+      {
+        "case_id": "m3_037",
+        "entity": "DPT",
+        "rank": 32
+      },
+      {
+        "case_id": "m3_038",
+        "entity": "UDALM",
+        "rank": 10
+      },
+      {
+        "case_id": "m3_039",
+        "entity": "DPT",
+        "rank": 30
+      },
+      {
+        "case_id": "m3_040",
+        "entity": "LLaMA-30B",
+        "rank": 35
+      },
+      {
+        "case_id": "m3_041",
+        "entity": "LLaMA-30B",
+        "rank": 35
+      },
+      {
+        "case_id": "m3_042",
+        "entity": "LLaMA-30B",
+        "rank": 37
+      },
+      {
+        "case_id": "m3_043",
+        "entity": "StarCoder",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_044",
+        "entity": "StarCoder",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_045",
+        "entity": "StarCoder",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_046",
+        "entity": "GPT-3.5-Turbo (Direct) is first; StarCoder is second.",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_047",
+        "entity": "LLaMA-7B",
+        "rank": 37
+      },
+      {
+        "case_id": "m3_048",
+        "entity": "LLaMA-7B",
+        "rank": 36
+      },
+      {
+        "case_id": "m3_049",
+        "entity": "LLaMA-30B",
+        "rank": 38
+      },
+      {
+        "case_id": "m3_050",
+        "entity": "LLaMA-30B",
+        "rank": 32
+      },
+      {
+        "case_id": "m3_051",
+        "entity": "StarCoder",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_052",
+        "entity": "RoBERTa_BASE (Liu et al., 2019)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_053",
+        "entity": "PL-Marker",
+        "rank": 8
+      },
+      {
+        "case_id": "m3_054",
+        "entity": "PIQN (Shen et al., 2022)",
+        "rank": 11
+      },
+      {
+        "case_id": "m3_055",
+        "entity": "LSFS (Ma et al., 2022a)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_056",
+        "entity": "Few-shot Method (LSFS)",
+        "rank": 11
+      },
+      {
+        "case_id": "m3_057",
+        "entity": "SEQ2SEQ (Shridhar et al., 2020)",
+        "rank": 33
+      },
+      {
+        "case_id": "m3_058",
+        "entity": "SEQ2SEQ (Shridhar et al., 2020)",
+        "rank": 39
+      },
+      {
+        "case_id": "m3_059",
+        "entity": "SEQ2SEQ (Shridhar et al., 2020)",
+        "rank": 34
+      },
+      {
+        "case_id": "m3_060",
+        "entity": "SEQ2SEQ (Shridhar et al., 2020)",
+        "rank": 34
+      },
+      {
+        "case_id": "m3_061",
+        "entity": "MOCA (Singh et al., 2021)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_062",
+        "entity": "EmBERT",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_063",
+        "entity": "EmBERT (Suglia et al., 2021)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_064",
+        "entity": "EmBERT (Suglia et al., 2021)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_065",
+        "entity": "EmBERT and E.T.",
+        "rank": 25
+      },
+      {
+        "case_id": "m3_066",
+        "entity": "E.T.\u2020 (Pashevich et al., 2021)",
+        "rank": 11
+      },
+      {
+        "case_id": "m3_067",
+        "entity": "E.T.\u2020 (Pashevich et al., 2021)",
+        "rank": 12
+      },
+      {
+        "case_id": "m3_068",
+        "entity": "Mintaka",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_069",
+        "entity": "Mintaka",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_070",
+        "entity": "Mintaka",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_071",
+        "entity": "UniEval",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_072",
+        "entity": "UniEval",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_073",
+        "entity": "VALHALLA (Li et al., 2022b)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_074",
+        "entity": "OURS (A) and OURS (S)",
+        "rank": 8
+      },
+      {
+        "case_id": "m3_075",
+        "entity": "VALHALLA (Li et al., 2022b)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_076",
+        "entity": "SentiEval",
+        "rank": 10
+      },
+      {
+        "case_id": "m3_077",
+        "entity": "SentiEval",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_078",
+        "entity": "SentiEval",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_079",
+        "entity": "AfriSenti",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_080",
+        "entity": "AfriSenti",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_081",
+        "entity": "TweetEval",
+        "rank": 32
+      },
+      {
+        "case_id": "m3_082",
+        "entity": "NaijaSenti",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_083",
+        "entity": "NaijaSenti",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_084",
+        "entity": "NaijaSenti",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_085",
+        "entity": "GSM8K",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_086",
+        "entity": "GSM8K",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_087",
+        "entity": "GSM8K",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_088",
+        "entity": "Vanilla Transformer",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_089",
+        "entity": "Vanilla Transformer",
+        "rank": 10
+      },
+      {
+        "case_id": "m3_090",
+        "entity": "AM-Parser",
+        "rank": 21
+      },
+      {
+        "case_id": "m3_091",
+        "entity": "Vanilla Transformer",
+        "rank": 12
+      },
+      {
+        "case_id": "m3_092",
+        "entity": "T5",
+        "rank": 26
+      },
+      {
+        "case_id": "m3_093",
+        "entity": "T5",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_094",
+        "entity": "MVQG-VL-T5",
+        "rank": 15
+      },
+      {
+        "case_id": "m3_095",
+        "entity": "MVQG-VL-T5 fine-tuned",
+        "rank": 19
+      },
+      {
+        "case_id": "m3_096",
+        "entity": "MVQG-VL-T5",
+        "rank": 20
+      },
+      {
+        "case_id": "m3_097",
+        "entity": "MVQG-VL-T5",
+        "rank": 21
+      },
+      {
+        "case_id": "m3_098",
+        "entity": "SALAM",
+        "rank": 26
+      },
+      {
+        "case_id": "m3_099",
+        "entity": "SALAM",
+        "rank": 23
+      },
+      {
+        "case_id": "m3_100",
+        "entity": "SALAM",
+        "rank": 30
+      },
+      {
+        "case_id": "m3_101",
+        "entity": "EARL",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_102",
+        "entity": "EARL",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_103",
+        "entity": "EARL",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_104",
+        "entity": "EARL Quantization",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_105",
+        "entity": "EARL Quantization",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_106",
+        "entity": "EARL Quantization",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_107",
+        "entity": "EQG",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_108",
+        "entity": "EQG",
+        "rank": 15
+      },
+      {
+        "case_id": "m3_109",
+        "entity": "EQG",
+        "rank": 12
+      },
+      {
+        "case_id": "m3_110",
+        "entity": "EQG",
+        "rank": 18
+      },
+      {
+        "case_id": "m3_111",
+        "entity": "PTQ4ViT",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_112",
+        "entity": "PTQ4ViT",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_113",
+        "entity": "None.",
+        "rank": 12
+      },
+      {
+        "case_id": "m3_114",
+        "entity": "GPT-4",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_115",
+        "entity": "GPT-4",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_116",
+        "entity": "OCR+BERT",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_117",
+        "entity": "OCR+BERT",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_118",
+        "entity": "BERT",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_119",
+        "entity": "BIRD",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_120",
+        "entity": "BIRD",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_121",
+        "entity": "longformer",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_122",
+        "entity": "longformer",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_123",
+        "entity": "PCP (Zhou et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_124",
+        "entity": "None.",
+        "rank": 12
+      },
+      {
+        "case_id": "m3_125",
+        "entity": "LDSGM (Wu et al., 2022)",
+        "rank": 18
+      },
+      {
+        "case_id": "m3_126",
+        "entity": "GOLF (Jiang et al., 2022)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_127",
+        "entity": "None.",
+        "rank": 35
+      },
+      {
+        "case_id": "m3_128",
+        "entity": "GOLF (Jiang et al., 2022)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_129",
+        "entity": "PEGASUS+NTM",
+        "rank": 16
+      },
+      {
+        "case_id": "m3_130",
+        "entity": "PEGASUS+NTM",
+        "rank": 16
+      },
+      {
+        "case_id": "m3_131",
+        "entity": "PEGASUS+NTM",
+        "rank": 11
+      },
+      {
+        "case_id": "m3_132",
+        "entity": "UniTAB",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_133",
+        "entity": "UniTAB",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_134",
+        "entity": "UniTAB (Yang et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_135",
+        "entity": "EMMA",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_136",
+        "entity": "OFA-base (Wang et al., 2022b)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_137",
+        "entity": "OFA-base (Wang et al., 2022b)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_138",
+        "entity": "ViTCAP (Fang et al., 2022)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_139",
+        "entity": "None.",
+        "rank": 55
+      },
+      {
+        "case_id": "m3_140",
+        "entity": "ViTCAP (Fang et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_141",
+        "entity": "PVI",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_142",
+        "entity": "TracIn",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_143",
+        "entity": "ChatGPT",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_144",
+        "entity": "ChatGPT (specifically for the StrategyQA dev* task).",
+        "rank": 16
+      },
+      {
+        "case_id": "m3_145",
+        "entity": "OASUM",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_146",
+        "entity": "OASUM",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_147",
+        "entity": "OASUM",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_148",
+        "entity": "SPACE",
+        "rank": 7
+      },
+      {
+        "case_id": "m3_149",
+        "entity": "MA-News",
+        "rank": 5
+      },
+      {
+        "case_id": "m3_150",
+        "entity": "MSG\u00b2 (Jang et al., 2023)",
+        "rank": 20
+      },
+      {
+        "case_id": "m3_151",
+        "entity": "BC and MSG\u00b2",
+        "rank": 10
+      },
+      {
+        "case_id": "m3_152",
+        "entity": "MSG\u00b2 (Jang et al., 2023)",
+        "rank": 12
+      },
+      {
+        "case_id": "m3_153",
+        "entity": "GRIT",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_154",
+        "entity": "GRIT",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_155",
+        "entity": "None of the models listed satisfy this condition.",
+        "rank": 67
+      },
+      {
+        "case_id": "m3_156",
+        "entity": "GRIT",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_157",
+        "entity": "GRIT",
+        "rank": 6
+      },
+      {
+        "case_id": "m3_158",
+        "entity": "UniKGQA",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_159",
+        "entity": "UniKQQA",
+        "rank": 11
+      },
+      {
+        "case_id": "m3_160",
+        "entity": "SR+NSM+E2E",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_161",
+        "entity": "SR+NSM+E2E",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_162",
+        "entity": "SR+NSM+E2E",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_163",
+        "entity": "UniKQ0A",
+        "rank": 6
+      },
+      {
+        "case_id": "m3_164",
+        "entity": "UniKQ0A",
+        "rank": 6
+      },
+      {
+        "case_id": "m3_165",
+        "entity": "UniKQ0A",
+        "rank": 10
+      },
+      {
+        "case_id": "m3_166",
+        "entity": "UniKQ0A",
+        "rank": 5
+      },
+      {
+        "case_id": "m3_167",
+        "entity": "Multialpaca",
+        "rank": 6
+      },
+      {
+        "case_id": "m3_168",
+        "entity": "Multialpaca",
+        "rank": 6
+      },
+      {
+        "case_id": "m3_169",
+        "entity": "Multialpaca",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_170",
+        "entity": "Multialpaca (Wei et al., 2023a)",
+        "rank": 5
+      },
+      {
+        "case_id": "m3_171",
+        "entity": "SpecialIFT (Fu et al., 2023) on FlanT5-XL backbone.",
+        "rank": 31
+      },
+      {
+        "case_id": "m3_172",
+        "entity": "DecomDistill$^1$ (Shridhar et al., 2022)",
+        "rank": 28
+      },
+      {
+        "case_id": "m3_173",
+        "entity": "DecomDistill$^1$ (Shridhar et al., 2022)",
+        "rank": 27
+      },
+      {
+        "case_id": "m3_174",
+        "entity": "MSP",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_175",
+        "entity": "MSP",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_176",
+        "entity": "BBH and GSM8K.",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_177",
+        "entity": "BBH",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_178",
+        "entity": "BBH",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_179",
+        "entity": "BBH",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_180",
+        "entity": "BBH",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_181",
+        "entity": "Tensor Fusion (TFN)",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_182",
+        "entity": "CSN-word",
+        "rank": 24
+      },
+      {
+        "case_id": "m3_183",
+        "entity": "Fine-tuning",
+        "rank": 19
+      },
+      {
+        "case_id": "m3_184",
+        "entity": "CSN-word",
+        "rank": 19
+      },
+      {
+        "case_id": "m3_185",
+        "entity": "CEAR (Zhao et al., 2023)",
+        "rank": 14
+      },
+      {
+        "case_id": "m3_186",
+        "entity": "CEAR (Zhao et al., 2023)",
+        "rank": 13
+      },
+      {
+        "case_id": "m3_187",
+        "entity": "CEAR (Zhao et al., 2023)",
+        "rank": 13
+      },
+      {
+        "case_id": "m3_188",
+        "entity": "None.",
+        "rank": 15
+      },
+      {
+        "case_id": "m3_189",
+        "entity": "CEAR (Zhao et al., 2023)",
+        "rank": 13
+      },
+      {
+        "case_id": "m3_190",
+        "entity": "PromptPG (Lu et al., 2023)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_191",
+        "entity": "PromptPG (Lu et al., 2023)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_192",
+        "entity": "PromptPG (Lu et al., 2023)",
+        "rank": 9
+      },
+      {
+        "case_id": "m3_193",
+        "entity": "KATE (Liu et al., 2022a)",
+        "rank": 43
+      },
+      {
+        "case_id": "m3_194",
+        "entity": "None. No method fits those criteria.",
+        "rank": 48
+      },
+      {
+        "case_id": "m3_195",
+        "entity": "KATE (Liu et al., 2022a)",
+        "rank": 42
+      },
+      {
+        "case_id": "m3_196",
+        "entity": "ELLE (Qin et al., 2022), CTO (Sialiam et al., 2022)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_197",
+        "entity": "K-Adapter (Wu et al., 2021)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_198",
+        "entity": "CMR (Lin et al., 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_199",
+        "entity": "IC-Retrieval",
+        "rank": 109
+      },
+      {
+        "case_id": "m3_200",
+        "entity": "IRCoT",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_201",
+        "entity": "Internet-Fewshot",
+        "rank": 72
+      },
+      {
+        "case_id": "m3_202",
+        "entity": "Knowledge Solver (Feng et al., 2023)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_203",
+        "entity": "MeLo (Zhong et al., 2023)",
+        "rank": 78
+      },
+      {
+        "case_id": "m3_204",
+        "entity": "GRACED (Hartviger et al., 2023)",
+        "rank": 31
+      },
+      {
+        "case_id": "m3_205",
+        "entity": "DuConv (Wu et al., 2019)",
+        "rank": 6
+      },
+      {
+        "case_id": "m3_206",
+        "entity": "DuConv (Wu et al., 2019)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_207",
+        "entity": "TG-ReDial (Zhou et al., 2020)",
+        "rank": 8
+      },
+      {
+        "case_id": "m3_208",
+        "entity": "DSM (Guo et al., 2022)",
+        "rank": 31
+      },
+      {
+        "case_id": "m3_209",
+        "entity": "DSM (Guo et al., 2022)",
+        "rank": 30
+      },
+      {
+        "case_id": "m3_210",
+        "entity": "DSM (Guo et al., 2022)",
+        "rank": 30
+      },
+      {
+        "case_id": "m3_211",
+        "entity": "DSM (Guo et al., 2022)",
+        "rank": 22
+      },
+      {
+        "case_id": "m3_212",
+        "entity": "Q-TOD (T5-Large)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_213",
+        "entity": "Q-TOD (T5-Large)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_214",
+        "entity": "SimCTG",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_215",
+        "entity": "SimCTG",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_216",
+        "entity": "SimCTG",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_217",
+        "entity": "LADAN (Xu et al., 2020)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_218",
+        "entity": "LADAN (Xu et al., 2020)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_219",
+        "entity": "LADAN (Xu et al., 2020)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_220",
+        "entity": "PPO",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_221",
+        "entity": "GeDi",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_222",
+        "entity": "GeDi",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_223",
+        "entity": "GeDi",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_224",
+        "entity": "DExperts",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_225",
+        "entity": "DExperts",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_226",
+        "entity": "PPLM",
+        "rank": 7
+      },
+      {
+        "case_id": "m3_227",
+        "entity": "PPLM",
+        "rank": 6
+      },
+      {
+        "case_id": "m3_228",
+        "entity": "PPLM",
+        "rank": 6
+      },
+      {
+        "case_id": "m3_229",
+        "entity": "PPLM",
+        "rank": 17
+      },
+      {
+        "case_id": "m3_230",
+        "entity": "MAPPO",
+        "rank": 28
+      },
+      {
+        "case_id": "m3_231",
+        "entity": "MAPPO",
+        "rank": 6
+      },
+      {
+        "case_id": "m3_232",
+        "entity": "MAPPO",
+        "rank": 28
+      },
+      {
+        "case_id": "m3_233",
+        "entity": "SPADE",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_234",
+        "entity": "SPADE (Hwang et al., 2021)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_235",
+        "entity": "SPADE",
+        "rank": 5
+      },
+      {
+        "case_id": "m3_236",
+        "entity": "Doc2Graph",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_237",
+        "entity": "Doc2Graph",
+        "rank": 5
+      },
+      {
+        "case_id": "m3_238",
+        "entity": "LayoutXLM",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_239",
+        "entity": "LayoutXLM",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_240",
+        "entity": "SERA",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_241",
+        "entity": "SERA",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_242",
+        "entity": "MSAU-PAF",
+        "rank": 8
+      },
+      {
+        "case_id": "m3_243",
+        "entity": "MSAU-PAF",
+        "rank": 13
+      },
+      {
+        "case_id": "m3_244",
+        "entity": "ViHOS",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_245",
+        "entity": "ViHOS",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_246",
+        "entity": "ViHOS",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_247",
+        "entity": "ViHOS",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_248",
+        "entity": "UIT-HSD",
+        "rank": 21
+      },
+      {
+        "case_id": "m3_252",
+        "entity": "XSumFaith",
+        "rank": 34
+      },
+      {
+        "case_id": "m3_253",
+        "entity": "None.",
+        "rank": 13
+      },
+      {
+        "case_id": "m3_254",
+        "entity": "XSumFaith",
+        "rank": 29
+      },
+      {
+        "case_id": "m3_255",
+        "entity": "Shared-Adapter\u2020",
+        "rank": 20
+      },
+      {
+        "case_id": "m3_256",
+        "entity": "HyperDecoder",
+        "rank": 24
+      },
+      {
+        "case_id": "m3_257",
+        "entity": "HyperDecoder\u2020",
+        "rank": 17
+      },
+      {
+        "case_id": "m3_258",
+        "entity": "Hyperformer++",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_259",
+        "entity": "Adapter\u2020",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_260",
+        "entity": "MPT",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_261",
+        "entity": "MPT",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_262",
+        "entity": "SPoT",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_263",
+        "entity": "PT",
+        "rank": 22
+      },
+      {
+        "case_id": "m3_264",
+        "entity": "Naive_LongT5-Base-SS (Inan et al., 2022)",
+        "rank": 36
+      },
+      {
+        "case_id": "m3_265",
+        "entity": "Naive_LongT5-Base-SS (Inan et al., 2022)",
+        "rank": 36
+      },
+      {
+        "case_id": "m3_266",
+        "entity": "Seq-ELECTRA-Base (Zhang et al., 2021)",
+        "rank": 41
+      },
+      {
+        "case_id": "m3_267",
+        "entity": "AMRBART",
+        "rank": 29
+      },
+      {
+        "case_id": "m3_268",
+        "entity": "AMRBART (under AMR 2.0)",
+        "rank": 17
+      },
+      {
+        "case_id": "m3_269",
+        "entity": "TET (Hu et al., 2020)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_270",
+        "entity": "TET (Hu et al., 2020)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_271",
+        "entity": "RGCN (Pan et al., 2021)",
+        "rank": 7
+      },
+      {
+        "case_id": "m3_272",
+        "entity": "RGCN (Pan et al., 2021)",
+        "rank": 7
+      },
+      {
+        "case_id": "m3_273",
+        "entity": "MetaBINK (Li et al., 2022b)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_274",
+        "entity": "MetaBINK (Li et al., 2022b)",
+        "rank": 5
+      },
+      {
+        "case_id": "m3_275",
+        "entity": "MetaBINK (Li et al., 2022b)",
+        "rank": 3
+      },
+      {
+        "case_id": "m3_276",
+        "entity": "CoT Fine-tuned (Magister et al., 2023)",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_277",
+        "entity": "One-Round Distillation",
+        "rank": 2
+      },
+      {
+        "case_id": "m3_278",
+        "entity": "CoT Fine-tuned (Magister et al., 2023)",
+        "rank": 4
+      },
+      {
+        "case_id": "m3_279",
+        "entity": "CoT Fine-tuned (Magister et al., 2023)",
+        "rank": 7
+      },
+      {
+        "case_id": "m3_280",
+        "entity": "DialoGPT Large",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_281",
+        "entity": "DialoGPT Large",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_282",
+        "entity": "GPT-Neo 1.3B",
+        "rank": 28
+      },
+      {
+        "case_id": "m3_283",
+        "entity": "DialoGPT Large",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_284",
+        "entity": "SpanBERT",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_285",
+        "entity": "SpanBERT",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_286",
+        "entity": "Composition (Narayyan et al., 2022a) on the $\\mu$ARD /2 dataset.",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_287",
+        "entity": "Composition (Narayan et al., 2022a)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_288",
+        "entity": "Nucleus-T5",
+        "rank": 58
+      },
+      {
+        "case_id": "m3_289",
+        "entity": "GWLAN",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_290",
+        "entity": "GWLAN",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_291",
+        "entity": "GWLAN",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_292",
+        "entity": "ConCN clusters (Li et al., 2023a)",
+        "rank": 6
+      },
+      {
+        "case_id": "m3_293",
+        "entity": "ConCN clusters (Li et al., 2023a)",
+        "rank": 8
+      },
+      {
+        "case_id": "m3_294",
+        "entity": "MMA",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_295",
+        "entity": "MMA",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_296",
+        "entity": "Wait-k",
+        "rank": 15
+      },
+      {
+        "case_id": "m3_297",
+        "entity": "Discup* (Zhang and Song, 2022)",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_298",
+        "entity": "None of the listed methods satisfy this condition.",
+        "rank": 30
+      },
+      {
+        "case_id": "m3_299",
+        "entity": "Discup* (Zhang and Song, 2022)",
+        "rank": 1
       }
     ]
   },
-  "generated_at": "2026-07-14T08:37:33"
+  "generated_at": "2026-07-14T09:22:17"
 }

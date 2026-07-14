@@ -269,16 +269,27 @@ def _normalize_evidence_citations(answer: str, evidence_items: list[dict[str, An
     used_ids: list[str] = []
     answer_without_direct_pages = re.sub(r"\[p\.\s*\d+\]", "", answer, flags=re.IGNORECASE)
 
-    def replace_evidence_id(match: re.Match[str]) -> str:
-        evidence_id = f"E{match.group(1)}".upper()
-        item = evidence_by_id.get(evidence_id)
-        if not item:
-            return ""
-        if evidence_id not in used_ids:
-            used_ids.append(evidence_id)
-        return f"[{used_ids.index(evidence_id) + 1}]"
+    def replace_evidence_group(match: re.Match[str]) -> str:
+        """Rewrite one bracket of evidence identifiers into numbered references.
 
-    normalized = re.sub(r"\[E\s*(\d+)\]", replace_evidence_id, answer_without_direct_pages, flags=re.IGNORECASE)
+        Models group identifiers ("[E1, E4]") as often as they emit them singly, so a
+        single-id pattern silently leaves the raw identifiers in the answer and drops those
+        citations. Handle the whole bracket and map every identifier inside it.
+        """
+        refs: list[str] = []
+        for number in re.findall(r"\d+", match.group(0)):
+            evidence_id = f"E{number}".upper()
+            if evidence_id not in evidence_by_id:
+                continue  # identifier the model invented: drop it rather than surface it
+            if evidence_id not in used_ids:
+                used_ids.append(evidence_id)
+            refs.append(f"[{used_ids.index(evidence_id) + 1}]")
+        return "".join(refs)
+
+    normalized = re.sub(
+        r"\[\s*E\s*\d+(?:\s*(?:,|;|/|&|and)\s*E?\s*\d+)*\s*\]",
+        replace_evidence_group, answer_without_direct_pages, flags=re.IGNORECASE,
+    )
     valid_pages = {int(item["page"]) for item in evidence_items if isinstance(item.get("page"), int)}
 
     def remove_unverified_page(match: re.Match[str]) -> str:

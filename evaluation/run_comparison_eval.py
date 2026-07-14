@@ -112,7 +112,10 @@ def fixed_chunks(pages: list[dict], size: int = 1200, overlap: int = 150) -> lis
 
 # ── citation parsing ──────────────────────────────────────────────────────
 _PCITE = re.compile(r"\[\s*p\.?\s*(\d+)\s*\]|\(\s*pages?\s*(\d+)(?:\s*[-–]\s*\d+)?\s*\)", re.I)
-_ECITE = re.compile(r"\[\s*E\s*(\d+)\s*\]", re.I)
+# Models group identifiers ("[E1, E4]") as often as they emit them singly; a single-id pattern
+# would count those sentences as uncited and understate citation recall.
+_ECITE = re.compile(r"\[\s*E\s*(\d+)(?:\s*(?:,|;|/|&|and)\s*E?\s*\d+)*\s*\]", re.I)
+_EIDS = re.compile(r"\d+")
 _SENT = re.compile(r"(?<=[.!?])\s+")
 
 
@@ -123,13 +126,18 @@ def _clean(text: str) -> str:
     return re.sub(r"[ \t]+", " ", text).strip()
 
 
-def sentences_with(answer: str, pattern: re.Pattern, group_all=False) -> list[tuple[str, list[int]]]:
+def sentences_with(answer: str, pattern: re.Pattern, all_ids: bool = False) -> list[tuple[str, list[int]]]:
     # Collapse the space inside "[p. 3]" -> "[p.3]" so the period inside the citation
     # is not treated as a sentence boundary (which would split the citation in two).
     answer = re.sub(r"\[\s*p\.?\s*(\d+)\s*\]", r"[p.\1]", answer, flags=re.I)
     out = []
     for sent in _SENT.split(answer.replace("\n", " ")):
-        ids = [int(next(g for g in m.groups() if g)) for m in pattern.finditer(sent)]
+        if all_ids:
+            # "[E1, E4]" carries two citations; take every identifier in the bracket, not just
+            # the first capture group, or the second one is silently dropped.
+            ids = [int(n) for m in pattern.finditer(sent) for n in _EIDS.findall(m.group(0))]
+        else:
+            ids = [int(next(g for g in m.groups() if g)) for m in pattern.finditer(sent)]
         if ids and len(_clean(sent)) > 12:
             out.append((_clean(sent), ids))
     return out
@@ -226,7 +234,7 @@ async def run_system(system: str, case: dict, model: str) -> dict:
     # resolve cited page numbers
     if mode == "indirect":
         cited = [(s, [ctx[e-1].get("page") for e in eids if 1 <= e <= len(ctx)])
-                 for s, eids in sentences_with(answer, _ECITE)]
+                 for s, eids in sentences_with(answer, _ECITE, all_ids=True)]
     else:
         cited = sentences_with(answer, _PCITE)
     return {"answer": answer, "cited": cited, "ctx": ctx, "mode": mode,

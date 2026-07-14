@@ -60,9 +60,11 @@ cross-document localization on labeled benchmarks. On 51 cases, the generated an
 stay grounded in their retrieved context with a mean score of 0.971, no answer atom
 contradicts its source, and 94\% of inline citations are fully supported with none
 unsupported. BM25-primary retrieval reaches Recall@5 of 0.93 across 25 papers, and figure and table
-questions route to the correct visual element in all 18 pilot cases. Cross-document
-localization sits at or below a random-guess floor, which we report as our clearest
-open problem. Against local reimplementations of PDF-chat, vanilla RAG, and a
+questions route to the correct visual element in all 18 pilot cases. On M3SciQA's
+cross-document localization task, retrieving from the question alone sits near chance,
+but resolving the anchor figure with the same local multimodal model first reaches an
+MRR of 0.474, ahead of every open-source baseline reported there and close to GPT-4o
+(0.500), while running on one machine. Against local reimplementations of PDF-chat, vanilla RAG, and a
 PaperQA2-style pipeline, ScholAR leads on answer correctness and faithfulness, and
 when a question's answer is absent from the retrieved paper the local models decline
 rather than fabricate on 90 to 100\% of a provably-unanswerable set, each within an
@@ -115,9 +117,10 @@ Our contributions are:
         grounding score of 0.971 with a zero contradiction rate and 94\% fully
         supported citations.
   \item Automated benchmarks and results for retrieval, retrieval-support
-        faithfulness, visual grounding, and cross-document localization, each
-        reported with its limitations, including a cross-document result at or below
-        a random-guess floor.
+        faithfulness, visual grounding, and cross-document localization, the last
+        measured against the published baselines of M3SciQA on its own data, where a
+        locally resolved figure lifts localization from near-chance to competitive with
+        a frontier cloud model.
   \item A 100-case benchmark across 25 papers spanning text, mathematical, and
         figure questions, with gold answers verified against their source passages,
         and a model-agnostic human-evaluation protocol over four local models. The
@@ -566,11 +569,11 @@ actually controls, the evidence-identifier citation mechanism, is the stable one
 around the citations tracks the strength of the underlying model.
 
 llama3.1:8b is the instructive case: it emits the fewest citations (85, against 579 for
-qwen3.5:9b) yet has the highest support rate (0.941). When it cites, it cites well, but it
-answers tersely and leaves more of its prose uncited, which is what drags its faithfulness
-down. A high citation-support rate alone is therefore not evidence of a faithful answer, which
-is why we report both. We read this as refining the model-agnostic claim rather than confirming
-it: the citation mechanism transfers across models, answer quality still depends on the model.
+qwen3.5:9b) yet has the highest support rate (0.941). It cites well but answers tersely,
+leaving more prose uncited, which drags its faithfulness down; a high support rate alone is
+therefore not evidence of a faithful answer, which is why we report both. This refines the
+model-agnostic claim rather than confirming it: the citation mechanism transfers, answer
+quality still depends on the model.
 
 \begin{table}[t]
   \centering
@@ -605,16 +608,55 @@ visual correctness, and many answers are also restated in nearby prose. Separati
 these effects requires a correctness-based judge, which we leave to the human study.
 
 \subsection{Multi-Document Localization}
-On the 10 arXiv-resolvable cases, ScholAR recovers the correct cited paper in the
-top 5 half the time (Recall@5 0.50, MRR 0.183) and never at rank 1 (Recall@1 0.00).
-A random-guess floor over the same candidate pool (on average 8.0 candidate papers
-per case; floor Recall@5 0.625, MRR 0.340) puts the system at or below chance on this
-small benchmark. An oracle that restricts retrieval to the anchor plus the single
-correct paper still reaches only Recall@1 0.00 and MRR 0.289, which points to a
-difficulty that is not only cross-paper competition but also within-paper chunk
-ranking on these questions. This is the clearest open problem in the system, and it
-echoes M3SciQA's finding that even large models struggle at cross-paper
-localization~\citep{li2024m3sciqa}.
+\label{sec:auto-multidoc}
+We evaluate cross-document localization on M3SciQA~\citep{li2024m3sciqa}, whose \emph{locality}
+task is exactly ours: given an anchor paper and a question about one of its figures, rank the
+anchor's bibliography (a mean of 47.9 candidates) to find the reference that answers it. Their
+297 gold-labeled locality cases and metric place us against their published baselines
+(Table~\ref{tab:multidoc}).
+
+Text-only retrieval is barely above chance. BM25-primary reaches MRR 0.180 against an empirical
+random floor of 0.121 on the pools we rank, and dense MiniLM (0.125) is indistinguishable from
+random; M3SciQA report 0.127 for BM25 against a floor of 0.126, so our setup reproduces the
+shape of theirs. This also explains our own 18-case benchmark, where BM25 scored 0.183: the
+question names an entity that appears only inside a figure, so a signal over titles and
+abstracts has almost nothing to match against.
+
+The bottleneck is therefore not retrieval but resolving what the question points at. Routing the
+anchor figure through the same local multimodal model first, then retrieving with the resolved
+entity, lifts MRR to 0.474 (qwen3.5:9b) and 0.455 (gemma4:12b): 2.6 times the text-only pipeline
+and 3.3 times the strongest open-source multimodal baseline they report (0.144), ahead of GPT-4V
+(0.400), and within 0.026 of GPT-4o (0.500), on a laptop. Expert humans remain far ahead at
+0.796, so the task is not solved. One caveat keeps this honest: our pipeline \emph{decomposes}
+the task (vision resolves the entity, then BM25 ranks the bibliography) whereas M3SciQA prompt
+their baselines to rank papers directly, so this compares systems on a shared task and metric,
+not under one identical protocol.
+
+\begin{table}[t]
+  \centering
+  \caption{Multi-document localization on M3SciQA's locality task (297 labeled cases, mean
+           47.9 candidate references). Rows marked $\dagger$ are figures published by
+           M3SciQA~\citep{li2024m3sciqa}; the rest are measured here. Resolving the figure with
+           a local multimodal model, rather than retrieving from the question alone, is what
+           moves this task.}
+  \label{tab:multidoc}
+  \setlength{\tabcolsep}{2pt}
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{System} & \textbf{MRR} & \textbf{R@5} \\
+    \midrule
+    Human expert$^\dagger$                    & 0.796 & -- \\
+    GPT-4o$^\dagger$ (cloud)                  & 0.500 & -- \\
+    \textbf{ScholAR + vision (qwen3.5)}       & \textbf{0.474} & \textbf{0.606} \\
+    \textbf{ScholAR + vision (gemma4)}        & 0.455 & 0.572 \\
+    GPT-4V$^\dagger$ (cloud)                  & 0.400 & -- \\
+    text-emb-3-large$^\dagger$ (cloud)        & 0.297 & -- \\
+    ScholAR BM25 (text only)                  & 0.180 & 0.242 \\
+    Best open-source LMM$^\dagger$            & 0.144 & -- \\
+    BM25$^\dagger$ / Random$^\dagger$         & 0.127 / 0.126 & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \subsection{Comparison with Local Baselines}
 \label{sec:auto-compare}
@@ -657,17 +699,15 @@ this is a resource-matched local comparison, not a claim to frontier-scale quali
 \subsection{Abstention on Unanswerable Questions}
 \label{sec:abstention}
 A grounded system should decline when the answer is not present rather than invent one. Every
-case above is answerable, so we built a complementary set of 20 provably-unanswerable questions:
-each paper-specific question is posed against a different paper in which the queried fact is
-provably absent (verified by exact substring over that paper's text), so the correct response is
-to abstain. Table~\ref{tab:permodel} reports how often each model declines. All four abstain on
-the large majority of cases: qwen3.5:9b and llama3.1:8b decline on every question, gemma4:12b on
-19 of 20, and mistral:7b on 18 of 20. The few non-abstentions are not free invention but a benign
-overlap: on a question about minibatch size, the wrongly paired paper independently reports a
-minibatch size, so the model surfaces a real but off-target value. The indirect-evidence prompt,
-not any one model, drives this behavior. The set is small and synthetic, and abstention is scored
-by a refusal-phrase detector that we validated by reading every model output, so we read this as
-evidence that grounding induces abstention rather than as a precise rate.
+case above is answerable, so we built 20 provably-unanswerable questions: each paper-specific
+question is posed against a different paper in which the queried fact is provably absent
+(verified by exact substring), so the correct response is to abstain. All four models decline on
+the large majority (Table~\ref{tab:permodel}): qwen3.5:9b and llama3.1:8b on every question,
+gemma4:12b on 19 of 20, mistral:7b on 18 of 20. The few non-abstentions are a benign overlap
+rather than invention: on a minibatch-size question the wrongly paired paper independently
+reports a minibatch size, so the model surfaces a real but off-target value. The set is small and
+synthetic and abstention is scored by a refusal detector we validated by reading every output, so
+we read this as evidence that grounding induces abstention, not as a precise rate.
 
 \begin{table}[t]
   \centering
@@ -692,51 +732,16 @@ evidence that grounding induces abstention rather than as a precise rate.
   \end{tabular}
 \end{table}
 
-\begin{table}[t]
-  \centering
-  \caption{One question through the unmodified pipeline, verbatim from the logs. The
-           middle row is a real failure we do not hide: the answer is right, but a surplus
-           citation points at a sentence that does not support it, which is what keeps
-           citation precision below 1.0 (Table~\ref{tab:compare}).}
-  \label{tab:example}
-  \small
-  \begin{tabular}{@{}p{0.96\columnwidth}@{}}
-    \toprule
-    \textbf{Question:} What is the size of a minibatch used for each SGD update? \\
-    \textbf{Gold fact:} ``a minibatch of 80 sentences'' \citep{bahdanau2015nmt}, p.\,5 \\
-    \midrule
-    \emph{(i) Asked of the paper that contains the answer} \\[1pt]
-    gemma4:12b: ``The training process utilized a minibatch size of 80 sentences
-    for calculating each SGD update direction~[1].'' \\[1pt]
-    \quad$[1]\rightarrow$ p.\,5: ``Each SGD update direction is computed using a
-    minibatch of 80 sentences.''\hfill \textbf{supported} \\
-    \midrule
-    \emph{(ii) The same pipeline, a surplus citation} \\[1pt]
-    qwen3.5:9b: same correct answer, but additionally cites p.\,2: ``In this paper, we
-    show that the proposed approach of jointly learning to align and
-    translate\ldots''\hfill \textbf{unsupported} \\
-    \midrule
-    \emph{(iii) Asked of a paper that does not contain the answer} \\[1pt]
-    qwen3.5:9b: ``The provided evidence does not state the specific minibatch size used
-    for each SGD update, but rather discusses optimal sizes in different
-    contexts.''\hfill \textbf{abstains} \\
-    \bottomrule
-  \end{tabular}
-\end{table}
 
 \subsection{Local Deployability}
 \label{sec:efficiency}
-Because ScholAR targets a single local machine, we also measured what a query costs
-there. On the same laptop (Apple Silicon, 18\,GB), we timed the answering path (BM25
-retrieval, then generation) over 20 questions for each of the four local models.
-Retrieval is not the bottleneck: BM25 over one paper's chunks returns in about 40\,ms
-regardless of model, so end-to-end latency is set almost entirely by generation. Every
-model fits within the 18\,GB budget (roughly 6 to 8\,GB loaded, weights plus KV cache)
-and answers in single-digit to low-double-digit seconds (Table~\ref{tab:permodel}).
-The text-only 7 to 8 billion parameter models (mistral:7b, llama3.1:8b) are fastest, at
-about 6 seconds and 25 tokens per second; the larger multimodal models cost more per
-token but stay interactive. No cloud call and no GPU cluster: one consumer laptop runs
-the whole loop.
+We also measured what a query costs on the target machine, timing the answering path (BM25
+retrieval, then generation) over 20 questions per model on the same laptop (Apple Silicon,
+18\,GB). Retrieval is not the bottleneck: BM25 over one paper's chunks returns in about
+40\,ms regardless of model, so latency is set almost entirely by generation. Every model fits
+the 18\,GB budget (6 to 8\,GB loaded, weights plus KV cache) and answers in single-digit to
+low-double-digit seconds (Table~\ref{tab:permodel}), the 7 to 8 billion parameter text-only
+models fastest at about 6 seconds. No cloud call and no GPU cluster: one laptop runs the loop.
 
 % -----------------------------------------------------------------------
 \section{Human Evaluation (In Progress)}
@@ -794,17 +799,16 @@ auditable, and in which the generated answers are measurably grounded, with no
 contradictions and no unsupported citations on the studied set. The limits of that
 evidence set the agenda for the rest of this section.
 
-The retrieval and retrieval-support benchmarks now span 100 cases across 25 papers,
-but their gold chunks are auto-derived from mined facts rather than hand-labeled, and
-the mined queries carry lexical overlap that likely flatters lexical retrieval; the
-3-paper hand-labeled sets remain the higher-precision anchor. The visual (18 cases)
-and multi-document (10 to 18 cases) benchmarks are still small and hand-labeled on
-three papers, so several of their deltas fall within noise and carry no significance
-testing. The abstention probe is likewise small and synthetic (20 auto-constructed
-cross-paper negatives scored by a validated refusal detector), so its near-total
-abstention rates indicate a tendency rather than a guarantee. The generation-faithfulness metric rewards grounding to retrieved context and
-the absence of contradiction, which leaves it insensitive to subtle unfaithfulness,
-and that gap is exactly what the human evaluation exists to close.
+The retrieval and retrieval-support benchmarks span 100 cases across 25 papers, but their
+gold chunks are auto-derived from mined facts rather than hand-labeled, and the mined queries
+carry lexical overlap that likely flatters lexical retrieval; the 3-paper hand-labeled sets
+remain the higher-precision anchor. The visual benchmark (18 cases) is small and hand-labeled,
+so its deltas fall within noise and carry no significance testing, and the abstention probe is
+likewise small and synthetic (20 auto-constructed negatives scored by a validated refusal
+detector), so its near-total rates indicate a tendency, not a guarantee. The
+generation-faithfulness metric rewards grounding to retrieved context and the absence of
+contradiction, leaving it insensitive to subtle unfaithfulness; closing that gap is what the
+human evaluation exists for.
 
 Our comparison (Section~\ref{sec:auto-compare}) is against local reimplementations of
 PDF-chat, vanilla RAG, and PaperQA2's rerank-and-summarize step, not against the
@@ -812,26 +816,26 @@ hosted OpenScholar, PaperQA2, or SciRAG. Those systems depend on cloud-hosted mo
 and large datastores, so a head-to-head would require either a cloud run, contradicting
 our local-only design, or crippling them to an untested backend; the honest scope of
 our result is therefore resource-matched local systems, not frontier-scale quality.
-Finally, cross-document localization is at or below a random floor and the oracle
-result suggests a within-paper ranking difficulty on these questions, which is our
-clearest open problem.
+Finally, cross-document localization is competitive only once the anchor figure is
+resolved by the vision model; from the question text alone it sits near chance, and even
+our best configuration (MRR 0.474) remains far below the 0.796 of expert humans on the
+same task, so the cross-document setting stays the weakest part of the system.
 
 % -----------------------------------------------------------------------
 \section{Conclusion}
 % -----------------------------------------------------------------------
-We presented ScholAR, a fully local retrieval-augmented system for grounded
-scientific document comprehension that combines page-preserving chunking with
-indirect citation grounding and extends to visual and multi-document questions. On
-51 cases its generated answers are grounded with a mean score of 0.971, no
-contradictions, and 94\% fully supported citations; retrieval reaches Recall@5 of 0.93
-across 25 papers; and figure and table routing is correct in all 18 pilot cases. Against
-local baselines ScholAR leads on answer correctness and faithfulness, and on
-unanswerable questions the local models decline rather than fabricate 90 to 100\% of the
-time. Swapping the generation model shows the citation layer transfers while answer
-faithfulness does not, so grounding is model-agnostic only where the design enforces it.
-Cross-document localization is at or below chance and is our clearest open problem. We
-contribute a 100-case, 25-paper benchmark and a human-evaluation protocol whose expert
-scoring will replace the placeholders reported here.
+We presented ScholAR, a fully local retrieval-augmented system for grounded scientific
+document comprehension combining page-preserving chunking with indirect citation grounding,
+extended to visual and multi-document questions. Its generated answers are grounded with a
+mean score of 0.971 and 94\% fully supported citations; retrieval reaches Recall@5 of 0.93
+across 25 papers; it leads local baselines on correctness and faithfulness; and on
+unanswerable questions the models decline rather than fabricate 90 to 100\% of the time.
+Swapping the generation model shows the citation layer transfers while answer faithfulness
+does not, so grounding is model-agnostic only where the design enforces it. On M3SciQA,
+resolving the anchor figure locally lifts cross-document localization from near-chance to
+MRR 0.474, ahead of every open-source baseline reported there and close to GPT-4o, though
+still far below expert humans. We contribute a 100-case, 25-paper benchmark and a
+human-evaluation protocol whose scoring will replace the placeholders reported here.
 
 \bibliography{scholar_references}
 

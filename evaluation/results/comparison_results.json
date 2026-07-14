@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-11T22:34:30",
+  "generated_at": "2026-07-14T10:07:32",
   "model": "qwen3.5:9b",
   "nli_mode": "semantic",
   "summary": {
@@ -17969,46 +17969,6 @@
       "invalid_page_rate": 0.0,
       "hallucination_rate": 0.0,
       "gold_cite_recall": null
-    },
-    "scholar_rcs::mine_text_001": {
-      "system": "scholar_rcs",
-      "case_id": "mine_text_001",
-      "source": "diverse",
-      "paper_id": "2006.11239",
-      "answer": "Based on the provided evidence, there is no specific numerical value listed in Table 4 or any other table within the text regarding Negative Log-Likelihood (NLL) scores. The document discusses FID scores for LSUN datasets and mentions Table 4 concerning unconditional CIFAR10 test set rate-distortion values [E2]. While mathematical formulations of loss functions are discussed, no results tables containing specific numerical NLL values on CIFAR10 are present in the text provided [E3]. Consequently, while one row labeled 'Ours (L, ﬁxed isotropic Σ)' is mentioned as having an NLL value of ≤3.70 under CIFAR10 results in Table 1 according to a specific citation [E1], this information appears inconsistent with the claim that the text does not contain such data or mentions for that specific model variant on CIFAR10 regarding NLL [E2]. Therefore, based strictly on the conflicting evidence provided, no definitive single value can be confirmed without further clarification of which table is being referenced.",
-      "cited": [
-        [
-          "The document discusses FID scores for LSUN datasets and mentions Table 4 concerning unconditional CIFAR10 test set rate-distortion values .",
-          [
-            13
-          ]
-        ],
-        [
-          "While mathematical formulations of loss functions are discussed, no results tables containing specific numerical NLL values on CIFAR10 are present in the text provided .",
-          [
-            14
-          ]
-        ],
-        [
-          "Consequently, while one row labeled 'Ours (L, ﬁxed isotropic Σ)' is mentioned as having an NLL value of ≤3.70 under CIFAR10 results in Table 1 according to a specific citation , this information appears inconsistent with the claim that the text does not contain such data or mentions for that specific model variant on CIFAR10 regarding NLL .",
-          [
-            5,
-            13
-          ]
-        ]
-      ],
-      "ctx_texts": [
-        "In Table 1 under CIFAR10 results, the row for 'Ours (L, ﬁxed isotropic Σ)' lists an NLL value of ≤3.70.",
-        "The provided text discusses FID scores for LSUN datasets and mentions Table 4 regarding unconditional CIFAR10 test set rate-distortion values, but it does not contain any data or mention of 'NLL' (Negative Log-Likelihood) nor the specific model variant 'Ours (L, fixed isotropic Σ)' on CIFAR10.",
-        "The provided text discusses mathematical formulations of loss functions (Equations 22-26) and experimental details regarding neural network architecture choices such as using Group Normalization instead of Weight Normalization, feature map resolutions for different model sizes, but it does not contain any results tables or specific numerical values for NLL on CIFAR10.",
-        "Figure 13: Unconditional CIFAR10 generated samples 19"
-      ],
-      "n_pages": 25,
-      "gold_must_include": [
-        "Ours (L, fixed isotropic Σ)",
-        "7.67±0.13"
-      ],
-      "gold_page": null
     }
   }
 }
