@@ -562,14 +562,14 @@ the job of the human evaluation (Section~\ref{sec:humaneval}).
 ScholAR's premise is that grounding lives in the retrieval and application layer, not in the
 model, so we swapped only the generation model and re-ran the pipeline over the 100 diverse
 cases (Table~\ref{tab:models}). Only half of that premise survives. Generation faithfulness
-does \emph{not} hold constant: it ranges from 0.719 (llama3.1:8b) to 0.947 (gemma4:12b), and
-llama3.1:8b carries the only non-trivial hallucination rate (0.046). Citation support, by
-contrast, stays within a narrow band for every model (0.839 to 0.941). The layer the design
+does \emph{not} hold constant: it ranges from 0.719 (llama3.1:8b) to 0.951 (gemma4:12b), and
+llama3.1:8b carries the only non-trivial hallucination rate (0.041). Citation support, by
+contrast, stays within a narrow band for every model (0.868 to 0.951). The layer the design
 actually controls, the evidence-identifier citation mechanism, is the stable one; the prose
 around the citations tracks the strength of the underlying model.
 
-llama3.1:8b is the instructive case: it emits the fewest citations (85, against 579 for
-qwen3.5:9b) yet has the highest support rate (0.941). It cites well but answers tersely,
+llama3.1:8b is the instructive case: it emits the fewest citations (81, against 587 for
+qwen3.5:9b) yet has the highest support rate (0.951). It cites well but answers tersely,
 leaving more prose uncited, which drags its faithfulness down; a high support rate alone is
 therefore not evidence of a faithful answer, which is why we report both. This refines the
 model-agnostic claim rather than confirming it: the citation mechanism transfers, answer
@@ -588,10 +588,10 @@ quality still depends on the model.
     \toprule
     \textbf{Model} & \textbf{Faith.} & \textbf{Hall.} & \textbf{Cites} & \textbf{Supp.} \\
     \midrule
-    gemma4:12b   & 0.947 & 0.001 & 289 & 0.879 \\
-    qwen3.5:9b   & 0.888 & 0.000 & 579 & 0.872 \\
-    mistral:7b   & 0.819 & 0.006 & 205 & 0.839 \\
-    llama3.1:8b  & 0.719 & 0.046 &  85 & 0.941 \\
+    gemma4:12b   & 0.951 & 0.001 & 366 & 0.907 \\
+    qwen3.5:9b   & 0.908 & 0.003 & 587 & 0.888 \\
+    mistral:7b   & 0.809 & 0.006 & 228 & 0.868 \\
+    llama3.1:8b  & 0.719 & 0.041 &  81 & 0.951 \\
     \bottomrule
   \end{tabular}
 \end{table}

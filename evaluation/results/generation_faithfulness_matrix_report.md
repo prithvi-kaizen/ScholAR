@@ -6,7 +6,7 @@ Automated per-model faithfulness of ScholAR's generated answers. Same metric and
 
 | Model | Gen-faithfulness | Contradiction rate | Citation support | S / P / U |
 |---|---:|---:|---:|---:|
-| `qwen3.5:9b` | 0.888 | 0.0 | 0.872 | 505 / 71 / 3 |
-| `gemma4:12b` | 0.947 | 0.001 | 0.879 | 254 / 30 / 5 |
-| `llama3.1:8b` | 0.719 | 0.046 | 0.941 | 80 / 3 / 2 |
-| `mistral:7b` | 0.819 | 0.006 | 0.839 | 172 / 29 / 4 |
+| `qwen3.5:9b` | 0.908 | 0.003 | 0.888 | 521 / 61 / 5 |
+| `gemma4:12b` | 0.951 | 0.001 | 0.907 | 332 / 31 / 3 |
+| `llama3.1:8b` | 0.719 | 0.041 | 0.951 | 77 / 3 / 1 |
+| `mistral:7b` | 0.809 | 0.006 | 0.868 | 198 / 25 / 5 |
