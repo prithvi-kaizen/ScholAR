@@ -211,48 +211,78 @@ application rather than by the model.
 \resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[
   font=\footnotesize,
-  box/.style={draw, rounded corners, align=center, inner sep=3pt, minimum height=11mm, minimum width=19mm, fill=blue!4},
-  ev/.style={draw, rounded corners, align=left, inner sep=4pt, minimum height=11mm, fill=green!8},
-  bad/.style={draw, rounded corners, align=left, inner sep=4pt, minimum height=11mm, fill=red!6},
-  vis/.style={draw, rounded corners, align=center, inner sep=3pt, minimum height=8mm, fill=orange!12},
-  hd/.style={font=\footnotesize\itshape, anchor=west},
+  blk/.style={draw, rounded corners=2pt, align=center, inner sep=3pt,
+              minimum height=9mm, minimum width=17mm, fill=white},
+  io/.style={draw, rounded corners=9pt, align=center, inner sep=3pt, fill=gray!14,
+             minimum height=10mm, minimum width=18mm},
+  grp/.style={draw, dashed, rounded corners=4pt, inner sep=7pt},
+  ttl/.style={font=\scriptsize\bfseries},
   >={Stealth[length=2mm]},
-  node distance=6mm and 6mm,
+  node distance=5mm and 6mm,
 ]
-% ---------------- (a) the problem ----------------
-\node[hd] (ha) at (0,1.35) {(a) Free-form citation: the page number is itself model output.};
-\node[box] (a1) at (1.1,0) {Retrieved\\text};
-\node[box, right=of a1] (a2) {LLM writes the answer\\\emph{and} the page number};
-\node[bad, right=of a2] (a3) {``\dots\ a minibatch of 80 sentences \textbf{[p.\,5]}''\\[1pt]
-  {\scriptsize the page is generated, not resolved: nothing binds it to the text the model saw}};
-\draw[->] (a1)--(a2); \draw[->] (a2)--(a3);
+% ---------------- Ingest ----------------
+\node[blk] (pdf) at (0,0) {PDF};
+\node[blk, right=of pdf] (pages) {per-page text\\+ figures};
+\node[blk, right=of pages] (chunks) {page-preserving\\chunks\\{\scriptsize 1 chunk $\subseteq$ 1 page}};
 
-% ---------------- (b) ScholAR ----------------
-\node[hd] (hb) at (0,-1.85) {(b) ScholAR: indirect citation grounding. The model may cite only $[E_i]$; the application resolves the page.};
-\node[box] (pdf) at (1.1,-3.5) {Scientific\\PDF};
-\node[box, right=of pdf] (chunk) {Page-preserving\\chunking\\{\scriptsize 1 chunk $\subseteq$ 1 page}};
-\node[box, right=of chunk] (bm25) {BM25-primary\\retrieval};
-\node[ev, right=of bm25] (ev) {$[E_1]$ (p.\,5): ``Each SGD update direction is\\computed using a minibatch of 80 sentences.''\\[1pt]
-  {\scriptsize each $E_i$ is bound to the page of the chunk it came from}};
-\node[box, right=of ev] (llm) {Local LLM\\cites $[E_1]$\\{\scriptsize cannot emit a page}};
-\node[box, right=of llm] (map) {App rewrites\\$[E_1]\!\to\![1]\!\to$ p.\,5\\{\scriptsize deterministic lookup}};
-\node[box, right=of map] (hl) {Highlighted\\PDF page};
-\node[vis, below=6mm of ev] (vision) {figure / table query $\to$ same local model, cropped image @ $3\times$ zoom};
-\draw[->] (pdf)--(chunk); \draw[->] (chunk)--(bm25); \draw[->] (bm25)--(ev);
-\draw[->] (ev)--(llm); \draw[->] (llm)--(map); \draw[->] (map)--(hl);
-\draw[->] (bm25) |- (vision);
-\draw[->] (vision) -| (llm);
+% ---------------- Retrieve ----------------
+\node[blk, right=13mm of chunks] (bm25) {BM25-primary\\{\scriptsize $k_1{=}1.4,\; b{=}0.72$}};
+\node[blk, right=of bm25] (topk) {top-$k$\\chunks};
+
+% ---------------- Ground & Cite ----------------
+\node[blk, right=13mm of topk] (ev) {evidence IDs\\$[E_1]\dots[E_k]$\\{\scriptsize each bound to a page}};
+\node[blk, right=of ev] (llm) {local LLM\\cites \emph{only} $[E_i]$\\{\scriptsize cannot emit a page}};
+\node[blk, right=of llm] (rw) {\textbf{app} rewrites\\$[E_i]\!\to\![n]\!\to$ page\\{\scriptsize deterministic}};
+
+% ---------------- output / input ----------------
+\node[io, right=11mm of rw] (ans) {answer with\\page-anchored\\citations\\{\scriptsize $\to$ highlighted page}};
+\node[io, left=11mm of pdf] (q) {question};
+
+% ---------------- Vision branch ----------------
+\node[blk, below=16mm of bm25] (crop) {crop figure\\@ $3\times$ zoom};
+\node[blk, right=of crop] (mm) {local multimodal\\LLM};
+
+% ---------------- Multi-document branch ----------------
+\node[blk, below=16mm of pdf] (bib) {anchor's\\bibliography};
+\node[blk, right=of bib] (rank) {rank\\references};
+
+% ---------------- group boxes (behind the blocks) ----------------
+\begin{scope}[on background layer]
+  \node[grp, fill=blue!6,   fit=(pdf)(pages)(chunks), label={[ttl]above:1. Ingest}] (gIng) {};
+  \node[grp, fill=green!7,  fit=(bm25)(topk),         label={[ttl]above:2. Retrieve}] (gRet) {};
+  \node[grp, fill=violet!7, fit=(ev)(llm)(rw),        label={[ttl]above:3. Ground \& Cite}] (gGr) {};
+  \node[grp, fill=orange!9, fit=(crop)(mm),
+        label={[ttl]below:4. Vision (figure / table queries)}] (gVis) {};
+  \node[grp, fill=gray!12,  fit=(rank)(bib),
+        label={[ttl]below:5. Multi-document (cross-paper queries)}] (gMd) {};
+\end{scope}
+
+% ---------------- flow ----------------
+\draw[->] (q)--(gIng);
+\draw[->] (pdf)--(pages); \draw[->] (pages)--(chunks);
+\draw[->] (gIng)--(gRet);
+\draw[->] (bm25)--(topk);
+\draw[->] (gRet)--(gGr);
+\draw[->] (ev)--(llm); \draw[->] (llm)--(rw);
+\draw[->] (gGr)--(ans);
+\draw[->] (crop)--(mm);
+\draw[->] (gRet.south) -- (gVis.north);            % figure query routes to vision
+\draw[->] (gVis.east) -| (llm.south);              % vision answer joins the grounded answer
+\draw[->] (bib)--(rank);
+\draw[->] (gMd.north) -- (gIng.south);             % ranked reference is ingested like any paper
 \end{tikzpicture}%
 }
-\caption{ScholAR's indirect citation grounding, contrasted with free-form citation.
-(a) When the model writes the page number itself, the number is generated text: nothing
-ties it to the passage the model was actually shown. (b) ScholAR keeps every retrieved
-unit inside one PDF page, exposes the retrieved chunks as evidence identifiers $[E_i]$
-that each carry their own page, and permits the model to cite only those identifiers.
-The application, not the model, rewrites $[E_i]$ into a numbered reference and resolves
-it to a page, so a cited page is correct by construction. Figure and table queries route
-to the same local multimodal model with a cropped, $3\times$-zoomed image. The evidence
-shown is the real chunk retrieved for this question.}
+\caption{The ScholAR architecture. A question enters at the left and leaves as an answer whose
+every citation resolves to a highlightable page. \textbf{(1)}~Ingest keeps each chunk inside a
+single PDF page. \textbf{(2)}~BM25-primary retrieval returns the top-$k$ chunks. \textbf{(3)}~Those
+chunks are exposed to the model only as evidence identifiers $[E_i]$, each already bound to the page
+of the chunk it came from; the model may cite an identifier but can never write a page number, and
+the \emph{application}, not the model, rewrites $[E_i]$ into a numbered reference and resolves it to
+a page. A cited page is therefore correct by construction rather than by the model's good behavior.
+\textbf{(4)}~Figure and table queries additionally route a cropped, $3\times$-zoomed image to the
+same local multimodal model. \textbf{(5)}~Cross-paper queries first rank the anchor's bibliography,
+and the selected reference is then ingested like any other paper. Every component runs on one
+machine.}
 \label{fig:pipeline}
 \end{figure*}
 

@@ -32,3 +32,8 @@ docs/reference_papers/
 # human-eval generated artifacts (regeneratable; answers.json is committed)
 evaluation/human_eval/score_sheet.html
 evaluation/human_eval/exports/
+
+# M3SciQA dataset clone (74MB, re-fetchable: see evaluation/m3sciqa/build_m3sciqa.py)
+evaluation/m3sciqa/data/
+# derived cases file (16MB, regenerate: python3 evaluation/m3sciqa/build_m3sciqa.py)
+evaluation/m3sciqa/m3sciqa_cases.json

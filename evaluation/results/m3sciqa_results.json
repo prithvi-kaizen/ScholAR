@@ -1,0 +1,65 @@
+{
+  "summary": {
+    "bm25": {
+      "n": 297,
+      "mrr": 0.18,
+      "recall@1": 0.064,
+      "recall@5": 0.242,
+      "recall@10": 0.391,
+      "random_mrr": 0.121,
+      "mean_pool": 47.9
+    },
+    "dense": {
+      "n": 297,
+      "mrr": 0.125,
+      "recall@1": 0.034,
+      "recall@5": 0.158,
+      "recall@10": 0.296,
+      "random_mrr": 0.121,
+      "mean_pool": 47.9
+    },
+    "hybrid_rrf": {
+      "n": 297,
+      "mrr": 0.158,
+      "recall@1": 0.061,
+      "recall@5": 0.215,
+      "recall@10": 0.37,
+      "random_mrr": 0.121,
+      "mean_pool": 47.9
+    },
+    "vision_bm25::qwen3.5:9b": {
+      "n": 4,
+      "mrr": 0.875,
+      "recall@1": 0.75,
+      "recall@5": 1.0,
+      "recall@10": 1.0,
+      "random_mrr": 0.105,
+      "mean_pool": 41.0
+    }
+  },
+  "raw": {
+    "vision_bm25::qwen3.5:9b": [
+      {
+        "case_id": "m3_000",
+        "entity": "GPT-3.5",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_001",
+        "entity": "GPT-4",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_002",
+        "entity": "GPT-4",
+        "rank": 1
+      },
+      {
+        "case_id": "m3_003",
+        "entity": "Alpaca (65B) and OPT (175B).",
+        "rank": 2
+      }
+    ]
+  },
+  "generated_at": "2026-07-14T08:37:33"
+}
