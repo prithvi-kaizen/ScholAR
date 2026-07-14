@@ -76,35 +76,30 @@ over four local models whose expert scoring is pending.
 % -----------------------------------------------------------------------
 \section{Introduction}
 % -----------------------------------------------------------------------
-Reading an unfamiliar paper is slowest at the moments that matter most: checking
-that a stated number, a method detail, or a figure actually says what you think it
-says. Uploading the PDF to a general-purpose chat model helps with fluency but brings
-a new failure mode. Such systems summarize confidently while inventing page
-references and attributing quotes to places they do not appear, because a generic
-chat pipeline puts no hard constraint between a citation and the text the model was
-conditioned on.
+Reading an unfamiliar paper is slowest at the moments that matter most: checking that a stated
+number, a method detail, or a figure actually says what you think it says. Uploading the PDF to a
+general-purpose chat model helps with fluency but brings a new failure mode: such systems
+summarize confidently while inventing page references and attributing quotes to places they do not
+appear, because a generic chat pipeline puts no hard constraint between a citation and the text the
+model was conditioned on.
 
-Purpose-built scientific retrieval-augmented generation (RAG) systems close part of
-this gap, but they assume resources most readers do not have on their own machine.
-OpenScholar~\citep{asai2024openscholar}, PaperQA2~\citep{lala2024paperqa2}, and
-SciRAG~\citep{ding2025scirag} depend on cloud-hosted frontier language models, and
-OpenScholar additionally on a datastore of tens of millions of papers. We ask a
-narrower question: what does grounded, citable question answering over a scientific
-document look like under a hard local-only constraint, with a single
-sub-15-billion-parameter model, no cloud API, and a retrieval design simple enough to
+Purpose-built scientific RAG systems close part of this gap but assume resources most readers do
+not have. OpenScholar~\citep{asai2024openscholar}, PaperQA2~\citep{lala2024paperqa2}, and
+SciRAG~\citep{ding2025scirag} depend on cloud-hosted frontier models, and OpenScholar additionally
+on a datastore of tens of millions of papers. We ask a narrower question: what does grounded,
+citable question answering over a scientific document look like under a hard local-only constraint,
+with a single sub-15-billion-parameter model, no cloud API, and a retrieval design simple enough to
 audit end to end?
 
-Two ideas carry ScholAR. Page-preserving chunking segments a document so that every
-retrieved chunk lies entirely within one PDF page, which makes a citation resolve to
-an exact, highlightable location rather than an approximate span. Indirect citation
-grounding assigns each retrieved passage a short-lived evidence identifier and
-instructs the model to cite only those identifiers, never a free-form page number;
-the application then rewrites each identifier into a numbered reference that maps
-deterministically to a page. The model decides only which evidence supports a claim,
-and the evidence-to-page mapping is application logic rather than a model guess.
-Beyond single-document text, ScholAR routes figure and table questions to a locally
-run, natively multimodal model and extends to a paper's own cited references for
-cross-document questions.
+Two ideas carry ScholAR. Page-preserving chunking segments a document so that every retrieved
+chunk lies entirely within one PDF page, making a citation resolve to an exact, highlightable
+location. Indirect citation grounding assigns each retrieved passage a short-lived evidence
+identifier and instructs the model to cite only those identifiers, never a free-form page number;
+the application then rewrites each identifier into a numbered reference that maps deterministically
+to a page. The model decides only which evidence supports a claim, and the evidence-to-page mapping
+is application logic rather than a model guess (Figure~\ref{fig:ui}). Beyond single-document text,
+ScholAR routes figure and table questions to a locally run multimodal model and extends to a
+paper's own cited references for cross-document questions.
 
 Our contributions are:
 \begin{itemize}
@@ -134,52 +129,37 @@ Our contributions are:
 % -----------------------------------------------------------------------
 
 \paragraph{Retrieval-augmented generation.}
-The RAG framework couples a retriever with a generator so that outputs are
-conditioned on retrieved evidence~\citep{lewis2020rag}. Lexical retrieval via
-BM25~\citep{robertson2009bm25} remains a strong baseline, and the
-BEIR benchmark~\citep{thakur2021beir} documents that zero-shot dense retrievers
-often fail to beat it. ScholAR uses BM25 as its primary retrieval signal and dense
-retrieval as a fusion component.
+RAG conditions generation on retrieved evidence~\citep{lewis2020rag}. Lexical retrieval via
+BM25~\citep{robertson2009bm25} remains a strong baseline, and BEIR~\citep{thakur2021beir}
+documents that zero-shot dense retrievers often fail to beat it, which is why ScholAR keeps
+BM25 primary and treats dense retrieval as a fusion component.
 
 \paragraph{Scientific-literature RAG systems.}
-PaperQA and PaperQA2~\citep{lala2023paperqa,lala2024paperqa2} are agentic systems
-that report high accuracy on scientific literature question answering using
-frontier model backends. OpenScholar~\citep{asai2024openscholar} synthesizes
-literature over a large open datastore, and SciRAG~\citep{ding2025scirag} adds
-citation-graph-aware, outline-guided synthesis. All three assume cloud-hosted or
-large self-hosted models. ScholAR differs by targeting a single local
-sub-15-billion-parameter model on consumer hardware, trading raw capability for
-zero data exposure and no API dependency.
-
-\paragraph{Small models that cite their sources.}
-Closest in spirit to our citation mechanism, Pleias-RAG~\citep{pleias2025rag}
-trains small (350M and 1.2B) models that emit literal source quotes during
-generation. That line shows citation behavior can be learned into a compact model.
-ScholAR takes a complementary, model-agnostic route: the grounding lives in the
-retrieval and application layer through evidence identifiers, so it works with any
-local generation model rather than requiring a model trained to quote.
+PaperQA and PaperQA2~\citep{lala2023paperqa,lala2024paperqa2} are agentic systems reporting high
+accuracy with frontier backends; OpenScholar~\citep{asai2024openscholar} synthesizes over a large
+open datastore, and SciRAG~\citep{ding2025scirag} adds citation-graph-aware, outline-guided
+synthesis. All three assume cloud-hosted or large self-hosted models. ScholAR instead targets a
+single local sub-15B model on consumer hardware, trading raw capability for zero data exposure.
+Closest to our citation mechanism, Pleias-RAG~\citep{pleias2025rag} \emph{trains} small models to
+emit literal source quotes; we take the complementary route of putting the grounding in the
+retrieval and application layer, so it works with any local model rather than a model taught to
+quote.
 
 \paragraph{Citation and faithfulness evaluation.}
-\citet{gao2023attributing} formalize citation precision and recall for generated
-text using entailment between cited passages and statements.
-SummaC~\citep{laban2022summac} scores summary consistency with a zero-shot,
-sentence-level entailment variant that needs no fine-tuned model, and
-FActScore~\citep{min2023factscore} decomposes text into atomic facts verified
-against a source. RAGAS~\citep{es2024ragas} automates RAG faithfulness scoring
-against retrieved context. Our faithfulness metric adopts the SummaC-style
-zero-shot entailment and the FActScore-style atomic decomposition, and we apply it
-to the system's own generated answers.
+\citet{gao2023attributing} formalize citation precision and recall via entailment between cited
+passages and statements. SummaC~\citep{laban2022summac} scores consistency with zero-shot
+sentence-level entailment, FActScore~\citep{min2023factscore} decomposes text into atomic facts,
+and RAGAS~\citep{es2024ragas} automates RAG faithfulness scoring. Our metric combines SummaC-style
+zero-shot entailment with FActScore-style atomic decomposition, applied to the system's own
+generated answers rather than to gold claims.
 
 \paragraph{Visual and multi-document scientific QA.}
-ColPali~\citep{faysse2024colpali} indexes pages as visual embeddings for retrieval
-without OCR. ScholAR keeps text retrieval primary and routes only figure and table
-questions to a cropped-region vision call, which keeps the common text path fast
-and fully lexical. M3SciQA~\citep{li2024m3sciqa} pairs each anchor paper with its
-cited references and finds that even large foundation models underperform human
-experts at cross-paper reasoning, a difficulty our cross-document results echo.
-Document parsing tools such as GROBID~\citep{lopez2009grobid} and
-Nougat~\citep{blecher2023nougat} target structured extraction and are complementary
-to our chunking.
+ColPali~\citep{faysse2024colpali} indexes pages as visual embeddings without OCR; ScholAR keeps
+text retrieval primary and routes only figure and table questions to a cropped-region vision call.
+M3SciQA~\citep{li2024m3sciqa} pairs each anchor paper with its cited references and finds that even
+large foundation models trail human experts at cross-paper reasoning; we evaluate directly on it
+(Section~\ref{sec:auto-multidoc}). GROBID~\citep{lopez2009grobid} and
+Nougat~\citep{blecher2023nougat} target structured extraction and are complementary to our chunking.
 
 % -----------------------------------------------------------------------
 \section{Problem Formulation}
@@ -324,19 +304,30 @@ claim; the mapping from evidence to page is deterministic application logic. Thi
 prevents page-number hallucination by construction rather than by asking the model
 to be careful.
 
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.82\textwidth]{scholar_ui}
+  \caption{Indirect citation grounding as the reader sees it, captured from the running system.
+           The question (top right) is answered by a local model (gemma4:12b) whose prose carries
+           only numbered references, never a page number: the model emitted evidence identifiers and
+           the application rewrote them into $[1]$ and $[2]$, resolving each to a page. Selecting
+           $[1]$ (highlighted under Sources) scrolls the document to page~5 and boxes the exact
+           sentence the claim rests on, ``Each SGD update direction is computed using a minibatch of
+           80 sentences.'' The cited page is a lookup rather than a generation, so the highlight
+           cannot disagree with the citation. Everything shown runs on one laptop.}
+  \label{fig:ui}
+\end{figure*}
+
 \subsection{Visual Grounding}
-When a query references visual content, through cue terms such as ``figure'',
-``table'', or an explicit figure number, retrieval boosts figure and table chunks so
-they can compete against longer text chunks. Each caption is detected by regular
-expression, and the region above it is rendered at $3\times$ zoom and cached
-alongside the caption. A query naming an explicit figure number is matched directly
-against that figure's label, which matters because a letter-initial tokenizer
-reduces ``Figure 2'' and ``Figure 14'' to the same token once digits are dropped.
-When the top-ranked chunk is a figure or table, the cached image is sent, with the
-caption and supporting text, to the same local model used for text generation (both
-models we use are natively multimodal), rather than to a separate vision model or
-cloud API. If the image is missing or the call fails, the system degrades to a
-caption-only extractive answer.
+When a query references visual content, through cue terms such as ``figure'' or an explicit
+figure number, retrieval boosts figure and table chunks so they can compete against longer
+text chunks. Captions are detected by regular expression and the region above each is rendered
+at $3\times$ zoom and cached. A query naming an explicit figure number is matched against that
+figure's label directly, which matters because a letter-initial tokenizer collapses ``Figure 2''
+and ``Figure 14'' to the same token once digits are dropped. When the top-ranked chunk is a
+figure or table, the cached image is sent with its caption to the same local model used for text
+(both of our multimodal models read it natively), never to a cloud API; if the image is missing,
+the system degrades to a caption-only answer.
 
 \subsection{Multi-Document Extension}
 ScholAR resolves an anchor paper's bibliography and lets the user ingest cited
@@ -438,51 +429,6 @@ Table~\ref{tab:benchstats} summarizes the corpus and the benchmarks built on it.
     Faithfulness      & 51 / 100 & Local models        & 4 \\
     Visual / multi-doc& 18 / 18  & Inline citations    & 829 \\
     Unanswerable      & 20       & Citations / answer  & 2.4 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-% -----------------------------------------------------------------------
-\section{Automated Evaluation}
-\label{sec:auto}
-% -----------------------------------------------------------------------
-
-\subsection{Retrieval}
-Table~\ref{tab:retrieval} reports retrieval on the scaled benchmark of 100
-auto-labeled cases across 25 papers. BM25-primary reaches Recall@5 of 0.93 and MRR of
-0.861; plain BM25 is within noise at 0.94 and 0.863, so the reranking heuristics and
-page hints again leave the aggregate unchanged. The clear shift from the 3-paper
-anchor is dense-only: it led there (Recall@5 1.000, MRR 0.881) but trails every
-lexical configuration on the diverse pool (MRR 0.572), the expected BEIR
-outcome~\citep{thakur2021beir} once the corpus is not three heavily studied papers. We
-read the size of BM25's margin cautiously, because the mined queries share lexical
-surface with their source passages, but the direction, lexical over single-pass dense
-at scale, is the one the BM25-primary design assumes.
-
-Aggregates hide where retrieval struggles, so Table~\ref{tab:bycap} breaks the same run
-down by question type. Both retrievers degrade monotonically from text to mathematical to
-figure and table questions, most steeply on the visual cases (BM25-primary Recall@5 falls
-from 0.98 to 0.84): a question about a figure shares little surface form with the caption
-and body text around it, which is why ScholAR routes such questions to a vision model
-rather than trusting retrieval alone. BM25-primary still leads dense-only in every
-category, by the widest margin on exactly those visual cases.
-
-\begin{table}[t]
-  \centering
-  \caption{Retrieval by question type on the same 100 scaled cases. Both retrievers
-           degrade from text to mathematical to visual questions; BM25-primary leads
-           dense-only in every category.}
-  \label{tab:bycap}
-  \setlength{\tabcolsep}{5pt}
-  \begin{tabular}{lcccc}
-    \toprule
-    & \multicolumn{2}{c}{\textbf{BM25-primary}} & \multicolumn{2}{c}{\textbf{Dense-only}} \\
-    \cmidrule(lr){2-3}\cmidrule(lr){4-5}
-    \textbf{Question type} & \textbf{R@5} & \textbf{MRR} & \textbf{R@5} & \textbf{MRR} \\
-    \midrule
-    Text ($n{=}50$)         & 0.98 & 0.904 & 0.82 & 0.680 \\
-    Mathematical ($n{=}25$) & 0.92 & 0.853 & 0.76 & 0.507 \\
-    Visual ($n{=}25$)       & 0.84 & 0.781 & 0.56 & 0.423 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -597,15 +543,13 @@ quality still depends on the model.
 \end{table}
 
 \subsection{Visual Grounding}
-On the 18-case visual pilot, retrieval routes to the correct figure or table in all
-18 cases, with no case falling back to the caption-only path. We also compare two
-local multimodal models on a keyword-overlap answer-quality proxy (not an
-LLM-judge): gemma4:12b scores 0.731 and qwen3.5:9b~\citep{qwenteam2026qwen35} scores 0.812. A caption-only
-ablation, sending the same prompt without the image, scores 0.752 versus 0.731 for
-full vision under gemma4:12b. We do not read this as evidence that the image is
-unnecessary: the proxy rewards lexical overlap with the question rather than grounded
-visual correctness, and many answers are also restated in nearby prose. Separating
-these effects requires a correctness-based judge, which we leave to the human study.
+On the 18-case visual pilot, retrieval routes to the correct figure or table in all 18 cases,
+never falling back to the caption-only path. On a keyword-overlap answer-quality proxy (not an
+LLM judge) gemma4:12b scores 0.731 and qwen3.5:9b~\citep{qwenteam2026qwen35} 0.812; a
+caption-only ablation scores 0.752 against 0.731 for full vision under gemma4:12b. We do not
+read that as evidence the image is unnecessary: the proxy rewards lexical overlap rather than
+visual correctness, and many answers are restated in nearby prose. The cleaner test is
+Section~\ref{sec:auto-multidoc}, where reading the figure is worth 2.6$\times$ on MRR.
 
 \subsection{Multi-Document Localization}
 \label{sec:auto-multidoc}
@@ -747,25 +691,19 @@ models fastest at about 6 seconds. No cloud call and no GPU cluster: one laptop 
 \section{Human Evaluation (In Progress)}
 \label{sec:humaneval}
 % -----------------------------------------------------------------------
-Automated metrics measure component behavior; they do not tell us whether a reader
-would judge an answer correct and well-cited. We therefore designed a
-model-agnostic human evaluation, grounded in the practice of comparable systems
-~\citep{asai2024openscholar,ding2025scirag,lala2024paperqa2}, over the 100-case
-diverse benchmark of Section~\ref{sec:datasets}. Each question is answered by four
-local generation models (qwen3.5:9b, gemma4:12b, llama3.1:8b~\citep{llamateam2024llama3},
-mistral:7b~\citep{jiang2023mistral}) running
-the \emph{same} ScholAR pipeline, so only the generation model changes. Expert
-evaluators score every answer on four anchored 1--5 dimensions, Relevance,
-Coverage, Faithfulness, and Usefulness, and grade each inline citation as Supported,
-Partial, or Unsupported. Answers are shown blind and in randomized order. From the
-scores we compute per-model means and citation precision, recall, and F1; a Friedman
-test across the four models to assess whether grounding is model-agnostic; and the
-correlation between human Faithfulness scores and the automated faithfulness metric.
-
-The four models' answers are generated across the diverse benchmark; the expert
-scoring itself is the remaining step. Table~\ref{tab:human} lists the reported
-quantities as placeholders; the values will be filled from the completed scoring and
-are not estimated here.
+Automated metrics measure component behavior, not whether a reader would judge an answer
+correct and well-cited. Following the practice of comparable
+systems~\citep{asai2024openscholar,ding2025scirag,lala2024paperqa2}, we designed a
+model-agnostic human evaluation over the 100-case diverse benchmark
+(Section~\ref{sec:datasets}). Each question is answered by the four local models (qwen3.5:9b,
+gemma4:12b, llama3.1:8b~\citep{llamateam2024llama3}, mistral:7b~\citep{jiang2023mistral})
+running the \emph{same} pipeline, so only the generation model changes. Blind and in randomized
+order, expert evaluators score every answer on four anchored 1--5 dimensions (Relevance,
+Coverage, Faithfulness, Usefulness) and grade each inline citation Supported / Partial /
+Unsupported. From these we compute per-model means, citation precision, recall and F1, a
+Friedman test of whether grounding is model-agnostic, and the correlation between human
+faithfulness and our automated metric. All 350 answers are generated; expert scoring is the
+remaining step, so Table~\ref{tab:human} reports placeholders, not estimates.
 
 \begin{table}[t]
   \centering
