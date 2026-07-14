@@ -126,7 +126,7 @@ The `gold_answer` and `must_include` fields are the evaluator's ground truth. Th
 
 ## 8. Volume and annotation protocol
 
-- **Full volume**: 75 text and mathematical cases x 4 models = 300 answers, plus 25 visual cases x 2 models = 50 visual answers, for **350 human-scored answers** carrying 788 citations in total (mean 2.3 per answer). Each answer takes Q1-Q6; each question adds one Q7 ranking.
+- **Full volume**: 75 text and mathematical cases x 4 models = 300 answers, plus 25 visual cases x 2 models = 50 visual answers, for **350 human-scored answers** carrying 829 citations in total (mean 2.4 per answer). Each answer takes Q1-Q6; each question adds one Q7 ranking.
 - **Reduced protocol** if an evaluator is time-limited: a stratified sample (for example 20 text + 10 math cases x 4 models, plus 10 visual x 2 = 140 answers) still exceeds the scale of SciRAG (90) and OpenScholar (108 questions, ~25 instances per annotator).
 - **Blinding and order**: the evaluator sees only the question and the answers with their citations, never the model identity, and the 4 answers appear in randomized order per question.
 - **Inter-annotator agreement**: a 20-answer overlap subset is scored independently by at least two evaluators. Report Cohen's kappa on the three-way citation labels and Krippendorff's alpha (or Pearson) on the Likert dimensions, matching how OpenScholar (kappa 0.68) and SciRAG (~0.87) report agreement.

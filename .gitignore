@@ -37,3 +37,7 @@ evaluation/human_eval/exports/
 evaluation/m3sciqa/data/
 # derived cases file (16MB, regenerate: python3 evaluation/m3sciqa/build_m3sciqa.py)
 evaluation/m3sciqa/m3sciqa_cases.json
+
+# reference papers kept locally for figure/table study (not ours to redistribute)
+/m3sciqa.pdf
+/paperqa.pdf

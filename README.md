@@ -128,16 +128,29 @@ Spans *Attention Is All You Need*, *RAG*, and *LLaMA* across 8 claim types: `res
 | Retrieval R@5 | **18 / 18 = 1.000** |
 | Caption fallback rate | 0 / 18 (0%) |
 
-### Multi-Document Locality Benchmark (10 `locality_arxiv` cases, M3SciQA-style)
+### Multi-Document Localization — evaluated on **M3SciQA** (297 labeled locality cases)
 
-| Metric | Score |
-|---|---:|
-| Locality R@1 | 0.00 |
-| Locality R@5 | 0.50 |
-| MRR | 0.183 |
-| Random-guess floor (R@5) | 0.625 |
+M3SciQA's *locality* task is exactly ours: given an anchor paper and a question about one of its figures, rank the anchor's bibliography (mean 47.9 candidate references) to find the reference that answers it. Their gold labels and metric let us be measured directly against their published baselines.
 
-A chunk-ID collision bug (fixed) had inflated an earlier version of these numbers (R@5 0.80, MRR 0.356) — the corrected result is at or below the random-guessing floor on this small benchmark. See the paper's Discussion for the full writeup and the oracle-bound analysis.
+| System | MRR | R@5 |
+|---|---:|---:|
+| Human expert † | 0.796 | — |
+| GPT-4o † (cloud) | 0.500 | — |
+| **ScholAR + local vision (`qwen3.5:9b`)** | **0.474** | **0.606** |
+| **ScholAR + local vision (`gemma4:12b`)** | 0.455 | 0.572 |
+| GPT-4V † (cloud) | 0.400 | — |
+| text-embedding-3-large † (cloud) | 0.297 | — |
+| ScholAR BM25-primary (text only) | 0.180 | 0.242 |
+| Best open-source LMM † | 0.144 | — |
+| BM25 † / Random † | 0.127 / 0.126 | — |
+
+† published by M3SciQA; the rest measured here. Our empirical random floor is 0.121, matching their 0.126 — the setup reproduces theirs.
+
+**The bottleneck was never retrieval.** From the question text alone, BM25 sits near chance (0.180 vs a 0.121 floor), matching their BM25 (0.127) and explaining our old 18-case result (0.183): the question names an entity that exists **only inside a figure**. Resolving that figure with the local multimodal model first lifts MRR to **0.474** — 3.3× the best open-source LMM they report, past GPT-4V, and within 0.026 of GPT-4o, on a laptop. Expert humans (0.796) remain far ahead, so the task is not solved.
+
+Caveat: our pipeline *decomposes* the task (vision resolves the entity, then BM25 ranks the bibliography) whereas M3SciQA prompt their multimodal baselines to rank papers directly — a comparison of systems on a shared task and metric, not one identical protocol.
+
+Run it: `python3 evaluation/m3sciqa/build_m3sciqa.py && python3 evaluation/m3sciqa/run_m3sciqa_eval.py --tier text`
 
 ### Abstention Benchmark (20 provably-unanswerable questions)
 

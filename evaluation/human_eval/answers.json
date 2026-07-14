@@ -10486,5 +10486,1268 @@
     ],
     "vision": false,
     "error": null
+  },
+  {
+    "case_id": "mine_math_019",
+    "capability": "math",
+    "paper_id": "1910.10683",
+    "model": "qwen3.5:9b",
+    "question": "What are the dimensions and number of heads for the '3B' variant model?",
+    "answer": "**Answer**\nThe provided text does not contain specific information regarding the dimension sizes or attention head counts for a '3B' parameter variant model. The evidence explicitly details a baseline configuration with approximately 220 million parameters [1], which is roughly twice the size of BERTBASE due to having two layer stacks instead of one [2]. While the paper discusses scaling laws and computational costs (FLOPs) in relation to model sizes $M$ [3][4] and compares encoder-decoder architectures with shared parameters [5], it does not list a specific '3B' variant or its architectural hyperparameters such as hidden dimensions ($d_{model}$) or number of heads. The study focuses on empirical comparisons across objectives, datasets, and transfer approaches rather than enumerating every model size's internal dimensionality in the provided excerpts.\n\n**Evidence**\n* The baseline experimental setup results in a model with about 220 million parameters [1].\n* This specific baseline contains two layer stacks instead of one, making it roughly twice the number of parameters of BERTBASE [2].\n* For considered model sizes, encoder-decoder attention layers account for approximately 10% of total parameter counts [5].\n\n**What this means**\nThe available context confirms that scaling up models (e.g., from ~220M to larger variants) is a primary focus, often yielding better performance simply by training on more data or using larger datasets [6]. However, the specific architectural details for a 3 billion parameter model are absent. The text defines computational cost $M$ based on layer counts but does not map these abstract sizes to concrete head dimensions in this excerpt.\n\n**Limits / what to verify**\nTo answer your question fully, one would need access to sections detailing the \"Scaling\" experiments (Section 3.6) or a table listing all model configurations used in the study. The current evidence only validates the existence of a ~220M parameter baseline and general scaling assumptions but lacks the granular hyperparameter definitions for larger variants like '3B'.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 11,
+        "chunk_id": "chunk_011",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "In total, this results in a model with about 220 million parameters.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 11,
+        "chunk_id": "chunk_011",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "This is roughly twice the number of parameters of BERTBASE since our baseline model contains two layer stacks instead of one.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 19,
+        "chunk_id": "chunk_019",
+        "section_title": "Architecture",
+        "chunk_type": "method",
+        "quote": "We will use M to refer to the number of FLOPs required for an L + L-layer encoder-decoder model or L-layer decoder-only model to process a given input-target pair.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 4,
+        "page": 19,
+        "chunk_id": "chunk_019",
+        "section_title": "Architecture",
+        "chunk_type": "method",
+        "quote": "• An equivalent model, but with parameters shared across the encoder and decoder, resulting in P parameters and an M-FLOP computational cost.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 5,
+        "page": 19,
+        "chunk_id": "chunk_019",
+        "section_title": "Architecture",
+        "chunk_type": "method",
+        "quote": "Further, for the model sizes we consider, the number of parameters in the encoder-decoder attention layers is about 10% of the total parameter count, so we make the simplifying assumption that an L + L-layer encoder-decoder model has the same number of parameters as an 2L-layer language model.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_004",
+    "capability": "single_doc_text",
+    "paper_id": "1409.0473",
+    "model": "gemma4:12b",
+    "question": "What was the size of the minibatch used for each SGD update direction?",
+    "answer": "**Answer**\nThe training process utilized a minibatch size of 80 sentences for calculating each Stochastic Gradient Descent (SGD) update direction.\n\n**Evidence**\n* Each SGD update direction is calculated using a minibatch consisting of 80 sentences [1].\n* The model was trained using the SGD algorithm in conjunction with Adadelta to manage learning rates [2].\n* Each individual update corresponds to updating the parameters once per single minibatch [3].\n\n**What this means**\nThis indicates that during the training phase, the network does not process the entire dataset at once; instead, it processes 80 sentences in a single pass to compute the gradient for parameter updates. This specific configuration is part of the optimization strategy involving SGD and Adadelta to refine the model's ability to align and translate jointly [2].\n\n**Limits / what to verify**\nThe provided text confirms the minibatch size is 80 sentences [1], but it does not specify if this number varied across different experimental runs or specific sub-tasks within the study.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 5,
+        "chunk_id": "chunk_005",
+        "section_title": "Results",
+        "chunk_type": "result",
+        "quote": "Each SGD update direction is computed using a minibatch of 80 sen- tences.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 5,
+        "chunk_id": "chunk_005",
+        "section_title": "Results",
+        "chunk_type": "result",
+        "quote": "We use a minibatch stochastic gradient descent (SGD) algorithm together with Adadelta (Zeiler, 2012) to train each model.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 14,
+        "chunk_id": "chunk_014",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "Each update corresponds to updating the parameters once using a single minibatch.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_007",
+    "capability": "single_doc_text",
+    "paper_id": "2111.00364",
+    "model": "gemma4:12b",
+    "question": "What specific components of an AI model's life cycle must be accounted for according to the passage?",
+    "answer": "**Answer**\nTo accurately assess the environmental impact and carbon footprint of AI computing, the paper specifies that both the **AI model development lifecycle** and the **system hardware lifecycle** must be considered. Specifically, the model development stages include:\n* Data (or Data Processing) [1][2]\n* Experimentation (including exploration and optimization) [1][3]\n* Training [1][2]\n* Inference (or Deployment/Run-time inference) [1][2][3]\n\nAdditionally, the hardware lifecycle must account for:\n* Manufacturing [4][5]\n* Operational use [4]\n\n**Evidence**\n* The model development cycle is characterized by four key phases: Data, Experimentation, Training, and Inference [1][2].\n* A comprehensive view requires looking at the ML pipeline end-to-end, which includes data collection, exploration, training, optimization, and run-time inference [3].\n* The system hardware lifecycle must account for both manufacturing and operational use to fully capture the footprint [4].\n* Sustainability analysis must consider the intersection of these two cycles: the model development stages (Data, Experimentation, Training, Deployment) and the hardware life cycle (Manufacturing and Use) [5].\n\n**What this means**\nThe authors argue that a \"holistic perspective\" is necessary. Instead of only measuring the energy consumed during active training or inference, researchers must account for the total lifecycle, including the carbon costs of manufacturing the physical hardware and the energy used during data preparation and model experimentation.\n\n**Limits / what to verify**\nWhile the text identifies these components, it does not provide a specific mathematical weight for how much each component contributes to the total carbon footprint in every scenario; however, it does provide a specific power capacity breakdown for Facebook's infrastructure (10:20:70) across Experimentation, Training, and Inference [6].",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 3,
+        "chunk_id": "chunk_003",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "MODEL DEVELOPMENT PHASES AND AI SYSTEM HARDWARE LIFE CYCLE Figure 3 depicts the major development phases for ML — Data Processing, Experimentation, Training, and Inference (Section II-A) — over the life cycle of AI system hardware (Section II-B).",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 1,
+        "chunk_id": "chunk_001",
+        "section_title": "Abstract",
+        "chunk_type": "abstract",
+        "quote": "More speciﬁcally, we present the challenges and opportunities to designing sustainable AI computing across the key phases of the machine learning (ML) development process — Data, Experimentation, Training, and Inference — for a variety of AI use cases at Facebook, such as vision, language, speech, recommendation and ranking.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Analysis",
+        "chunk_type": "method",
+        "quote": "We must look at the ML pipeline end-to-end: data collection, model exploration and experimentation, model training, model optimization and run-time inference.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 4,
+        "page": 10,
+        "chunk_id": "chunk_010",
+        "section_title": "Analysis",
+        "chunk_type": "method",
+        "quote": "From the system’s perspective, the life cycle of model development and 7Papers with code: https://paperswithcode.com/sota/image-classiﬁcation-on -imagenet 8https://github.com/mlcommons/algorithmic-efﬁciency/ 9https://2021.naacl.org/ethics/faq/#-if-my-paper-reports-on-experiments-t hat-involve-lots-of-compute-timepower system hardware, including manufacturing and operational use, must also be accounted for.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 5,
+        "page": 10,
+        "chunk_id": "chunk_010",
+        "section_title": "Analysis",
+        "chunk_type": "method",
+        "quote": "Many different aspects must be accounted for, including the life cycles of both AI models (Data, Experimentation, Training, Deployment) and system hardware (Manufacturing and Use) (Section II).",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_010",
+    "capability": "single_doc_text",
+    "paper_id": "2203.02155",
+    "model": "gemma4:12b",
+    "question": "What were the completion results for GPT-3 175B when it received a labeler-written prompt?",
+    "answer": "**Answer**\nThe provided text does not contain specific qualitative or quantitative \"completion results\" (such as exact scores, accuracy percentages, or specific text outputs) for the GPT-3 175B model when it receives a labeler-written prompt. The documentation notes that these completions are visually represented in figures but does not provide a descriptive analysis of the content of those specific completions.\n\n**Evidence**\n* The paper includes images showing \"completions from GPT-3 175B and InstructGPT175B\" in response to labeler-written prompts [1][2].\n* While it notes that the 1.3B parameter InstructGPT model is preferred over the 175B GPT-3 model in human evaluations [3], it does not detail the specific content of the GPT-3 completions themselves [4].\n\n**What this means**\nThe text confirms that GPT-3 175B was used as a baseline for comparison against InstructGPT models. While the paper acknowledges that GPT-3 175B produces outputs to these prompts, it focuses on the fact that the smaller, fine-tuned InstructGPT models outperform the larger GPT-3 model in human preference evaluations [3][4].\n\n**Limits / what to verify**\nThe specific text of the completions for GPT-3 175B is only available in the figures (Figure 46 and Figure 47) rather than the provided text chunks. To understand the exact nature of these results, one would need to examine the visual data in those specific figures.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 65,
+        "chunk_id": "chunk_065",
+        "section_title": "Body",
+        "chunk_type": "body",
+        "quote": "Figure 46: Labeler-written prompt from our dataset, along with the human-written demonstration, and completions from GPT-3 175B and InstructGPT175B.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 65,
+        "chunk_id": "chunk_065",
+        "section_title": "Body",
+        "chunk_type": "body",
+        "quote": "Figure 47: Labeler-written prompt from our dataset, along with the human-written demonstration, and completions from GPT-3 175B and InstructGPT175B.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 1,
+        "chunk_id": "chunk_001",
+        "section_title": "Abstract",
+        "chunk_type": "abstract",
+        "quote": "In human evaluations on our prompt distribution, outputs from the 1.3B parameter InstructGPT model are preferred to outputs from the 175B GPT-3, despite having 100x fewer parameters.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 4,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "Our InstructGPT models (PPO-ptx) as well as its variant trained without pretraining mix (PPO) signiﬁcantly outperform the GPT-3 baselines (GPT, GPT prompted); outputs from our 1.3B PPO-ptx model are preferred to those from the 175B GPT-3.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_011",
+    "capability": "single_doc_text",
+    "paper_id": "2010.00133",
+    "model": "gemma4:12b",
+    "question": "What is the threshold for displaying a warning message regarding the Levenshtein distance between two sentences in the HIT design?",
+    "answer": "**Answer**\nThe threshold for displaying a warning message on the HIT (Human Intelligence Task) occurs when the Levenshtein distance between the two sentences exceeds 13.\n\n**Evidence**\n* A warning message is displayed if the Levenshtein distance between the two sentences is greater than 13 [1].\n\n**What this means**\n* This specific threshold ensures that the pairs presented to human workers remain \"minimally distant\" [2][3]. By enforcing a low Levenshtein distance, the researchers ensure that the only significant differences between the two sentences are the words identifying the demographic groups, rather than structural or grammatical changes.\n\n**Limits / what to verify**\n* The provided text does not specify the exact criteria used to determine why 13 was chosen as the specific numerical threshold for the Levenshtein distance.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 13,
+        "chunk_id": "chunk_013",
+        "section_title": "Body",
+        "chunk_type": "body",
+        "quote": "Additionally, a warning message is displayed on the HIT if the Levenshtein distance between the two sentences is greater than 13.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "In this dataset, for each example, the two sentences are minimally distant.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "The two sentences are minimally distant, the only words that change between them are those that identify the group being spoken about.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_013",
+    "capability": "single_doc_text",
+    "paper_id": "2201.08239",
+    "model": "gemma4:12b",
+    "question": "What is the definition of an 'utterance'?",
+    "answer": "**Answer**\nAn \"utterance\" is defined specifically within the context of the study's evaluation and safety assessment framework as a single statement within a conversation.\n\n**Evidence**\n* The paper defines an \"utterance\" as one statement in a conversation [1].\n\n**What this means**\nThis definition provides a granular unit of analysis for evaluating model performance, particularly when assessing the quality and safety of multi-turn dialogs. By defining each individual statement as an utterance, the researchers can systematically categorize and label specific responses for attributes such as harm, bias, or misinformation [2][3].\n\n**Limits / what to verify**\nThe provided text does not specify if this definition changes in different contexts (e.g., during pre-training vs. fine-tuning), but it is the standard definition used throughout the section regarding safety and groundedness.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 26,
+        "chunk_id": "chunk_026",
+        "section_title": "Evaluation",
+        "chunk_type": "method",
+        "quote": "Participants were provided with the following deﬁnitions which we use throughout this section: • An “utterance” is one statement in a conversation.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 34,
+        "chunk_id": "chunk_034",
+        "section_title": "Body",
+        "chunk_type": "body",
+        "quote": "A.4 Safety annotations data distribution Table 10: Safety annotations data distribution Utterance label Total collected All 48,348 Unsafe - Harm 5,570 Unsafe - Bias 2,560 Unsafe - Misinformation 1,260 Safe 41,810 B Crowdworker instructions for quality and groundedness The crowdworkers who rated dialogs for SSI were given the following instructions.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 26,
+        "chunk_id": "chunk_026",
+        "section_title": "Evaluation",
+        "chunk_type": "method",
+        "quote": "• An “Unsafe Utterance” is a statement that is harmful, biased, misinformative, incomprehensible, or otherwise undesirable.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_014",
+    "capability": "single_doc_text",
+    "paper_id": "2005.11401",
+    "model": "gemma4:12b",
+    "question": "What is the ratio of distinct to total tri-grams for the RAG-Seq. model on the Jeopardy QGen task?",
+    "answer": "**Answer**\nThe provided text does not contain a specific numerical value or percentage for the \"ratio of distinct to total tri-grams\" specifically for the **RAG-Seq.** model on the Jeopardy QGen task. While the paper provides data regarding tri-gram diversity and performance metrics for RAG models, it does not isolate the tri-gram ratio for the \"RAG-Seq.\" variant in the provided evidence.\n\n**Evidence**\n* Table 5 reports the \"Ratio of distinct to total tri-grams\" for generation tasks, showing that RAG is better than BART in terms of factuality and specificity [1].\n* Table 4 provides human assessments for the Jeopardy Question Generation task, where **RAG-Seq.** achieved scores of $77.8\\%$ and $46.8\\%$, but these are not tri-gram ratios [2][3].\n\n**What this means**\nThe evidence distinguishes between two different types of metrics: 1) the diversity of output (tri-gram ratio), which is used to compare RAG against a BART baseline [1], and 2) human assessment scores for specific tasks like Jeopardy QGen [2][3]. While both are reported in the paper, the specific tri-gram calculation for the \"RAG-Seq.\" model specifically is not explicitly listed in the provided snippets.\n\n**Limits / what to verify**\nThe text provides a general comparison of RAG vs. BART for tri-gram ratios [1], but it does not provide a granular breakdown by specific sub-model (e.g., RAG-Token vs. RAG-Seq.) for that specific metric. You would need the full Table 5 data or additional context to see if \"RAG\" in [1] refers specifically to the \"RAG-Seq.\" architecture.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 8,
+        "chunk_id": "chunk_008",
+        "section_title": "Architecture",
+        "chunk_type": "method",
+        "quote": "Factuality Speciﬁcity BART better 7.1% 16.8% RAG better 42.7% 37.4% Both good 11.7% 11.8% Both poor 17.7% 6.9% No majority 20.8% 20.1% Table 5: Ratio of distinct to total tri-grams for generation tasks.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 8,
+        "chunk_id": "chunk_008",
+        "section_title": "Architecture",
+        "chunk_type": "method",
+        "quote": "MSMARCO Jeopardy QGen Gold 89.6% 90.0% BART 70.7% 32.4% RAG-Token 77.8% 46.8% RAG-Seq.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 8,
+        "chunk_id": "chunk_008",
+        "section_title": "Architecture",
+        "chunk_type": "method",
+        "quote": "Table 4: Human assessments for the Jeopardy Question Generation Task.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_016",
+    "capability": "single_doc_text",
+    "paper_id": "1810.04805",
+    "model": "gemma4:12b",
+    "question": "What is the difference in how BERT and OpenAI GPT architectures differ in their pre-training?",
+    "answer": "**Answer**\nThe primary architectural difference between BERT and OpenAI GPT lies in the directionality of the training process. While both models utilize a fine-tuning approach—meaning they introduce minimal task-specific parameters by fine-tuning all pre-trained parameters [1][2]—they differ in how they process context during pre-training:\n\n* **OpenAI GPT** utilizes a left-to-right architecture. In this configuration, every token can only attend to previous tokens within the self-attention layers of the Transformer [3].\n* **BERT** is designed as a bidirectional model (Bidirectional Encoder Representations from Transformers), which allows it to be trained on deep bidirectional representations by conditioning on both left and right context simultaneously [4].\n\n**Evidence**\n* OpenAI GPT uses a left-to-right Transformer LM architecture where tokens only attend to previous tokens [5][3].\n* BERT is designed for \"Bidirectional Encoder Representations from Transformers\" [4].\n* Both BERT and OpenAI GPT are categorized as fine-tuning approaches, distinguishing them from feature-based models like ELMo [1].\n\n**What this means**\nThe distinction highlights a fundamental difference in how the models \"see\" language. GPT's unidirectional constraint limits its context to what precedes a word, whereas BERT’s bidirectional design allows it to capture information from both sides of a token simultaneously during pre-training. This architectural choice is central to their respective capabilities in understanding sentence-level tasks [6].\n\n**Limits / what to verify**\nThe provided text does not detail the specific objective functions (e.g., Masked Language Modeling vs. Causal Language Modeling) used by each model, only the directional constraints of their architectures.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 14,
+        "chunk_id": "chunk_014",
+        "section_title": "Results",
+        "chunk_type": "method",
+        "quote": "Note that in addition to the architec- ture differences, BERT and OpenAI GPT are ﬁne- tuning approaches, while ELMo is a feature-based approach.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 1,
+        "chunk_id": "chunk_001",
+        "section_title": "Abstract",
+        "chunk_type": "abstract",
+        "quote": "The ﬁne-tuning approach, such as the Generative Pre-trained Transformer (OpenAI GPT) (Radford et al., 2018), introduces minimal task-speciﬁc parameters, and is trained on the downstream tasks by simply ﬁne-tuning all pre- trained parameters.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 1,
+        "chunk_id": "chunk_001",
+        "section_title": "Abstract",
+        "chunk_type": "abstract",
+        "quote": "For example, in OpenAI GPT, the authors use a left-to- right architecture, where every token can only at- tend to previous tokens in the self-attention layers of the Transformer (Vaswani et al., 2017).",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 4,
+        "page": 1,
+        "chunk_id": "chunk_001",
+        "section_title": "Abstract",
+        "chunk_type": "abstract",
+        "quote": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding Jacob Devlin Ming-Wei Chang Kenton Lee Kristina Toutanova Google AI Language {jacobdevlin,mingweichang,kentonl,kristout}@google.com Abstract We introduce a new language representa- tion model called BERT, which stands for Bidirectional Encoder Representations from Transformers.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 5,
+        "page": 14,
+        "chunk_id": "chunk_014",
+        "section_title": "Results",
+        "chunk_type": "method",
+        "quote": "The most comparable existing pre-training method to BERT is OpenAI GPT, which trains a left-to-right Transformer LM on a large text cor- pus.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_018",
+    "capability": "single_doc_text",
+    "paper_id": "1910.10683",
+    "model": "gemma4:12b",
+    "question": "What was the number of bacterial and archaeal taxa identified in a study of 40 North Carolina homes?",
+    "answer": "**Answer**\nA study involving 40 homes in North Carolina utilized genomic technologies to identify more than 8,000 bacterial and archaeal taxa.\n\n**Evidence**\n* The study specifically documented more than 8,000 bacterial and archaeal taxa across 40 houses in North Carolina [1].\n* This finding was established using genomic technologies during the investigation of these specific locations [1].\n\n**What this means**\nThe data indicates a high level of microbial diversity within the sampled residential environments. However, it is important to note that this information appears to be unrelated to the primary focus of the paper, which discusses \"Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer.\"\n\n**Limits / what to verify**\nThe provided text contains two distinct types of information: one regarding microbial taxa [2][1] and another regarding large language model pre-training [3][4][5][6][7]. The specific count of 8,000 taxa is the only data point available in the context regarding biological organisms.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 46,
+        "chunk_id": "chunk_046",
+        "section_title": "Body",
+        "chunk_type": "body",
+        "quote": "a study of 40 houses in north carolina used genomic technologies to document more than 8,000 bacterial and archaeal taxa .",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 46,
+        "chunk_id": "chunk_046",
+        "section_title": "Body",
+        "chunk_type": "body",
+        "quote": "study of 40 north carolina homes found 8,000 bacterial and archaeal taxa .",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 41,
+        "chunk_id": "chunk_041",
+        "section_title": "Result",
+        "chunk_type": "method",
+        "quote": "“Baseline-1T” refers to the performance achieved by pre-training the baseline model on 1 trillion tokens (the same number used for the T5 model variants) instead of 235 ≈34B tokens (as was used for the baseline).",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 4,
+        "page": 41,
+        "chunk_id": "chunk_041",
+        "section_title": "Result",
+        "chunk_type": "method",
+        "quote": "Consistent with the findings in Section 3.6, we find that additional pre-training improves performance over the baseline.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 5,
+        "page": 41,
+        "chunk_id": "chunk_041",
+        "section_title": "Result",
+        "chunk_type": "method",
+        "quote": "We showed how this approach can be successfully applied to generative tasks like abstractive summarization, classification tasks like natural language inference, and even regression tasks like STS-B.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_024",
+    "capability": "single_doc_text",
+    "paper_id": "2112.11446",
+    "model": "gemma4:12b",
+    "question": "What are the specific words associated with 'Atheist' in the second instance of the Attribute Pair Adjectives category?",
+    "answer": "**Answer**\nThe provided text does not contain information regarding the word \"Atheist\" or any specific entries under an \"Attribute Pair Adjectives\" category.\n\n**Evidence**\nThe available context includes data on sentiment clusters for countries [1], comparisons between \"Black,\" \"White,\" and \"no attribute\" labels [2][3][4], and a list of verbs associated with \"Syria\" [5]. However, there is no mention of the term \"Atheist\" or an \"Attribute Pair Adjectives\" category in the provided snippets.\n\n**What this means**\nThe specific information requested is missing from the retrieved context. The document focuses on scaling language models and analyzing biases related to race and geography, but the specific sub-category or word you are looking for was not included in the provided chunks.\n\n**Limits / what to verify**\nTo find this answer, a search of the full paper's appendix or the specific section detailing \"Attribute Pair Adjectives\" would be required, as it is not present in the current evidence [E1-E7].",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 100,
+        "chunk_id": "chunk_100",
+        "section_title": "Results",
+        "chunk_type": "result",
+        "quote": "We compare countries from the lower sentiment cluster, “Syria” and “Iran,” with one from the higher sentiment cluster, “Iceland.” In these results, we see a reﬂection of recent events particularly for Syria, in words such as “ﬂee” and “escape,” while those for Iceland are more neutral in connotation, such as “see,” “eat,” and “spend.” Nouns which co-occur with the word “White” include “race,” “racist” and “racism” whereas words associated with “Black” are more varied (“hair,” “beauty,” “police,”",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 100,
+        "chunk_id": "chunk_100",
+        "section_title": "Results",
+        "chunk_type": "result",
+        "quote": "When comparing “Black” and “White” to “no attribute,” we observe that both “White” and “Black” are associated with similar words (“racism,” “race,” “skin”) whereas the “no attribute” template is associated with a broad set of general terms like “life,” “time,” and “car”.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 100,
+        "chunk_id": "chunk_100",
+        "section_title": "Results",
+        "chunk_type": "result",
+        "quote": "Because groups that are the majority in the context of our dataset, like “White,” are often unmarked in language, we also compare templates with the “Black” and “White” attribute to the template with “no attribute”.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 4,
+        "page": 100,
+        "chunk_id": "chunk_100",
+        "section_title": "Results",
+        "chunk_type": "result",
+        "quote": "We believe this reﬂects the way in which race is marked in our dataset; because the attribute “White” is an assumed default, it is mentioned more often when it is explicitly relevant to discussions of race and racism.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 5,
+        "page": 101,
+        "chunk_id": "chunk_101",
+        "section_title": "Analysis",
+        "chunk_type": "result",
+        "quote": "Scaling Language Models: Methods, Analysis & Insights from Training Gopher Attribute Pair Nouns Black hair, police, care, community, music, beauty, skin White racist, person, couldn, race, privilege, racism, man Black man, hair, person, police, skin, racism, race no attribute someone, encounter, life, car, time, disability, lot White man, person, racist, racism, race, color, skin no attribute life, someone, encounter, time, car, disability, home Verbs Syria syria, help, damascus, leave, ﬂee, und",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_029",
+    "capability": "single_doc_text",
+    "paper_id": "2005.11401",
+    "model": "gemma4:12b",
+    "question": "What is the difference between RAG-Sequence and RAG-Token models in terms of how they handle retrieved documents?",
+    "answer": "**Answer**\nThe primary distinction between RAG-Sequence and RAG-Token lies in the stage at which the model marginalizes over the latent documents. In **RAG-Sequence**, the model treats the entire output as a single sequence; it generates an output probability for each retrieved document and then marginalizes over those documents to produce the final distribution [1]. Conversely, **RAG-Token** operates at the token level: for every individual target token in the sequence, the model draws a different latent document and marginalizes accordingly [1][2].\n\n**Evidence**\n* The RAG-Sequence probability is defined as $p_{RAG-Sequence}(y|x) \\approx \\sum_{z \\in top-k} p_{\\eta}(z|x)p_{\\theta}(y|x, z)$, where the entire sequence $y$ is generated based on a single retrieved document $z$ [1].\n* The RAG-Token probability is defined as $p_{RAG-Token}(y|x) \\approx \\prod_{i} \\sum_{z \\in top-k} p_{\\eta}(z|x)p_{\\theta}(y_i|x, z, y_{1:i-1})$, allowing a different document to be sampled for each token $y_i$ [1][2].\n* Empirical results show that while RAG-Sequence performance improves monotonically as more documents are retrieved, RAG-Token performance peaks at 10 retrieved documents [3].\n\n**What this means**\nRAG-Sequence assumes that a single document is sufficient to provide the context for an entire answer, whereas RAG-Token allows the model to \"re-evaluate\" which document provides the best information for every specific word or token produced in the output.\n\n**Limits / what to verify**\nThe provided text does not specify the exact architectural differences in the generator's internal weights between the two models, only how they handle the marginalization of retrieved documents during inference.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 3,
+        "chunk_id": "chunk_003",
+        "section_title": "Results",
+        "chunk_type": "method",
+        "quote": "Concretely, the top K documents are retrieved using the retriever, and the generator produces the output sequence probability for each document, which are then marginalized, pRAG-Sequence(y|x) ≈ X z∈top-k(p(·|x)) pη(z|x)pθ(y|x, z) = X z∈top-k(p(·|x)) pη(z|x) N Y i pθ(yi|x, z, y1:i−1) RAG-Token Model In the RAG-Token model we can draw a different latent document for each target token and marginalize accordingly.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 3,
+        "chunk_id": "chunk_003",
+        "section_title": "Results",
+        "chunk_type": "method",
+        "quote": "Concretely, the top K documents are retrieved using the retriever, and then the generator produces a distribution for the next output token for each document, before marginalizing, and repeating the process with the following output token, Formally, we deﬁne: pRAG-Token(y|x) ≈ N Y i X z∈top-k(p(·|x)) pη(z|x)pθ(yi|x, z, y1:i−1) Finally, we note that RAG can be used for sequence classiﬁcation tasks by considering the target class as a target sequence of length one, in which case RAG-Sequence and R",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 8,
+        "chunk_id": "chunk_008",
+        "section_title": "Architecture",
+        "chunk_type": "method",
+        "quote": "Figure 3 (left) shows that retrieving more documents at test time monotonically improves Open-domain QA results for RAG-Sequence, but performance peaks for RAG-Token at 10 retrieved documents.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_032",
+    "capability": "single_doc_text",
+    "paper_id": "1909.08053",
+    "model": "gemma4:12b",
+    "question": "What are the structural components of the flower?",
+    "answer": "**Answer**\nThe provided text does not contain information regarding the biological structure of flowers. The paper focuses on training multi-billion parameter language models using model parallelism and transformer architectures.\n\n**Evidence**\nThe available evidence describes technical aspects of transformer models, such as layer normalization placement [1][2] and performance metrics on datasets like WikiText103, LAMBADA, and RACE [3][4]. While one specific chunk contains a sentence regarding flower components [5], this appears to be an error in the provided context or a non-sequitur, as it does not relate to the actual subject matter of the \"Megatron-LM\" research paper.\n\n**What this means**\nBecause the primary content of the paper is about large language model (LLM) training techniques and infrastructure, information regarding botany or floral anatomy is not part of the intended technical scope.\n\n**Limits / what to verify**\nThe specific mention of \"petals,\" \"sepals,\" \"hypanthium,\" and \"calyx\" in [5] appears to be an outlier in the provided context; however, since it is the only mention of flowers in the provided snippets, it cannot be confirmed as a valid part of the actual research paper's content.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 1,
+        "chunk_id": "chunk_001",
+        "section_title": "Abstract",
+        "chunk_type": "abstract",
+        "quote": "We show that careful attention to the placement of layer normalization in BERT-like models is critical to achieving in- creased performance as the model size grows.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "• We show that careful attention to the placement of layer normalization in BERT-like models is critical to achieving increased accuracies as the model grows.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "In addition, we show that our models achieve test set state of the art (SOTA) results on WikiText103, cloze-style prediction accuracy on LAMBADA, and reading comprehension RACE datasets.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 4,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "• We showcase that our models achieve state of the art results on test sets: perplexity on WikiText103 (10.8 ppl), accuracy on LAMBADA (66.5%), and accuracy on RACE (90.9%).",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 5,
+        "page": 13,
+        "chunk_id": "chunk_013",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "Megatron-LM: The structural components of the ﬂower are the petals and sepals, which are the reproductive organs, the hypanthium, which forms the base of the ﬂower, and the calyx, which is the stigma.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_040",
+    "capability": "single_doc_text",
+    "paper_id": "1810.04805",
+    "model": "gemma4:12b",
+    "question": "What is the difference in how BERT and OpenAI GPT models are fine-tuned?",
+    "answer": "**Answer**\nBased on the provided text, both BERT and OpenAI GPT share a common architectural approach to task adaptation known as \"fine-tuning.\" Unlike feature-based approaches (such as ELMo), both BERT and OpenAI GPT are designed so that they require minimal task-specific parameters. The process involves training the model on downstream tasks by simply fine-tuning all of the pre-trained parameters [1][2].\n\n**Evidence**\n* Both BERT and OpenAI GPT are categorized as \"fine-tuning approaches\" in contrast to ELMo, which is a \"feature-based approach\" [1].\n* The fine-tuning approach used by models like OpenAI GPT involves \"minimal task-specific parameters\" [2].\n* In these models, the transition from pre-training to downstream tasks is achieved by \"simply fine-tuning all pre-trained parameters\" [2].\n\n**What this means**\nThis indicates that BERT and OpenAI GPT share a fundamental methodology for adapting to new tasks: instead of extracting fixed features (as ELMo does), they utilize a large, pre-trained model where the entire weight set is updated during the final training phase on specific datasets. This allows both models to leverage deep bidirectional or unidirectional representations learned during pre-training to perform well on various downstream tasks with minimal architectural changes for each new task.\n\n**Limits / what to verify**\nThe provided text does not specify the exact number of parameters added or removed during the fine-tuning process, nor does it detail the specific hyperparameters used during the fine-tuning phase for BERT specifically compared to GPT.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 14,
+        "chunk_id": "chunk_014",
+        "section_title": "Results",
+        "chunk_type": "method",
+        "quote": "Note that in addition to the architec- ture differences, BERT and OpenAI GPT are ﬁne- tuning approaches, while ELMo is a feature-based approach.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 1,
+        "chunk_id": "chunk_001",
+        "section_title": "Abstract",
+        "chunk_type": "abstract",
+        "quote": "The ﬁne-tuning approach, such as the Generative Pre-trained Transformer (OpenAI GPT) (Radford et al., 2018), introduces minimal task-speciﬁc parameters, and is trained on the downstream tasks by simply ﬁne-tuning all pre- trained parameters.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_042",
+    "capability": "single_doc_text",
+    "paper_id": "2203.02155",
+    "model": "gemma4:12b",
+    "question": "What is the specific value for the pretraining loss coefficient (γ) that seems to work well across model sizes from 1.3B to 175B parameter count?",
+    "answer": "**Answer**\nThe specific value for the pretraining loss coefficient ($\\gamma$) that performs effectively across a wide range of model sizes, specifically from 1.3B to 175B parameters, is $27.8$ [1].\n\n**Evidence**\n* Research indicates that while increasing the pretraining loss coefficient causes the validation reward to decrease, the specific value of $27.8$ appears robust across different model scales [1].\n* This coefficient ($\\gamma$) is used in Equation 2 to balance the training objectives; researchers swept a range of these values to address and fix regressions on public NLP datasets [2].\n* The study notes that while specific tasks may show varying sensitivity to this coefficient, the value of $27.8$ remains a consistent choice for maintaining performance across large model variations [1][3].\n\n**What this means**\nThis finding suggests that even as models scale significantly in size (from 1.3B to 175B parameters), there is a stable point for the pretraining loss coefficient that maintains high validation rewards without causing significant degradation in performance on standard NLP tasks [1][4].\n\n**Limits / what to verify**\nThe text notes that sensitivity to this coefficient can vary depending on the specific task being performed [3]. While $27.8$ is a stable value for general model scaling, specific downstream tasks may still require individual tuning or monitoring of the $\\gamma$ parameter.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 53,
+        "chunk_id": "chunk_053",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "Although increasing the pretraining loss coefﬁcient causes the validation reward to drop, a single value of 27.8 seems to work well across model sizes, from 1.3B to 175B parameter count.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 53,
+        "chunk_id": "chunk_053",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "E.6 Fixing regressions on public NLP datasets We sweep a range of pretraining loss coefﬁcient (γ in Equation 2) to see its effects on the performance of public NLP datasets and validation reward.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 53,
+        "chunk_id": "chunk_053",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "We also noticed that the sensitivity to pretraining loss coefﬁcient varies across tasks.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 4,
+        "page": 53,
+        "chunk_id": "chunk_053",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "By setting pretraining loss coefﬁcient to greater or equal 20, the regression on these tasks can be recovered, on the 1.3B model.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_043",
+    "capability": "single_doc_text",
+    "paper_id": "2010.00133",
+    "model": "gemma4:12b",
+    "question": "What is the maximum Levenshtein distance between two sentences before a warning message is displayed on the HIT?",
+    "answer": "**Answer**\nThe maximum allowed Levenshtein distance between two sentences before a warning message is triggered on the HIT is 13. If the distance exceeds this value, a warning is displayed to the worker.\n\n**Evidence**\n* A warning message is shown on the HIT if the Levenshtein distance between the two sentences is greater than 13 [1].\n\n**What this means**\nThis threshold serves as a quality control mechanism during the data collection process for the CrowS-Pairs dataset. By monitoring the Levenshtein distance, the researchers ensure that the pairs remain \"minimally distant\" [2] and that only specific identifying words are changed between sentences [3]. If the distance exceeds 13, it suggests the two sentences have diverged too much to be considered a valid pair for measuring subtle social biases.\n\n**Limits / what to verify**\nThe provided text does not specify the exact criteria used to determine why the number 13 was chosen as the specific threshold, nor does it detail the consequences for a worker if they receive this warning beyond the display of the message itself.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 13,
+        "chunk_id": "chunk_013",
+        "section_title": "Body",
+        "chunk_type": "body",
+        "quote": "Additionally, a warning message is displayed on the HIT if the Levenshtein distance between the two sentences is greater than 13.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "In this dataset, for each example, the two sentences are minimally distant.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "The two sentences are minimally distant, the only words that change between them are those that identify the group being spoken about.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_044",
+    "capability": "single_doc_text",
+    "paper_id": "2107.03374",
+    "model": "gemma4:12b",
+    "question": "What are the correct completions of the code snippet provided in the passage?",
+    "answer": "**Answer**\nThe provided text does not contain specific code snippets or their corresponding \"correct completions.\" While the paper discusses the evaluation of functional correctness and mentions that Figure 2 showcases problems of varying difficulty along with correct model-generated solutions, the actual code examples are not included in the provided context.\n\n**Evidence**\n* The text notes that Figure 2 contains \"problems of varying difficulty in our dataset, along with correct model generated solutions\" [1].\n* The paper discusses evaluating \"functional correctness for synthesizing programs from docstrings\" and mentions that a sample is considered correct if it passes a set of unit tests [2].\n\n**What this means**\nBecause the provided snippets are limited to high-level descriptions of the evaluation methodology (such as the $pass@k$ estimator) and general observations about model behavior, the specific code completions for any given snippet cannot be identified. The text describes the *process* of determining correctness via unit tests rather than providing a list of correct answers for specific snippets.\n\n**Limits / what to verify**\nThe full paper or the specific figure mentioned (Figure 2) would be required to see the actual code samples and their corresponding correct solutions.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Framework",
+        "chunk_type": "method",
+        "quote": "Figure 2 showcases problems of varying difﬁculty in our dataset, along with correct model generated solutions.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Framework",
+        "chunk_type": "method",
+        "quote": "As a consequence, recent works in unsupervised code translation (Lachaux et al., 2020) and pseudocode-to-code translation (Kulal et al., 2019) have turned to functional correctness instead, where a sample is considered correct if it passes a set of unit tests.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_045",
+    "capability": "single_doc_text",
+    "paper_id": "1909.12673",
+    "model": "gemma4:12b",
+    "question": "What is the purpose of the term $\\eta$ in equation (5)?",
+    "answer": "**Answer**\nThe term $\\eta$ in equation (5) is part of a complex-valued envelope function used to parameterize the transition of generalization error across different scales of model size ($m$) and dataset size ($n$). Specifically, it appears within the denominator as $i\\eta$, where $i = \\sqrt{-1}$. This mathematical structure allows the authors to define a functional form that approximates the observed generalization error $\\hat{\\epsilon}(m, n)$ in practice.\n\n**Evidence**\n* The authors propose an envelope (complex) function to parameterize the transition of error: $\\hat{\\epsilon}(m, n) = \\epsilon_0 \\frac{\\tilde{\\epsilon}(m, n)}{\\tilde{\\epsilon}(m, n) - i\\eta} = \\epsilon_0 \\frac{a n^{-\\alpha} + b m^{-\\beta} + c}{a n^{-\\alpha} + b m^{-\\beta} + c - i\\eta}$ [1].\n* The term $i$ is defined as $\\sqrt{-1}$ in the context of this equation [1].\n* This functional form is intended to fit observations across scales and provide accurate predictions when moving from small-scale (seen) to large-scale (unseen) models and data [2][3].\n\n**What this means**\nThe inclusion of $\\eta$ within a complex denominator suggests that the model uses complex arithmetic to represent the transition between different regimes of performance. By incorporating $i\\eta$, the authors create a mathematical framework where the real part of the resulting expression approximates the observed generalization error while potentially handling the \"saturation\" effects described in criteria C1, C2, and C3 [1][4][5].\n\n**Limits / what to verify**\nThe provided text does not explicitly define the physical or geometric interpretation of $\\eta$ (e.g., whether it represents a specific damping factor or a transition width). The text only defines its role within the complex-valued envelope function [1].",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 6,
+        "chunk_id": "chunk_006",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "We propose to parameterize the transition using the following envelope (complex) function: ˆϵ(m, n) = ϵ0 ˜ϵ(m, n) ˜ϵ(m, n) −iη = ϵ0 an−α + bm−β + c∞ an−α + bm−β + c∞−iη (5) where i = √−1.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 1,
+        "chunk_id": "chunk_001",
+        "section_title": "Abstract",
+        "chunk_type": "abstract",
+        "quote": "We show that the form both ﬁts the observations well across scales, and provides accurate predictions from small- to large-scale models and data.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 1,
+        "chunk_id": "chunk_001",
+        "section_title": "Abstract",
+        "chunk_type": "abstract",
+        "quote": "We propose an intuitive candidate for such a function and evaluate its quality, both in explaining the observed error landscapes and in extrapolating from small scale (seen) to large scale (unseen) errors.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 4,
+        "page": 5,
+        "chunk_id": "chunk_005",
+        "section_title": "Evaluation",
+        "chunk_type": "method",
+        "quote": "In particular, let us consider function families meeting the following criteria which augment and restrict our observations: C1 As either model or dataset size goes to zero, the expected performance is equivalent to a random-guess error level ϵ0.2 C2 For a given dataset size, scaling up the model will result in an initial increase in perfor- mance, which will then saturate, taking the form in equation 1.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 5,
+        "page": 5,
+        "chunk_id": "chunk_005",
+        "section_title": "Evaluation",
+        "chunk_type": "method",
+        "quote": "C3 For a given model size, scaling up the dataset will result in an initial increase in perfor- mance, which will then saturate, taking the form in equation 2.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_math_001",
+    "capability": "math",
+    "paper_id": "2010.00133",
+    "model": "gemma4:12b",
+    "question": "What is the method used to calculate the conditional pseudo-log-likelihood of each sentence?",
+    "answer": "**Answer**\nTo calculate the conditional pseudo-log-likelihood for each sentence in the study, the methodology involves a specific iterative process over the text. The model processes the sentence by masking a single token at a time. For each masked token, the system measures its log likelihood and accumulates these individual results into a cumulative sum [1].\n\n**Evidence**\n* The calculation is performed by iterating over the sentence and masking one token at a time [1].\n* The resulting values from these measurements are summed to determine the final conditional pseudo-log-likelihood for the sentence [1].\n\n**What this means**\nThis method allows the researchers to quantify how likely a model finds a specific sentence to be \"correct\" or \"natural\" based on its training. By masking individual tokens and summing their log likelihoods, they can compare the probabilities of two minimally distant sentences (one stereotyping and one anti-stereotyping) to determine if the model exhibits a preference for biased content [1][2][3].\n\n**Limits / what to verify**\nThe provided text does not specify the exact mathematical formula used for the summation or the specific probability distribution over the vocabulary. Additionally, while it mentions that tokens can appear anywhere in the sentence, it does not detail how the model handles multiple masks if they were to occur simultaneously (though the method specifies masking a single token at a time).",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 4,
+        "chunk_id": "chunk_004",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "Shane lifted the lumber and swung his ax [MASK] Jenny lifted the lumber and swung her ax [MASK] Step 1 Step 2 Step 8 Figure 1: To calculate the conditional pseudo-log-likelihood of each sentence, we iterate over the sentence, mask- ing a single token at a time, measuring its log likelihood, and accumulating the result in a sum (Salazar et al., 2020).",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 4,
+        "chunk_id": "chunk_004",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "To measure this, we propose a metric that calculates the percentage of examples for which the LM prefers the more stereotyping sentence (or, equivalently, the less anti-stereotyping sentence).",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "In this dataset, for each example, the two sentences are minimally distant.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_math_006",
+    "capability": "math",
+    "paper_id": "1706.03762",
+    "model": "gemma4:12b",
+    "question": "What is the formula for Scaled Dot-Product Attention?",
+    "answer": "**Answer**\nThe specific formula for Scaled Dot-Product Attention, as defined in the Transformer architecture, is calculated by taking the product of the query ($Q$) and key ($K$) matrices, scaling the result by the square root of the dimension of the keys ($\\sqrt{d_k}$), applying a softmax function, and multiplying by the value ($V$) matrix.\n\n**Evidence**\n* The paper defines this specific mechanism as \"Scaled Dot-Product Attention\" [1].\n* The mathematical formulation for this operation is given as: $Attention(Q, K, V) = \\text{softmax}(\\frac{QK^T}{\\sqrt{d_k}})V$ [2].\n\n**What this means**\n* The inclusion of the $\\sqrt{d_k}$ term serves as a scaling factor. This is necessary because, for large values of $d_k$, the dot products can grow large in magnitude, pushing the softmax function into regions where it has extremely small gradients [2].\n* By using this specific formula, the model replaces traditional recurrent or convolutional layers with an attention-based mechanism to capture global dependencies between inputs and outputs [3].\n\n**Limits / what to verify**\n* The provided text does not explicitly detail the mathematical derivation of why $\\sqrt{d_k}$ is the optimal scaling factor, only that it is the standard used in this specific \"Scaled Dot-Product\" implementation.\n* The context confirms that while additive attention exists as an alternative [2], the Transformer specifically utilizes the dot-product version described above.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 4,
+        "chunk_id": "chunk_004",
+        "section_title": "Body",
+        "chunk_type": "body",
+        "quote": "3.2.1 Scaled Dot-Product Attention We call our particular attention \"Scaled Dot-Product Attention\" (Figure 2).",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 4,
+        "chunk_id": "chunk_004",
+        "section_title": "Body",
+        "chunk_type": "body",
+        "quote": "We compute the matrix of outputs as: Attention(Q, K, V ) = softmax(QKT √dk )V (1) The two most commonly used attention functions are additive attention [2], and dot-product (multi- plicative) attention.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Model",
+        "chunk_type": "introduction",
+        "quote": "In this work we propose the Transformer, a model architecture eschewing recurrence and instead relying entirely on an attention mechanism to draw global dependencies between input and output.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_math_010",
+    "capability": "math",
+    "paper_id": "2107.03374",
+    "model": "gemma4:12b",
+    "question": "What is the formula used to calculate the sum of products of digits in Completion 2?",
+    "answer": "**Answer**\n\nThe provided text does not contain a mathematical formula for calculating the sum of products of digits specifically for \"Completion 2.\" While the document includes several code snippets labeled as completions, the specific logic for \"Completion 2\" in the context of digit multiplication is not explicitly defined by a standalone formula.\n\n**Evidence**\n\n* The text contains a snippet for \"COMPLETION 2 (WRONG)\" regarding an `add_elements` function [1].\n* Another section includes code for a different problem involving products of digits, but it is labeled as \"COMPLETION 2 (WRONG)\" in a separate context where the logic involves `sum(a*b for a, b in zip(str(a), str(b)))` [2].\n* A subsequent snippet shows an alternative implementation using a loop and powers of ten: `result += (a_digit * b_digit) * (10 ** power)` [3].\n\n**What this means**\n\nThe term \"Completion 2\" appears in two different contexts within the provided snippets. In one instance, it refers to an incorrect attempt at a list processing task [1]. In another instance, it refers to a calculation involving `sum(a*b for a, b in zip(str(a), str(b)))` [2], which calculates the sum of products of digits by pairing characters from the string representations of two numbers.\n\n**Limits / what to verify**\n\nThe specific \"formula\" depends on which \"Completion 2\" is being referenced. Because there are multiple instances of \"COMPLETION 2\" in different code blocks, you must verify which specific problem (e.g., `add_elements` vs. the digit multiplication task) is intended by the question.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 21,
+        "chunk_id": "chunk_021",
+        "section_title": "Body",
+        "chunk_type": "body",
+        "quote": "1 <= k <= len(arr) \"\"\" ### COMPLETION 1 (WRONG): ### pass ### COMPLETION 2 (WRONG): ### for i in range(0, k): if len(str(arr[i])) < 3: k = k - 1 continue else: return arr[i] ### COMPLETION 3 (WRONG): ### sum_ = 0 i = 0 while k > 0 and i < len(arr): if len(str(arr[i])) <= 2: sum_ += arr[i] k -= 1 i += 1 return sum_ ### COMPLETION 4 (WRONG): ### size = len(arr) if k > size: return None start = k * -1 - 1 end = k * -1 arr = arr[start:end] return sum(arr) ### COMPLETION 5 (CORRECT): ### if k <= len(",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 22,
+        "chunk_id": "chunk_022",
+        "section_title": "Result",
+        "chunk_type": "result",
+        "quote": "\"\"\" ### COMPLETION 1 (WRONG): ### if a == 0 or b == 0: return 0 elif a < b: return (a - b) * 10 elif a > b: return (a - b) * 10 + b else: return (a - b) * 10 + b ### COMPLETION 2 (WRONG): ### #return sum([a * b for a, b in zip(str(a), str(b)) ]) return sum(a*b for a, b in zip(str(a), str(b))) ### COMPLETION 3 (WRONG): ### # Edge case: a and b are both 0.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 22,
+        "chunk_id": "chunk_022",
+        "section_title": "Result",
+        "chunk_type": "result",
+        "quote": "# a = abs(a) b = abs(b) result = 0 power = 0 while a > 0: a_digit = a % 10 a //= 10 b_digit = b % 10 b //= 10 result += (a_digit * b_digit) * (10 ** power) power += 1 if b < 0: return 0 - result return result ### COMPLETION 8 (WRONG): ### number = a*b string = str(number) total = 0 for i in string: total += int(i) return total def even_odd_palindrome(n): \"\"\" Given a positive integer n, return a tuple that has the number of even and odd integer palindromes that fall within the range(1, n ), inclu",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_math_011",
+    "capability": "math",
+    "paper_id": "2010.00133",
+    "model": "gemma4:12b",
+    "question": "What is the method for calculating the conditional pseudo-log-likelihood of each sentence?",
+    "answer": "**Answer**\nThe methodology for calculating the conditional pseudo-log-likelihood involves a process where the model evaluates the probability of individual tokens within a sentence after they have been masked. Specifically, the calculation is performed by:\n* Iterating through the sentence one token at a time [1].\n* Masking a single token during each step of the iteration [1].\n* Measuring the log likelihood of that specific masked token [1].\n* Accumulating these individual results into a total sum to determine the final score for the sentence [1].\n\n**Evidence**\n* To calculate the conditional pseudo-log-likelihood, the process iterates over the sentence, masking a single token at a time and measuring its log likelihood, then accumulating the result in a sum [1].\n* The mathematical representation for this calculation is given as $score(S) = \\sum_{i=0}^{|C|} \\log P(u_i \\in U | U \\setminus u_i, M, \\theta)$ [2].\n\n**What this means**\nThis method allows the researchers to quantify how much a language model \"prefers\" certain tokens based on the surrounding context. By summing the log probabilities of masked tokens, the metric provides a numerical representation of the model's internal state regarding specific sentence structures or content. This is used as a basis for measuring social bias by comparing these scores across different stereotyping pairs [3].\n\n**Limits / what to verify**\nThe provided text does not specify the exact value of $C$ or the specific definition of the set $U$ beyond the context of masked tokens, though it is implied that $C$ represents the count of tokens in the sentence.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 4,
+        "chunk_id": "chunk_004",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "Shane lifted the lumber and swung his ax [MASK] Jenny lifted the lumber and swung her ax [MASK] Step 1 Step 2 Step 8 Figure 1: To calculate the conditional pseudo-log-likelihood of each sentence, we iterate over the sentence, mask- ing a single token at a time, measuring its log likelihood, and accumulating the result in a sum (Salazar et al., 2020).",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 5,
+        "chunk_id": "chunk_005",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "For each sentence, we mask one unmodiﬁed token at a time until all ui have been masked, score(S) = |C| X i=0 log P(ui ∈U|U\\ui, M, θ) (1) Figure 1 shows an illustration.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 4,
+        "chunk_id": "chunk_004",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "To measure this, we propose a metric that calculates the percentage of examples for which the LM prefers the more stereotyping sentence (or, equivalently, the less anti-stereotyping sentence).",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_math_020",
+    "capability": "math",
+    "paper_id": "2006.11239",
+    "model": "gemma4:12b",
+    "question": "What is the difference between the true variational bound and the simplified objective in terms of sample quality?",
+    "answer": "**Answer**\nThe primary difference between the true variational bound and the simplified objective lies in their impact on sample quality versus codelength. While training on the true variational bound yields better codelengths, it does not produce the highest sample quality. In contrast, the simplified objective $L_{simple}(\\theta)$ is specifically designed to improve sample quality and is easier to implement [1][2]. Furthermore, when comparing specific prediction targets, predicting $\\epsilon$ performs significantly better than predicting $\\tilde{\\mu}$ when using the simplified objective, whereas they perform approximately equally under the true variational bound with fixed variances [3].\n\n**Evidence**\n* Training on the true variational bound yields better codelengths than the simplified objective, but the latter (the simplified objective) yields the best sample quality [1].\n* The authors found it beneficial to sample quality and simpler to implement to train on the variant $L_{simple}(\\theta) := \\mathbb{E}_{t,x_0,\\epsilon} [\\|\\epsilon - \\epsilon_\\theta(\\sqrt{\\bar{\\alpha}_t}x_0 + \\sqrt{1-\\bar{\\alpha}_t}\\epsilon, t)\\|^2]$ [2].\n* Predicting $\\epsilon$ performs much better than predicting $\\tilde{\\mu}$ when trained with the simplified objective compared to the true variational bound [3].\n\n**What this means**\nThe authors chose the simplified objective because it optimizes for visual quality over mathematical codelength. This suggests that while the true variational bound is theoretically more aligned with information theory, the simplified version effectively captures the necessary features for high-quality image synthesis in diffusion models.\n\n**Limits / what to verify**\nThe text does not provide specific numerical values for \"better\" or \"worse\" sample quality; these are qualitative assessments based on the results in Table 2 [4].",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 6,
+        "chunk_id": "chunk_006",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": ", 1, 0 do 3: Receive xt using pθ(xt|xt+1) 4: end for 5: return x0 We ﬁnd that training our models on the true variational bound yields better codelengths than training on the simpliﬁed objective, as expected, but the latter yields the best sample quality.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 5,
+        "chunk_id": "chunk_005",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "However, we found it beneﬁcial to sample quality (and simpler to implement) to train on the following variant of the variational bound: Lsimple(θ) := Et,x0,ϵ h ϵ −ϵθ(√¯αtx0 + √ 1 −¯αtϵ, t) 2i (14) where t is uniform between 1 and T.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 6,
+        "chunk_id": "chunk_006",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "Predicting ϵ, as we proposed, performs approximately as well as predicting ˜µ when trained on the variational bound with ﬁxed variances, but much better when trained with our simpliﬁed objective.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 4,
+        "page": 6,
+        "chunk_id": "chunk_006",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "4.2 Reverse process parameterization and training objective ablation In Table 2, we show the sample quality effects of reverse process parameterizations and training objectives (Section 3.2).",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_math_023",
+    "capability": "math",
+    "paper_id": "2005.11401",
+    "model": "gemma4:12b",
+    "question": "What is the formula for pRAG-Sequence(y|x) or its approximation?",
+    "answer": "**Answer**\nThe RAG-Sequence model approximates the probability of a sequence $y$ given an input $x$ by marginalizing over a set of top-$K$ retrieved documents. The specific formula for this approximation is:\n\n$pRAG\\text{-}Sequence(y|x) \\approx \\sum_{z \\in top\\text{-}k} p_{\\eta}(z|x)p_{\\theta}(y|x, z)$\n\nIn this calculation, the probability is further expanded as:\n$\\sum_{z \\in top\\text{-}k} p_{\\eta}(z|x) \\prod_{i=1}^{N} p_{\\theta}(y_i|x, z, y_{1:i-1})$\n\n**Evidence**\n* The RAG-Sequence model treats the retrieved document as a single latent variable that is marginalized to obtain the seq2seq probability $p(y|x)$ via a top-$K$ approximation [1].\n* The specific mathematical formulation for this marginalization over the top-$K$ documents is provided as $pRAG\\text{-}Sequence(y|x) \\approx \\sum_{z \\in top\\text{-}k} p_{\\eta}(z|x)p_{\\theta}(y|x, z)$, where the generator produces output sequence probabilities for each document [2].\n* The expanded product notation for the sequence generation is $\\prod_{i=1}^{N} p_{\\theta}(y_i|x, z, y_{1:i-1})$ [2].\n\n**What this means**\nThis formula indicates that the RAG-Sequence model selects a single document to inform the generation of the entire output sequence. By marginalizing over the top-$K$ documents, the model combines the retriever's probability $p_{\\eta}(z|x)$ with the generator's conditional probability $p_{\\theta}(y|x, z)$, effectively weighting each retrieved document's contribution to the final output distribution.\n\n**Limits / what to verify**\nThe provided text distinguishes this from the RAG-Token model, which allows for a different latent document for each target token; the formula above is specific only to the RAG-Sequence architecture [2].",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 3,
+        "chunk_id": "chunk_003",
+        "section_title": "Results",
+        "chunk_type": "method",
+        "quote": "Technically, it treats the retrieved document as a single latent variable that is marginalized to get the seq2seq probability p(y|x) via a top-K approximation.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 3,
+        "chunk_id": "chunk_003",
+        "section_title": "Results",
+        "chunk_type": "method",
+        "quote": "Concretely, the top K documents are retrieved using the retriever, and the generator produces the output sequence probability for each document, which are then marginalized, pRAG-Sequence(y|x) ≈ X z∈top-k(p(·|x)) pη(z|x)pθ(y|x, z) = X z∈top-k(p(·|x)) pη(z|x) N Y i pθ(yi|x, z, y1:i−1) RAG-Token Model In the RAG-Token model we can draw a different latent document for each target token and marginalize accordingly.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_math_024",
+    "capability": "math",
+    "paper_id": "1910.10683",
+    "model": "gemma4:12b",
+    "question": "What was the calculated average span length when processing a sequence of 500 tokens with 15% corruption and 25 total spans?",
+    "answer": "**Answer**\nWhen processing a sequence of 500 tokens with a specified corruption rate of 15% and a total of 25 spans, the calculated average span length is 3.\n\n**Evidence**\n* The calculation is derived from the total number of corrupted tokens divided by the total number of spans: $500 \\times 0.15 = 75$ total corrupted tokens; then $75 / 25 = 3$ [1].\n* The paper notes that this objective can be parameterized either by the average span length or the total number of spans [2].\n\n**What this means**\nThis calculation demonstrates how the model's corruption objectives are mathematically structured. By defining both a corruption rate and a target number of spans, the researchers can control the granularity of the noise introduced during pre-training. In this specific example, an average span length of 3 is identified as a configuration that significantly outperforms i.i.d. noise [3].\n\n**Limits / what to verify**\nThe provided text confirms that while different parameters (like average span length of 2, 3, 5, or 10) were tested at a constant 15% corruption rate, the specific calculation for 25 spans resulting in a length of 3 is used as an illustrative example of how these two parameters are mathematically equivalent [1][2].",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 24,
+        "chunk_id": "chunk_024",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "For example, if we are processing a sequence of 500 tokens and we have specified that 15% of tokens should be corrupted and that there should be 25 total spans, then the total number of corrupted tokens would be 500×0.15 = 75 and the average span length would be 75/25 = 3.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 24,
+        "chunk_id": "chunk_024",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "Note that given the original sequence length and corruption rate, we can equivalently parametrize this objective either by the average span length or the total number of spans.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 24,
+        "chunk_id": "chunk_024",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "We also find in particular that using an average span length of 3 slightly (but significantly) outperforms the i.i.d.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_figure_004",
+    "capability": "visual",
+    "paper_id": "2512.24601",
+    "model": "gemma4:12b",
+    "question": "What does a Recursive Language Model (RLM) treat prompts as?",
+    "answer": "**Answer**\nA Recursive Language Model (RLM) treats long prompts as part of an external environment rather than just a standard input string [1][2]. This paradigm allows the model to interact with the prompt programmatically by examining, decomposing, and recursively calling itself over specific snippets of the prompt [2].\n\n**Evidence**\n* The RLM framework treats long prompts as part of an external environment [1][2].\n* This approach enables the LLM to decompose and recursively call itself over segments of the input [2].\n* By treating the prompt this way, the system functions as an abstracted \"language model\" that operates without traditional context limitations [3].\n\n**What this means**\nBy shifting the perspective from a linear sequence of tokens to an external environment, RLMs can bypass standard context window constraints. This allows the model to handle inputs significantly larger than what is typically possible for vanilla LLMs by breaking down complex or long-form data into manageable pieces that are processed recursively [2][4].\n\n**Limits / what to verify**\nThe text does not specify the exact technical mechanism (e.g., specific API calls or file system interactions) used to \"examine\" or \"decompose\" these snippets, only that it is a programmatic process [2].",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Limitations",
+        "chunk_type": "method",
+        "quote": "Figure 2: A Recursive Language Model (RLM) treats prompts as part of the environment.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 1,
+        "chunk_id": "chunk_001",
+        "section_title": "Abstract",
+        "chunk_type": "abstract",
+        "quote": "We propose Recursive Lan- guage Models (RLMs), a general inference paradigm that treats long prompts as part of an external environment and allows the LLM to programmatically ex- amine, decompose, and recursively call itself over snippets of the prompt.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Limitations",
+        "chunk_type": "method",
+        "quote": "This system serves as an abstracted “language model” without context limitations.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 4,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Limitations",
+        "chunk_type": "method",
+        "quote": "We introduce Recursive Language Models (RLMs), a general-purpose inference paradigm for dramatically scaling the effective input and output lengths of LLMs.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_figure_016",
+    "capability": "visual",
+    "paper_id": "1706.03762",
+    "model": "gemma4:12b",
+    "question": "What does the summary of results compare?",
+    "answer": "**Answer**\nThe paper evaluates the Transformer's performance primarily through its superiority over existing state-of-the-art models in translation tasks and its ability to generalize across different types of natural language processing tasks. Specifically, the results compare:\n\n* The Transformer's performance against previous best results (including ensembles) on the WMT 2014 English-to-German translation task [1].\n* The model's effectiveness in handling both large and limited training data sets for English constituency parsing [2][3].\n* The impact of different positional encoding methods, specifically comparing standard embeddings against learned positional embeddings [4].\n\n**Evidence**\n* The Transformer achieved 28.4 BLEU on the WMT 2014 English-to-German translation task, which outperformed existing best results by over 2 BLEU [1].\n* The model demonstrated successful generalization to English constituency parsing under both large and limited training data conditions [2][3].\n* Experiments showed that using learned positional embeddings produced nearly identical results compared to the standard implementation [4].\n\n**What this means**\nThese comparisons serve to validate two main claims: first, that replacing recurrence and convolutions with attention mechanisms improves translation quality over previous benchmarks; and second, that the architecture is robust enough to generalize across different tasks (like parsing) and different internal configurations (like positional embedding types).\n\n**Limits / what to verify**\nThe provided text does not specify the exact metrics used for \"English constituency parsing\" other than a reference to Table 4. Additionally, while it notes that learned embeddings produced \"nearly identical results,\" the specific numerical delta or the exact configuration of the \"standard\" version is not detailed in the snippets.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 1,
+        "chunk_id": "chunk_001",
+        "section_title": "Abstract",
+        "chunk_type": "abstract",
+        "quote": "Our model achieves 28.4 BLEU on the WMT 2014 English- to-German translation task, improving over the existing best results, including ensembles, by over 2 BLEU.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 1,
+        "chunk_id": "chunk_001",
+        "section_title": "Abstract",
+        "chunk_type": "abstract",
+        "quote": "We show that the Transformer generalizes well to other tasks by applying it successfully to English constituency parsing both with large and limited training data.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 10,
+        "chunk_id": "fig_fig_10_007",
+        "section_title": "Table",
+        "chunk_type": "table",
+        "quote": "Table 4: The Transformer generalizes well to English constituency parsing (Results are on Section 23",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 4,
+        "page": 6,
+        "chunk_id": "chunk_006",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "We also experimented with using learned positional embeddings [9] instead, and found that the two versions produced nearly identical results (see Table 3 row (E)).",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_010",
+    "capability": "single_doc_text",
+    "paper_id": "2203.02155",
+    "model": "mistral:7b",
+    "question": "What were the completion results for GPT-3 175B when it received a labeler-written prompt?",
+    "answer": "**Answer**\nThe paper provides two examples [1][2] of completion results for GPT-3 175B when it received labeler-written prompts. However, the specific details of these completions are not explicitly stated in the provided context.\n\n**Evidence**\n- Figure 46 and Figure 47 show a labeler-written prompt, human-written demonstration, and completions from GPT-3 175B and InstructGPT175B for two different prompts [1][2].\n\n**What this means**\nWithout the specific details of the completions, it's challenging to draw definitive conclusions about the performance of GPT-3 175B on these particular tasks. However, we do know from other evidence that human evaluations on a prompt distribution favor outputs from the 1.3B parameter InstructGPT model over outputs from the 175B GPT-3 [3][4][5]. This suggests that the InstructGPT model may perform better in terms of following user intent compared to GPT-3 175B on this specific dataset.\n\n**Limits / what to verify**\nTo gain a more comprehensive understanding of GPT-3 175B's performance on labeler-written prompts, it would be beneficial to have access to the specific completions provided by GPT-3 175B in Figures 46 and 47. Additionally, further investigation into the human evaluations mentioned in [3][4][5] could provide insights into the aspects of user intent that InstructGPT excels at compared to GPT-3 175B.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 65,
+        "chunk_id": "chunk_065",
+        "section_title": "Body",
+        "chunk_type": "body",
+        "quote": "Figure 46: Labeler-written prompt from our dataset, along with the human-written demonstration, and completions from GPT-3 175B and InstructGPT175B.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 65,
+        "chunk_id": "chunk_065",
+        "section_title": "Body",
+        "chunk_type": "body",
+        "quote": "Figure 47: Labeler-written prompt from our dataset, along with the human-written demonstration, and completions from GPT-3 175B and InstructGPT175B.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 1,
+        "chunk_id": "chunk_001",
+        "section_title": "Abstract",
+        "chunk_type": "abstract",
+        "quote": "In human evaluations on our prompt distribution, outputs from the 1.3B parameter InstructGPT model are preferred to outputs from the 175B GPT-3, despite having 100x fewer parameters.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 4,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "1.3B 6B 175B Model size 0.2 0.4 0.6 Win rate against SFT 175B Model PPO-ptx PPO SFT GPT (prompted) GPT Figure 1: Human evaluations of various models on our API prompt distribution, evaluated by how often outputs from each model were preferred to those from the 175B SFT model.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 5,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Model",
+        "chunk_type": "method",
+        "quote": "Our InstructGPT models (PPO-ptx) as well as its variant trained without pretraining mix (PPO) signiﬁcantly outperform the GPT-3 baselines (GPT, GPT prompted); outputs from our 1.3B PPO-ptx model are preferred to those from the 175B GPT-3.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
+  },
+  {
+    "case_id": "mine_text_023",
+    "capability": "single_doc_text",
+    "paper_id": "1409.0473",
+    "model": "mistral:7b",
+    "question": "What was the difference in translation quality between the RNNencsdec-50 and the RNNsearch-50 models?",
+    "answer": "**Answer**\nThe paper does not provide a direct comparison of translation quality between the RNNencsdec-50 and the RNNsearch-50 models. However, it is stated that both models belong to the family of encoder-decoders [1][2] and are used for English-to-French translation [3]. The RNNsearch-50 model is shown to generate a correct translation preserving the whole meaning of the input sentence without omitting any details [4], which suggests better performance in terms of accuracy.\n\n**Evidence**\n- [1][2]: These evidence pieces describe that both RNNencsdec-50 and RNNsearch-50 models belong to the family of encoder-decoders.\n- [4]: This evidence shows an example of a correct translation generated by the RNNsearch-50 model.\n- [3]: This evidence indicates that both models are used for English-to-French translation.\n\n**What this means**\nAlthough the paper does not provide a direct comparison between the two models, the RNNsearch-50 model's ability to generate a correct translation without omitting details suggests better performance in terms of accuracy compared to the RNNencsdec-50 model. However, more specific comparisons or evaluations are missing from the provided context.\n\n**Limits / what to verify**\nTo confirm the difference in translation quality between the two models, it would be helpful to have direct comparisons or evaluation metrics for both models in the paper's context. Additionally, understanding the specific differences between RNNencsdec-50 and RNNsearch-50 models could provide more insight into their performance discrepancies.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 1,
+        "chunk_id": "chunk_001",
+        "section_title": "Abstract",
+        "chunk_type": "abstract",
+        "quote": "Most of the proposed neural machine translation models belong to a family of encoder– decoders (Sutskever et al., 2014; Cho et al., 2014a), with an encoder and a decoder for each lan- guage, or involve a language-speciﬁc encoder applied to each sentence whose outputs are then com- pared (Hermann and Blunsom, 2014).",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 2,
+        "page": 1,
+        "chunk_id": "chunk_001",
+        "section_title": "Abstract",
+        "chunk_type": "abstract",
+        "quote": "The models proposed recently for neu- ral machine translation often belong to a family of encoder–decoders and encode a source sentence into a ﬁxed-length vector from which a decoder generates a translation.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 3,
+        "page": 2,
+        "chunk_id": "chunk_002",
+        "section_title": "Approach",
+        "chunk_type": "method",
+        "quote": "On the task of English-to-French translation, the proposed approach achieves, with a single model, a translation performance comparable, or close, to the conventional phrase-based system.",
+        "source_paper_id": null
+      },
+      {
+        "ref_id": 4,
+        "page": 8,
+        "chunk_id": "chunk_008",
+        "section_title": "Approach",
+        "chunk_type": "method",
+        "quote": "On the other hand, the RNNsearch-50 generated the following correct translation, preserving the whole meaning of the input sentence without omitting any details: Un privil`ege d’admission est le droit d’un m´edecin d’admettre un patient `a un hˆopital ou un centre m´edical pour effectuer un diagnostic ou une proc´edure, selon son statut de travailleur des soins de sant´e `a l’hˆopital.",
+        "source_paper_id": null
+      }
+    ],
+    "vision": false,
+    "error": null
   }
 ]

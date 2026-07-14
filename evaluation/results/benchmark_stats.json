@@ -31,8 +31,8 @@
       "mistral:7b",
       "qwen3.5:9b"
     ],
-    "citations_total": 788,
-    "citations_per_answer_mean": 2.3
+    "citations_total": 829,
+    "citations_per_answer_mean": 2.4
   },
   "labeled_benchmarks": {
     "retrieval_anchor": 14,

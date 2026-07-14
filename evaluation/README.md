@@ -29,6 +29,8 @@ intentionally small: enough for real ablations, not for a broad research claim.
 | `run_comparison_eval.py` | ScholAR vs pdfchat / vanilla-RAG / PaperQA2-RCS on shared cases (`--rescore` re-scores offline) | model |
 | `run_efficiency_eval.py` | Per-model latency, throughput, and memory footprint of the answering path (`--model`, resumable) | model |
 | `run_abstention_eval.py` | Abstention vs fabrication on provably-unanswerable questions, per model (`--model`, `--rescore`) | model |
+| `m3sciqa/build_m3sciqa.py` | Assembles M3SciQA's locality task (297 labeled cases) into our schema | none |
+| `m3sciqa/run_m3sciqa_eval.py` | Multi-doc localization vs M3SciQA's published baselines (`--tier text\|vision`) | vision tier: model |
 | `mine_cases.py` | Mines + source-verifies the diverse 100-case benchmark | model |
 | `build_scaled_benchmark.py` | Auto-labels the 100-case set into the scaled retrieval + faithfulness benchmarks | none |
 | `build_abstention_benchmark.py` | Builds the 20 provably-unanswerable cross-paper negatives | none |
@@ -43,12 +45,12 @@ Shared components: `embedder.py` (local all-MiniLM-L6-v2, pure PyTorch), `hybrid
 
 - **Retrieval (scaled, 100 cases / 25 papers):** BM25-primary R@5 0.93, MRR 0.861; plain BM25 within noise (0.94, 0.863); dense-only trails (0.74, 0.572). At scale BM25 beats dense, reversing the 3-paper anchor where dense topped a tiny set, which is why ScholAR keeps BM25 primary.
 - **Retrieval-support CFS (scaled):** BM25 0.785, Hybrid 0.782; SCHR@5 0.860 → 0.750; 93/100 and 92/100 faithful.
-- **Generation faithfulness (single model, gemma4:12b, 51 cases):** mean 0.971, contradiction rate 0.0, 94% of citations fully supported (188/12/0 of 200).
+- **Generation faithfulness across the 4 models (100 diverse cases):** faithfulness varies widely (gemma4 0.951, qwen3.5 0.908, mistral 0.809, llama3.1 0.719) while citation support stays in a narrow band (0.868–0.951). The citation layer the design enforces is what transfers across models; answer quality does not.
 - **Local comparison (qwen3.5:9b, 91 cases):** ScholAR leads on generation faithfulness (0.892) and answer correctness (0.563), ahead of PaperQA2-style RCS (0.872 / 0.550) and long-context PDF-chat (0.801 / 0.267); every emitted page citation is valid.
 - **Abstention (20 unanswerable questions):** qwen3.5 and llama3.1 decline 100%, gemma4 95%, mistral 90%; the rare non-abstentions are a benign minibatch-size overlap, not free invention.
 - **Efficiency (per query, Apple Silicon 18 GB):** BM25 retrieval ~40 ms (model-independent); end-to-end 6 to 11 s; 6 to 8 GB loaded; 16 to 27 tok/s across the four models.
 - **Visual:** correct figure/table routing on all 18 pilot cases, zero caption fallback.
-- **Multi-doc localization:** R@5 0.50, MRR 0.183, at or below the random floor (R@5 0.625) — the clearest open problem.
+- **Multi-doc localization (M3SciQA, 297 labeled locality cases):** text-only BM25 sits near chance (MRR 0.180 vs our empirical floor 0.121; their BM25 is 0.127 vs floor 0.126). Resolving the anchor **figure** with the local multimodal model first lifts MRR to **0.474** (qwen3.5:9b) / 0.455 (gemma4:12b): 3.3× the best open-source LMM they report (0.144), past GPT-4V (0.400), and within 0.026 of GPT-4o (0.500). Expert humans remain ahead at 0.796.
 
 ## Requirements
 
