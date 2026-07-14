@@ -388,32 +388,23 @@ Table~\ref{tab:benchstats} summarizes the corpus and the benchmarks built on it.
            yields close to one chunk per page, because a typical page holds fewer words
            than the chunk window.}
   \label{tab:benchstats}
-  \setlength{\tabcolsep}{4pt}
-  \begin{tabular}{lr}
+  \small
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabular}{lr@{\hskip 12pt}lr}
     \toprule
-    \textbf{Statistic} & \textbf{Value} \\
+    \multicolumn{2}{c}{\emph{Corpus}} & \multicolumn{2}{c}{\emph{Diverse benchmark}} \\
+    \cmidrule(lr){1-2}\cmidrule(lr){3-4}
+    Papers            & 25       & Questions           & 100 \\
+    Pages / paper     & 34.5     & \ \ text/math/vis.  & 50/25/25 \\
+    Chunks / paper    & 34.8     & Question words      & 12.9 \\
+    Words / paper     & 17{,}694 & Gold facts / q.     & 2.8 \\
     \midrule
-    \multicolumn{2}{l}{\emph{Corpus}} \\
-    Papers                              & 25 \\
-    Pages per paper (mean)              & 34.5 \\
-    Chunks per paper (mean)             & 34.8 \\
-    Words per paper (mean)              & 17{,}694 \\
-    \midrule
-    \multicolumn{2}{l}{\emph{Diverse benchmark (mined, source-verified)}} \\
-    Questions                           & 100 \\
-    \quad text / mathematical / visual  & 50 / 25 / 25 \\
-    Question length (words, mean)       & 12.9 \\
-    Gold facts per question (mean)      & 2.8 \\
-    \midrule
-    \multicolumn{2}{l}{\emph{Labeled benchmarks (hand-labeled / auto-labeled)}} \\
-    Retrieval                           & 14 / 100 \\
-    Retrieval-support faithfulness      & 51 / 100 \\
-    Visual / multi-document             & 18 / 18 \\
-    Unanswerable (abstention)           & 20 \\
-    \midrule
-    \multicolumn{2}{l}{\emph{Generated answers (4 local models)}} \\
-    Answers collected                   & 350 \\
-    Inline citations (mean per answer)  & 788 (2.3) \\
+    \multicolumn{2}{c}{\emph{Labeled sets (hand / auto)}} & \multicolumn{2}{c}{\emph{Generated answers}} \\
+    \cmidrule(lr){1-2}\cmidrule(lr){3-4}
+    Retrieval         & 14 / 100 & Answers             & 350 \\
+    Faithfulness      & 51 / 100 & Local models        & 4 \\
+    Visual / multi-doc& 18 / 18  & Inline citations    & 788 \\
+    Unanswerable      & 20       & Citations / answer  & 2.3 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -435,15 +426,13 @@ read the size of BM25's margin cautiously, because the mined queries share lexic
 surface with their source passages, but the direction, lexical over single-pass dense
 at scale, is the one the BM25-primary design assumes.
 
-Aggregates hide where retrieval actually struggles, so Table~\ref{tab:bycap} breaks the
-same run down by question type. Both retrievers degrade monotonically from text to
-mathematical to figure and table questions, and the drop is steepest for the visual
-cases (BM25-primary Recall@5 falls from 0.98 to 0.84). This is the expected weakness of
-a lexical signal: a question about a figure shares little surface form with the caption
-and body text that surround it, which is also why ScholAR routes figure and table
-questions to a vision model rather than trusting retrieval alone. BM25-primary
-nonetheless leads dense-only in every category, by the widest margin on exactly the
-visual cases where dense retrieval is often assumed to help.
+Aggregates hide where retrieval struggles, so Table~\ref{tab:bycap} breaks the same run
+down by question type. Both retrievers degrade monotonically from text to mathematical to
+figure and table questions, most steeply on the visual cases (BM25-primary Recall@5 falls
+from 0.98 to 0.84): a question about a figure shares little surface form with the caption
+and body text around it, which is why ScholAR routes such questions to a vision model
+rather than trusting retrieval alone. BM25-primary still leads dense-only in every
+category, by the widest margin on exactly those visual cases.
 
 \begin{table}[t]
   \centering
@@ -522,7 +511,7 @@ Section~\ref{sec:auto-gen}.
 
 \subsection{Generation Faithfulness}
 \label{sec:auto-gen}
-Table~\ref{tab:gen} reports the faithfulness of the system's generated answers on
+We first report the faithfulness of the system's generated answers on
 the same 51 queries, using the local model gemma4:12b~\citep{gemmateam2026gemma4} for generation. The mean
 generation-faithfulness score is 0.971: 97.1\% of the atomic claims in the generated
 answers are entailed by the retrieved context. The mean contradiction rate is 0.0, so
@@ -535,21 +524,41 @@ zero unsupported-citation count is automated evidence for the indirect citation
 mechanism, not a claim of perfect correctness against ground truth; assessing that is
 the job of the human evaluation (Section~\ref{sec:humaneval}).
 
+\subsection{Does the Grounding Hold Across Models?}
+\label{sec:auto-models}
+ScholAR's premise is that grounding lives in the retrieval and application layer, not in the
+model, so we swapped only the generation model and re-ran the pipeline over the 100 diverse
+cases (Table~\ref{tab:models}). Only half of that premise survives. Generation faithfulness
+does \emph{not} hold constant: it ranges from 0.719 (llama3.1:8b) to 0.947 (gemma4:12b), and
+llama3.1:8b carries the only non-trivial hallucination rate (0.046). Citation support, by
+contrast, stays within a narrow band for every model (0.839 to 0.941). The layer the design
+actually controls, the evidence-identifier citation mechanism, is the stable one; the prose
+around the citations tracks the strength of the underlying model.
+
+llama3.1:8b is the instructive case: it emits the fewest citations (85, against 579 for
+qwen3.5:9b) yet has the highest support rate (0.941). When it cites, it cites well, but it
+answers tersely and leaves more of its prose uncited, which is what drags its faithfulness
+down. A high citation-support rate alone is therefore not evidence of a faithful answer, which
+is why we report both. We read this as refining the model-agnostic claim rather than confirming
+it: the citation mechanism transfers across models, answer quality still depends on the model.
+
 \begin{table}[t]
   \centering
-  \caption{Generation faithfulness of ScholAR's produced answers on 51 cases
-           (generation model gemma4:12b). Citation counts are over 200 inline
-           citations.}
-  \label{tab:gen}
-  \setlength{\tabcolsep}{6pt}
-  \begin{tabular}{lc}
+  \caption{The same ScholAR pipeline with only the generation model changed, on the 100
+           diverse cases. Faith.\ is mean generation faithfulness and Hall.\ the mean
+           hallucination rate; Cites is the number of inline citations the model emitted and
+           Supp.\ the fraction of them supported by the cited evidence. Faithfulness varies
+           widely across models; citation support does not.}
+  \label{tab:models}
+  \setlength{\tabcolsep}{5pt}
+  \begin{tabular}{lcccc}
     \toprule
-    \textbf{Metric} & \textbf{Value} \\
+    \textbf{Model} & \textbf{Faith.} & \textbf{Hall.} & \textbf{Cites} & \textbf{Supp.} \\
     \midrule
-    Mean generation faithfulness & 0.971 \\
-    Mean contradiction rate      & 0.000 \\
-    Citation support rate        & 0.94 \\
-    Citations supported / partial / unsupported   & 188 / 12 / 0 \\
+    gemma4:12b   & 0.947 & 0.001 & 289 & 0.879 \\
+    qwen3.5:9b   & 0.888 & 0.000 & 579 & 0.872 \\
+    mistral:7b   & 0.819 & 0.006 & 205 & 0.839 \\
+    llama3.1:8b  & 0.719 & 0.046 &  85 & 0.941 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -655,12 +664,10 @@ evidence that grounding induces abstention rather than as a precise rate.
 
 \begin{table}[t]
   \centering
-  \caption{One question, run through the unmodified pipeline. Asked of the paper that
-           contains the answer, the cited page resolves to the exact supporting sentence;
-           asked of a paper that does not, the model declines. The middle row is a real
-           failure we do not hide: the answer is right, but a surplus citation points at a
-           sentence that does not support the claim, which is what keeps citation precision
-           below 1.0 in Table~\ref{tab:compare}. Text is verbatim from the logged runs.}
+  \caption{One question through the unmodified pipeline, verbatim from the logs. The
+           middle row is a real failure we do not hide: the answer is right, but a surplus
+           citation points at a sentence that does not support it, which is what keeps
+           citation precision below 1.0 (Table~\ref{tab:compare}).}
   \label{tab:example}
   \small
   \begin{tabular}{@{}p{0.96\columnwidth}@{}}
@@ -785,15 +792,16 @@ clearest open problem.
 We presented ScholAR, a fully local retrieval-augmented system for grounded
 scientific document comprehension that combines page-preserving chunking with
 indirect citation grounding and extends to visual and multi-document questions. On
-51 cases the system's generated answers are grounded with a mean score of 0.971, no
-contradictions, and 94\% fully supported citations with none unsupported; retrieval
-reaches Recall@5 of 0.93 across 25 papers; and figure and table routing is correct in all 18 pilot
-cases. Against local baselines ScholAR leads on answer correctness and faithfulness,
-and on unanswerable questions the local models decline rather than fabricate 90 to
-100\% of the time. Cross-document localization is at or below chance and is our
-clearest open problem. We contribute a 100-case, 25-paper text, math, and figure benchmark and a
-model-agnostic human-evaluation protocol over four local models, whose expert scoring
-is in progress and will replace the placeholders reported here.
+51 cases its generated answers are grounded with a mean score of 0.971, no
+contradictions, and 94\% fully supported citations; retrieval reaches Recall@5 of 0.93
+across 25 papers; and figure and table routing is correct in all 18 pilot cases. Against
+local baselines ScholAR leads on answer correctness and faithfulness, and on
+unanswerable questions the local models decline rather than fabricate 90 to 100\% of the
+time. Swapping the generation model shows the citation layer transfers while answer
+faithfulness does not, so grounding is model-agnostic only where the design enforces it.
+Cross-document localization is at or below chance and is our clearest open problem. We
+contribute a 100-case, 25-paper benchmark and a human-evaluation protocol whose expert
+scoring will replace the placeholders reported here.
 
 \bibliography{scholar_references}
 
