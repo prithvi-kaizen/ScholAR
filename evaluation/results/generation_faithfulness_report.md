@@ -6,20 +6,20 @@ This measures the faithfulness of ScholAR's **generated answers**, not of a pre-
 
 | Metric | Value |
 |---|---:|
-| Mean generation-faithfulness (answer atoms entailed) | 0.971 |
+| Mean generation-faithfulness (answer atoms entailed) | 0.937 |
 | Mean hallucination rate (answer atoms contradicted) | 0.0 |
-| Citation-support rate (Supported / all checked) | 0.94 |
-| Citations checked (Supported / Partial / Unsupported) | 188 / 12 / 0 |
+| Citation-support rate (Supported / all checked) | 0.922 |
+| Citations checked (Supported / Partial / Unsupported) | 248 / 21 / 0 |
 
 ## Generation faithfulness by claim type
 
 | Claim type | N | Mean generation-faithfulness |
 |---|---:|---:|
-| architecture_detail | 10 | 1.0 |
-| conceptual_claim | 5 | 0.933 |
-| environmental_claim | 1 | 1.0 |
+| architecture_detail | 10 | 0.9 |
+| conceptual_claim | 5 | 1.0 |
+| environmental_claim | 1 | 0.0 |
 | formula | 1 | 1.0 |
 | human_eval | 2 | 1.0 |
-| result_number | 13 | 0.952 |
-| technical_claim | 11 | 0.97 |
-| training_detail | 8 | 0.975 |
+| result_number | 13 | 0.909 |
+| technical_claim | 11 | 1.0 |
+| training_detail | 8 | 1.0 |

@@ -57,8 +57,8 @@ highlightable location. Indirect citation grounding lets the model cite only evi
 identifiers that map to chunks it actually retrieved, so it cannot write a page number
 of its own. We evaluate retrieval, answer faithfulness, visual grounding, and
 cross-document localization on labeled benchmarks. On 51 cases, the generated answers
-stay grounded in their retrieved context with a mean score of 0.971, no answer atom
-contradicts its source, and 94\% of inline citations are fully supported with none
+stay grounded in their retrieved context with a mean score of 0.937, no answer atom
+contradicts its source, and 92\% of the 269 inline citations are fully supported with none
 unsupported. BM25-primary retrieval reaches Recall@5 of 0.93 across 25 papers, and figure and table
 questions route to the correct visual element in all 18 pilot cases. On M3SciQA's
 cross-document localization task, retrieving from the question alone sits near chance,
@@ -114,8 +114,8 @@ Our contributions are:
   \item An evaluation that scores the faithfulness of the system's \emph{generated
         answers} rather than of pre-written gold claims, paired with an automated
         per-citation support metric. On 51 cases, generated answers reach a mean
-        grounding score of 0.971 with a zero contradiction rate and 94\% fully
-        supported citations.
+        grounding score of 0.937 with a zero contradiction rate and 92\% fully
+        supported citations, none unsupported.
   \item Automated benchmarks and results for retrieval, retrieval-support
         faithfulness, visual grounding, and cross-document localization, the last
         measured against the published baselines of M3SciQA on its own data, where a
@@ -546,11 +546,11 @@ Section~\ref{sec:auto-gen}.
 \label{sec:auto-gen}
 We first report the faithfulness of the system's generated answers on
 the same 51 queries, using the local model gemma4:12b~\citep{gemmateam2026gemma4} for generation. The mean
-generation-faithfulness score is 0.971: 97.1\% of the atomic claims in the generated
+generation-faithfulness score is 0.937: 93.7\% of the atomic claims in the generated
 answers are entailed by the retrieved context. The mean contradiction rate is 0.0, so
-no answer atom was classified as contradicting its source. Of 200 inline citations
-checked, 188 are fully supported, 12 partially supported, and none unsupported, a
-citation-support rate of 0.94. These scores measure grounding to the retrieved
+no answer atom was classified as contradicting its source. Of 269 inline citations
+checked, 248 are fully supported, 21 partially supported, and none unsupported, a
+citation-support rate of 0.922. These scores measure grounding to the retrieved
 context and the absence of outright contradiction, both of which run naturally high
 for a well-behaved retrieval-augmented system, so we read them conservatively. The
 zero unsupported-citation count is automated evidence for the indirect citation
@@ -827,7 +827,7 @@ same task, so the cross-document setting stays the weakest part of the system.
 We presented ScholAR, a fully local retrieval-augmented system for grounded scientific
 document comprehension combining page-preserving chunking with indirect citation grounding,
 extended to visual and multi-document questions. Its generated answers are grounded with a
-mean score of 0.971 and 94\% fully supported citations; retrieval reaches Recall@5 of 0.93
+mean score of 0.937 and 92\% fully supported citations, none unsupported; retrieval reaches Recall@5 of 0.93
 across 25 papers; it leads local baselines on correctness and faithfulness; and on
 unanswerable questions the models decline rather than fabricate 90 to 100\% of the time.
 Swapping the generation model shows the citation layer transfers while answer faithfulness
