@@ -21,12 +21,19 @@ References:
 """
 from __future__ import annotations
 
+import os
 import re
 import sys
 from pathlib import Path
 from typing import Literal
 
 import numpy as np
+
+# ── Optional real-entailment judge (set FAITH_JUDGE=llm) ────────────────
+# When enabled, atoms are classified ENTAILMENT/NEUTRAL/CONTRADICTION by a local LLM
+# (llm_entailment.py) instead of by cosine similarity. Cosine cannot detect contradiction;
+# the LLM judge can. Kept opt-in so the fast cosine path stays the default for retrieval-support.
+_USE_LLM_JUDGE = os.getenv("FAITH_JUDGE", "").lower() == "llm"
 
 # ── Embedder injection (set by run_faithfulness_eval.py) ──────────────
 # We do NOT self-load here to avoid double model instantiation.
@@ -186,10 +193,16 @@ class NLIFaithfulnessScorer:
 
     @property
     def _mode(self):
+        if _USE_LLM_JUDGE:
+            from llm_entailment import JUDGE_MODEL
+            return f"llm_judge:{JUDGE_MODEL}"
         return "semantic" if _get_embedder() is not None else "lexical_fallback"
 
     def _classify_atom(self, atom: str, chunk_text: str) -> tuple[NLILabel, float]:
         """Classify a single atomic claim against a single chunk."""
+        if _USE_LLM_JUDGE:
+            from llm_entailment import classify
+            return classify(atom, chunk_text)  # real entailment, can fire CONTRADICTION
         emb = _get_embedder()
         if emb is not None:
             h_sents = _split_sentences(atom) or [atom]
@@ -236,10 +249,18 @@ class NLIFaithfulnessScorer:
         atoms = _split_atoms(expected_claim)
 
         atom_results = []
-        for atom in atoms:
-            result = self.score_claim_vs_chunks(atom, chunk_texts, top_k)
-            result["atom"] = atom
-            atom_results.append(result)
+        if _USE_LLM_JUDGE:
+            # One judge call per atom against the joined evidence (not per chunk).
+            from llm_entailment import classify
+            premise = "\n\n".join(t for t in chunk_texts if t)
+            for atom in atoms:
+                label, score = classify(atom, premise)
+                atom_results.append({"atom": atom, "label": label, "score": score, "chunk_idx": 0})
+        else:
+            for atom in atoms:
+                result = self.score_claim_vs_chunks(atom, chunk_texts, top_k)
+                result["atom"] = atom
+                atom_results.append(result)
 
         n = max(len(atom_results), 1)
         entailed_atoms  = sum(1 for r in atom_results if r["label"] == "ENTAILMENT")
