@@ -22,9 +22,15 @@
 \usepackage{amssymb}
 \usepackage{mathtools}
 \usepackage{booktabs}
+\usepackage{microtype}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,fit,backgrounds}
 \graphicspath{{figures/}}
+
+% Results-table emphasis, following the field convention (PaperQA2, M3SciQA):
+% \best marks the best value in a column, \snd the second best.
+\newcommand{\best}[1]{\textbf{#1}}
+\newcommand{\snd}[1]{\underline{#1}}
 
 \pdfinfo{
 /TemplateVersion (2027.1)
@@ -91,10 +97,11 @@ citable question answering over a scientific document look like under a hard loc
 with a single sub-15-billion-parameter model, no cloud API, and a retrieval design simple enough to
 audit end to end?
 
-Two ideas carry ScholAR. Page-preserving chunking segments a document so that every retrieved
-chunk lies entirely within one PDF page, making a citation resolve to an exact, highlightable
-location. Indirect citation grounding assigns each retrieved passage a short-lived evidence
-identifier and instructs the model to cite only those identifiers, never a free-form page number;
+Two ideas carry ScholAR. \textbf{Page-preserving chunking} segments a document so that every
+retrieved chunk lies entirely within one PDF page, making a citation resolve to an exact,
+highlightable location. \textbf{Indirect citation grounding} assigns each retrieved passage a
+short-lived evidence identifier and instructs the model to cite only those identifiers, never a
+free-form page number;
 the application then rewrites each identifier into a numbered reference that maps deterministically
 to a page. The model decides only which evidence supports a claim, and the evidence-to-page mapping
 is application logic rather than a model guess (Figure~\ref{fig:ui}). Beyond single-document text,
@@ -436,17 +443,18 @@ Table~\ref{tab:benchstats} summarizes the corpus and the benchmarks built on it.
 \begin{table}[t]
   \centering
   \caption{Retrieval on the scaled benchmark: 100 auto-labeled cases across 25 papers,
-           with NDCG@5 over the gold chunks. On the 3-paper hand-labeled anchor
-           (14 cases) dense-only instead leads (R@5 1.000, MRR 0.881).}
+           with NDCG@5 over the gold chunks. Here and in later tables, \best{best} and
+           \snd{second} per column are marked. On the 3-paper hand-labeled anchor (14 cases)
+           dense-only instead leads (R@5 1.000, MRR 0.881).}
   \label{tab:retrieval}
   \setlength{\tabcolsep}{3pt}
   \begin{tabular}{lccccc}
     \toprule
     \textbf{System} & \textbf{R@1} & \textbf{R@3} & \textbf{R@5} & \textbf{MRR} & \textbf{NDCG@5} \\
     \midrule
-    Keyword         & 0.670 & 0.860 & 0.950 & 0.779 & 0.762 \\
-    BM25-Only       & 0.810 & 0.910 & 0.940 & 0.863 & 0.828 \\
-    BM25+Rerank     & 0.810 & 0.910 & 0.930 & 0.861 & 0.824 \\
+    Keyword         & \snd{0.670} & \snd{0.860} & \best{0.950} & 0.779 & 0.762 \\
+    BM25-Only       & \best{0.810} & \best{0.910} & \snd{0.940} & \best{0.863} & \best{0.828} \\
+    BM25+Rerank     & \best{0.810} & \best{0.910} & 0.930 & \snd{0.861} & \snd{0.824} \\
     Dense-Only      & 0.470 & 0.650 & 0.740 & 0.572 & 0.523 \\
     \bottomrule
   \end{tabular}
@@ -534,10 +542,10 @@ quality still depends on the model.
     \toprule
     \textbf{Model} & \textbf{Faith.} & \textbf{Hall.} & \textbf{Cites} & \textbf{Supp.} \\
     \midrule
-    gemma4:12b   & 0.951 & 0.001 & 366 & 0.907 \\
-    qwen3.5:9b   & 0.908 & 0.003 & 587 & 0.888 \\
+    gemma4:12b   & \best{0.951} & \best{0.001} & 366 & \snd{0.907} \\
+    qwen3.5:9b   & \snd{0.908} & \snd{0.003} & 587 & 0.888 \\
     mistral:7b   & 0.809 & 0.006 & 228 & 0.868 \\
-    llama3.1:8b  & 0.719 & 0.041 &  81 & 0.951 \\
+    llama3.1:8b  & 0.719 & 0.041 &  81 & \best{0.951} \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -580,9 +588,10 @@ not under one identical protocol.
   \centering
   \caption{Multi-document localization on M3SciQA's locality task (297 labeled cases, mean
            47.9 candidate references). Rows marked $\dagger$ are figures published by
-           M3SciQA~\citep{li2024m3sciqa}; the rest are measured here. Resolving the figure with
-           a local multimodal model, rather than retrieving from the question alone, is what
-           moves this task.}
+           M3SciQA~\citep{li2024m3sciqa}; the rest are measured here. \best{Best} and
+           \snd{second-best} \emph{system} per column are marked; human and random are reference
+           rows, not ranked. Resolving the figure with a local multimodal model, rather than
+           retrieving from the question alone, is what moves this task.}
   \label{tab:multidoc}
   \setlength{\tabcolsep}{2pt}
   \begin{tabular}{lcc}
@@ -590,12 +599,12 @@ not under one identical protocol.
     \textbf{System} & \textbf{MRR} & \textbf{R@5} \\
     \midrule
     Human expert$^\dagger$                    & 0.796 & -- \\
-    GPT-4o$^\dagger$ (cloud)                  & 0.500 & -- \\
-    \textbf{ScholAR + vision (qwen3.5)}       & \textbf{0.474} & \textbf{0.606} \\
-    \textbf{ScholAR + vision (gemma4)}        & 0.455 & 0.572 \\
+    GPT-4o$^\dagger$ (cloud)                  & \best{0.500} & -- \\
+    \textbf{ScholAR + vision (qwen3.5)}       & \snd{0.474} & \best{0.606} \\
+    \textbf{ScholAR + vision (gemma4)}        & 0.455 & \snd{0.572} \\
     GPT-4V$^\dagger$ (cloud)                  & 0.400 & -- \\
     text-emb-3-large$^\dagger$ (cloud)        & 0.297 & -- \\
-    ScholAR BM25 (text only)                  & 0.180 & 0.242 \\
+    \textbf{ScholAR BM25} (text only)         & 0.180 & 0.242 \\
     Best open-source LMM$^\dagger$            & 0.144 & -- \\
     BM25$^\dagger$ / Random$^\dagger$         & 0.127 / 0.126 & -- \\
     \bottomrule
@@ -633,9 +642,9 @@ this is a resource-matched local comparison, not a claim to frontier-scale quali
     \textbf{System} & \textbf{Faith.} & \textbf{Correct.} & \textbf{Cite-F1} \\
     \midrule
     PDF-chat (long-context)      & 0.801 & 0.267 & 0.742 \\
-    Vanilla RAG                  & 0.860 & 0.340 & 0.802 \\
-    PaperQA2-style (RCS, local)  & 0.872 & 0.550 & 0.782 \\
-    ScholAR                      & 0.892 & 0.563 & 0.760 \\
+    Vanilla RAG                  & 0.860 & 0.340 & \best{0.802} \\
+    PaperQA2-style (RCS, local)  & \snd{0.872} & \snd{0.550} & \snd{0.782} \\
+    \textbf{ScholAR}             & \best{0.892} & \best{0.563} & 0.760 \\
     \bottomrule
   \end{tabular}
 \end{table}
