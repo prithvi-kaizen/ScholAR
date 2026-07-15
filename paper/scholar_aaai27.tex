@@ -73,7 +73,9 @@ cross-document localization task, retrieving from the question alone sits near c
 but resolving the anchor figure with the same local multimodal model first reaches an
 MRR of 0.474, ahead of every open-source baseline reported there and close to GPT-4o
 (0.500), while running on one machine. Against local reimplementations of PDF-chat, vanilla RAG, and a
-PaperQA2-style pipeline, ScholAR leads on answer correctness and faithfulness, and
+PaperQA2-style pipeline, ScholAR matches the strongest (a PaperQA2-style pipeline) on
+answer correctness and faithfulness within bootstrap 95\% confidence intervals, with a
+simpler design, and
 when a question's answer is absent from the retrieved paper the local models decline
 rather than fabricate on 90 to 100\% of a provably-unanswerable set, each within an
 18\,GB single-machine budget. We also contribute a 100-case benchmark across 25 papers spanning text,
@@ -112,9 +114,10 @@ paper's own cited references for cross-document questions.
 
 Our contributions are:
 \begin{itemize}
-  \item A fully local RAG system for scientific documents that runs both text and
-        vision inference on-device, using page-preserving chunking and an indirect
-        citation mechanism that rules out page-number hallucination by construction.
+  \item A local-inference RAG system for scientific documents that runs both text and
+        vision on-device (paper acquisition and reference resolution use public
+        arXiv/Semantic Scholar lookups by identifier), using page-preserving chunking and
+        an indirect citation mechanism that rules out page-number hallucination by construction.
   \item An evaluation that scores the faithfulness of the system's \emph{generated
         answers} rather than of pre-written gold claims, paired with an automated
         per-citation support metric. On 51 cases, generated answers reach a mean
@@ -126,10 +129,10 @@ Our contributions are:
         locally resolved figure lifts localization from near-chance to competitive with
         a frontier cloud model.
   \item A 100-case benchmark across 25 papers spanning text, mathematical, and
-        figure questions, with gold answers verified against their source passages,
-        and a model-agnostic human-evaluation protocol over four local models. The
-        expert scoring is under way, and its result tables are marked as placeholders
-        here.
+        figure questions, with gold answers verified against their source passages. A
+        model-agnostic human-evaluation protocol over these cases is described in
+        Section~\ref{sec:humaneval}; its expert scoring is pending, so we do not list it
+        among our results.
 \end{itemize}
 
 % -----------------------------------------------------------------------
@@ -375,8 +378,9 @@ hallucination claim rests on, and it is the result we foreground.
 \subsection{System Architecture}
 The backend is a local application that stores parsed PDFs as JSON on disk; the
 frontend highlights cited pages. All inference, both text generation and figure or
-table question answering, runs locally through a single natively multimodal model,
-with no cloud API used for inference and no user data leaving the machine. Paper
+table question answering, runs locally; the evaluation swaps among four local models,
+two of which (qwen3.5:9b, gemma4:12b) are natively multimodal and handle figure and
+table queries. No cloud API is used for inference and no user data leaves the machine. Paper
 acquisition and reference resolution use public arXiv and Semantic Scholar lookups
 by identifier only. All
 experiments in this paper were run on a consumer laptop (Apple Silicon, 18\,GB
@@ -581,10 +585,14 @@ anchor figure through the same local multimodal model first, then retrieving wit
 entity, lifts MRR to 0.474 (qwen3.5:9b) and 0.455 (gemma4:12b): 2.6 times the text-only pipeline
 and 3.3 times the strongest open-source multimodal baseline they report (0.144), ahead of GPT-4V
 (0.400), and within 0.026 of GPT-4o (0.500), on a laptop. Expert humans remain far ahead at
-0.796, so the task is not solved. One caveat keeps this honest: our pipeline \emph{decomposes}
-the task (vision resolves the entity, then BM25 ranks the bibliography) whereas M3SciQA prompt
-their baselines to rank papers directly, so this compares systems on a shared task and metric,
-not under one identical protocol.
+0.796, so the task is not solved. Two caveats keep this honest. The daggered rows are M3SciQA's
+published figures on their 1000-item test split, whereas we evaluate their 297 labeled locality
+cases and rank a pool our own resolver reconstructs (mean 47.9 vs their 42.8), which is why our
+random floor (0.121) differs from theirs (0.126): a shared task and metric, not an identical set.
+And our pipeline \emph{decomposes} the task (vision resolves the entity, then BM25 ranks); but so
+do M3SciQA's simple baselines, captioning the figure with GPT-4o before embedding and ranking, so
+text-embedding-3-large (0.297) already uses a frontier cloud model for the vision step, and our
+0.474 beats it with a local one.
 
 \begin{table}[t]
   \centering
@@ -620,23 +628,25 @@ three baselines on the same model (qwen3.5:9b) and the same cases (51 labeled an
 diverse): long-context PDF-chat, which puts the whole paper in the model's context;
 vanilla RAG, with fixed cross-page chunks and dense retrieval; and a local
 reimplementation of the rerank-and-summarize step of PaperQA2~\citep{lala2024paperqa2}.
-Table~\ref{tab:compare} shows ScholAR is strongest on the two axes that matter most,
-generation faithfulness (0.892) and answer correctness (0.563), narrowly ahead of the
-PaperQA2-style system and well ahead of long-context PDF-chat, which is worst at
-answering correctly (0.267): retrieval beats putting the whole document in context.
-ScholAR is not best on every axis, since the terser baselines reach higher citation
-precision by citing less, but it leads where grounding and correctness are concerned,
-with a simpler pipeline than the rerank-and-summarize baseline and page citations that
-are valid by construction. We compare against local reimplementations, not the hosted
-OpenScholar, PaperQA2, or SciRAG, which depend on cloud models and large datastores;
-this is a resource-matched local comparison, not a claim to frontier-scale quality.
+Table~\ref{tab:compare} shows ScholAR at the top on generation faithfulness (0.892) and
+answer correctness (0.563), but its margin over the PaperQA2-style system is not resolvable
+on 91 cases: the paired bootstrap 95\% CIs for ScholAR minus PaperQA2-style are
+$+0.020\,[-0.020,+0.059]$ for faithfulness and $+0.013\,[-0.104,+0.133]$ for correctness,
+both spanning zero. The honest reading is that ScholAR \emph{matches} a PaperQA2-style
+pipeline on these axes with a simpler design and page citations valid by construction, while
+both clearly beat long-context PDF-chat (correctness 0.267): retrieval beats putting the whole
+document in context. We compare against local reimplementations, not the hosted OpenScholar,
+PaperQA2, or SciRAG, which depend on cloud models and large datastores; a resource-matched
+local comparison, not a claim to frontier-scale quality.
 
 \begin{table}[t]
   \centering
   \caption{ScholAR versus local baselines on the shared model (qwen3.5:9b) and cases
            (51 labeled + 40 diverse). Faith. is generation faithfulness; Correct. is
-           must-include recall; Cite-F1 is ALCE-style citation F1. Every emitted page
-           citation is valid (invalid-page rate 0 for all systems).}
+           must-include recall; Cite-F1 is citation F1 in the sense of
+           \citet{gao2023attributing}. All systems emit in-range page numbers
+           (invalid-page rate 0); this checks only that a cited page exists, not that it
+           supports the claim, which we examine separately below.}
   \label{tab:compare}
   \setlength{\tabcolsep}{3pt}
   \begin{tabular}{lccc}
@@ -777,8 +787,9 @@ We presented ScholAR, a fully local retrieval-augmented system for grounded scie
 document comprehension combining page-preserving chunking with indirect citation grounding,
 extended to visual and multi-document questions. Its generated answers are grounded with a
 mean score of 0.937 and 92\% fully supported citations, none unsupported; retrieval reaches Recall@5 of 0.93
-across 25 papers; it leads local baselines on correctness and faithfulness; and on
-unanswerable questions the models decline rather than fabricate 90 to 100\% of the time.
+across 25 papers; it matches a PaperQA2-style pipeline on correctness and faithfulness
+within confidence intervals, with a simpler design; and on unanswerable questions the
+models decline rather than fabricate on our small probe set.
 Swapping the generation model shows the citation layer transfers while answer faithfulness
 does not, so grounding is model-agnostic only where the design enforces it. On M3SciQA,
 resolving the anchor figure locally lifts cross-document localization from near-chance to
