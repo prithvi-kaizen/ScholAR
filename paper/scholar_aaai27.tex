@@ -613,15 +613,12 @@ three baselines on the same model (qwen3.5:9b) and the same cases (51 labeled an
 diverse): long-context PDF-chat, which puts the whole paper in the model's context;
 vanilla RAG, with fixed cross-page chunks and dense retrieval; and a local
 reimplementation of the rerank-and-summarize step of PaperQA2~\citep{lala2024paperqa2}.
-Table~\ref{tab:compare} shows ScholAR at the top on generation faithfulness (0.892) and
-answer correctness (0.563), but its margin over the PaperQA2-style system is not resolvable
-on 91 cases: the paired bootstrap 95\% CIs for ScholAR minus PaperQA2-style are
-$+0.020\,[-0.020,+0.059]$ for faithfulness and $+0.013\,[-0.104,+0.133]$ for correctness,
-both spanning zero. The honest reading is that ScholAR \emph{matches} a PaperQA2-style
-pipeline on these axes with a simpler design and page citations valid by construction, while
-both clearly beat long-context PDF-chat (correctness 0.267): retrieval beats putting the whole
-document in context. We compare against local reimplementations, not the hosted OpenScholar,
-PaperQA2, or SciRAG, which depend on cloud models and large datastores; a resource-matched
+In Table~\ref{tab:compare} ScholAR tops generation faithfulness (0.892) and answer correctness
+(0.563), but the margin over the PaperQA2-style system is not resolvable on 91 cases (paired 95\%
+CIs $+0.020\,[-0.020,+0.059]$ and $+0.013\,[-0.104,+0.133]$, both spanning zero). ScholAR therefore
+\emph{matches} a PaperQA2-style pipeline with a simpler design, while both clearly beat long-context
+PDF-chat (correctness 0.267): retrieval beats putting the whole document in context. We compare
+against local reimplementations, not the hosted OpenScholar, PaperQA2, or SciRAG; a resource-matched
 local comparison, not a claim to frontier-scale quality.
 
 \begin{table}[t]
@@ -646,18 +643,25 @@ local comparison, not a claim to frontier-scale quality.
   \end{tabular}
 \end{table}
 
+\paragraph{Do cited pages support their claims?} The invalid-page rate checks only that a cited
+page exists. Judging with the entailment judge whether each cited page actually supports its claim,
+ScholAR's pages do so 66\% of the time and long-context PDF-chat's 71\%: the motivating failure is
+real (about a third of cited pages, for both systems, do not support their claim), and indirect
+grounding does not fix it. The mechanism guarantees a cited page is real and was retrieved
+(invalid-page rate 0), not that the page supports the claim, which depends on retrieval, where
+ScholAR is no better than PDF-chat. We therefore read it as a provenance and auditability
+guarantee, not a faithfulness improvement.
+
 \subsection{Abstention on Unanswerable Questions}
 \label{sec:abstention}
-A grounded system should decline when the answer is not present rather than invent one. Every
-case above is answerable, so we built 20 provably-unanswerable questions: each paper-specific
-question is posed against a different paper in which the queried fact is provably absent
-(verified by exact substring), so the correct response is to abstain. All four models decline on
-the large majority (Table~\ref{tab:permodel}): qwen3.5:9b and llama3.1:8b on every question,
-gemma4:12b on 19 of 20, mistral:7b on 18 of 20. The few non-abstentions are a benign overlap
-rather than invention: on a minibatch-size question the wrongly paired paper independently
-reports a minibatch size, so the model surfaces a real but off-target value. The set is small and
-synthetic and abstention is scored by a refusal detector we validated by reading every output, so
-we read this as evidence that grounding induces abstention, not as a precise rate.
+A grounded system should decline when the answer is not present. We built 20 provably-unanswerable
+questions, each posed against a different paper in which the queried fact is provably absent (exact
+substring), so the correct response is to abstain. All four models decline on the large majority
+(Table~\ref{tab:permodel}): qwen3.5:9b and llama3.1:8b on every question, gemma4:12b on 19 of 20,
+mistral:7b on 18. The few non-abstentions are a benign overlap, not invention (a wrongly paired
+paper that independently reports a minibatch size). The set is small and synthetic, scored by a
+refusal detector we validated by reading every output, so we read it as evidence that grounding
+induces abstention, not as a precise rate.
 
 \begin{table}[t]
   \centering
@@ -769,12 +773,12 @@ about a quarter of them, well below what a cosine proxy reports; retrieval reach
 0.93 across 25 papers; it matches a PaperQA2-style pipeline on correctness and faithfulness within
 confidence intervals, with a simpler design; and on unanswerable questions the models decline
 rather than fabricate on our small probe set.
-Swapping the generation model shows the citation layer transfers while answer faithfulness
-does not, so grounding is model-agnostic only where the design enforces it. On M3SciQA,
-resolving the anchor figure locally lifts cross-document localization from near-chance to
-MRR 0.474, ahead of every open-source baseline reported there and close to GPT-4o, though
-still far below expert humans. We contribute a 100-case, 25-paper benchmark and a
-human-evaluation protocol whose scoring will replace the placeholders reported here.
+Indirect citation grounding guarantees a cited page is real and was retrieved, but a page-support
+check (66\%, no better than a free-form baseline) shows it does not make the page support the
+claim: it is a provenance guarantee, not a faithfulness fix. On M3SciQA, resolving the anchor
+figure locally lifts cross-document localization to MRR 0.474, ahead of every open-source baseline
+reported there and close to GPT-4o but far below expert humans. We contribute a 100-case, 25-paper
+benchmark and a human-evaluation protocol whose scoring will replace the placeholders here.
 
 \bibliography{scholar_references}
 

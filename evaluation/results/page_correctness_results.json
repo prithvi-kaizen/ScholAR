@@ -1,0 +1,15 @@
+{
+  "judge": "qwen3.5:9b",
+  "systems": {
+    "pdfchat": {
+      "cited_pages_checked": 283,
+      "page_supported": 202,
+      "page_correctness": 0.714
+    },
+    "scholar": {
+      "cited_pages_checked": 378,
+      "page_supported": 249,
+      "page_correctness": 0.659
+    }
+  }
+}
