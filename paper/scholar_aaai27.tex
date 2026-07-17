@@ -162,9 +162,10 @@ quote.
 \citet{gao2023attributing} formalize citation precision and recall via entailment between cited
 passages and statements. SummaC~\citep{laban2022summac} scores consistency with zero-shot
 sentence-level entailment, FActScore~\citep{min2023factscore} decomposes text into atomic facts,
-and RAGAS~\citep{es2024ragas} automates RAG faithfulness scoring. Our metric combines SummaC-style
-zero-shot entailment with FActScore-style atomic decomposition, applied to the system's own
-generated answers rather than to gold claims.
+and RAGAS~\citep{es2024ragas} automates RAG faithfulness scoring. Our generation-faithfulness
+metric adopts FActScore-style atomic decomposition and scores each atom with a local LLM
+entailment judge, applied to the system's own generated answers rather than to gold claims; a
+lighter cosine-similarity signal is used only for retrieval-support scoring.
 
 \paragraph{Visual and multi-document scientific QA.}
 ColPali~\citep{faysse2024colpali} indexes pages as visual embeddings without OCR; ScholAR keeps
@@ -447,6 +448,19 @@ Table~\ref{tab:benchstats} summarizes the corpus and the benchmarks built on it.
   \end{tabular}
 \end{table}
 
+\section{Automated Evaluation}
+\label{sec:auto}
+\subsection{Retrieval}
+Table~\ref{tab:retrieval} reports retrieval on the 100-case scaled set. The system we deploy,
+BM25-primary (BM25 with lightweight heuristic reranking), reaches Recall@5 0.93 and MRR 0.861;
+plain BM25 is within noise (0.94, 0.863), and a keyword-overlap baseline even edges Recall@5
+(0.95), so no lexical variant is clearly best and the reranking heuristics add nothing measurable
+here. The clear loser is single-pass dense retrieval (0.74, 0.572): on 25 diverse papers it trails
+every lexical configuration, the expected BEIR outcome~\citep{thakur2021beir} and the reverse of
+the 3-paper anchor where dense led. We read BM25's margin cautiously, since the mined queries share
+lexical surface with their source passages, but the direction, lexical over single-pass dense at
+scale, is the one BM25-primary assumes.
+
 \begin{table}[t]
   \centering
   \caption{Retrieval on the scaled benchmark: 100 auto-labeled cases across 25 papers,
@@ -461,7 +475,7 @@ Table~\ref{tab:benchstats} summarizes the corpus and the benchmarks built on it.
     \midrule
     Keyword         & \snd{0.670} & \snd{0.860} & \best{0.950} & 0.779 & 0.762 \\
     BM25-Only       & \best{0.810} & \best{0.910} & \snd{0.940} & \best{0.863} & \best{0.828} \\
-    BM25+Rerank     & \best{0.810} & \best{0.910} & 0.930 & \snd{0.861} & \snd{0.824} \\
+    BM25-primary    & \best{0.810} & \best{0.910} & 0.930 & \snd{0.861} & \snd{0.824} \\
     Dense-Only      & 0.470 & 0.650 & 0.740 & 0.572 & 0.523 \\
     \bottomrule
   \end{tabular}
@@ -493,7 +507,7 @@ Section~\ref{sec:auto-gen}.
     \toprule
     \textbf{Metric} & \textbf{BM25-primary} & \textbf{Hybrid+RRF} \\
     \midrule
-    NLI (entailment)     & 0.925 & 0.915 \\
+    Semantic (cosine)    & 0.925 & 0.915 \\
     SCR (cosine)         & 0.433 & 0.438 \\
     KFP (key-fact recall)& 0.966 & 0.966 \\
     Combined CFS         & 0.785 & 0.782 \\
@@ -513,7 +527,9 @@ perturbed, relations negated), a cosine proxy flagged 50\% as unfaithful and fir
 on 0\%, whereas the judge flagged 90\% and fired a contradiction on 75\%. Scored with the judge
 over the 100 diverse cases and four models (Section~\ref{sec:auto-models}), answers reach a mean
 faithfulness of 0.61, far below the 0.94 a cosine proxy reports; about a quarter of answers (93 of
-350) contain a contradicted atom, and of 1{,}279 citations checked, 73\% are supported, 18\%
+350) contain a contradicted atom, and of 1{,}279 citation occurrences checked (a source cited in
+several sentences is checked each time; Table~\ref{tab:benchstats} counts the 829 distinct
+markers), 73\% are supported, 18\%
 partial, and 9\% unsupported, against the ``none unsupported'' cosine had claimed. These numbers
 are lower and honest; validating them against expert judgment is the human evaluation's job
 (Section~\ref{sec:humaneval}).
