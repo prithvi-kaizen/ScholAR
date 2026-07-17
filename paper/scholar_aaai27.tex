@@ -64,10 +64,11 @@ every retrieved unit inside a single PDF page, so a citation resolves to one
 highlightable location. Indirect citation grounding lets the model cite only evidence
 identifiers that map to chunks it actually retrieved, so it cannot write a page number
 of its own. We evaluate retrieval, answer faithfulness, visual grounding, and
-cross-document localization on labeled benchmarks. On 51 cases, the generated answers
-stay grounded in their retrieved context with a mean score of 0.937, no answer atom
-contradicts its source, and 92\% of the 269 inline citations are fully supported with none
-unsupported. BM25-primary retrieval reaches Recall@5 of 0.93 across 25 papers, and figure and table
+cross-document localization on labeled benchmarks. Scored by a local entailment judge, which a
+negative control shows detects the contradictions a similarity proxy misses, generated answers
+reach a mean faithfulness of 0.61 across four local models on 100 cases; about a quarter contain a
+contradicted claim and roughly 9\% of citations are unsupported, numbers a cosine proxy had put at
+0.94 with none unsupported. BM25-primary retrieval reaches Recall@5 of 0.93 across 25 papers, and figure and table
 questions route to the correct visual element in all 18 pilot cases. On M3SciQA's
 cross-document localization task, retrieving from the question alone sits near chance,
 but resolving the anchor figure with the same local multimodal model first reaches an
@@ -119,10 +120,10 @@ Our contributions are:
         arXiv/Semantic Scholar lookups by identifier), using page-preserving chunking and
         an indirect citation mechanism that rules out page-number hallucination by construction.
   \item An evaluation that scores the faithfulness of the system's \emph{generated
-        answers} rather than of pre-written gold claims, paired with an automated
-        per-citation support metric. On 51 cases, generated answers reach a mean
-        grounding score of 0.937 with a zero contradiction rate and 92\% fully
-        supported citations, none unsupported.
+        answers} rather than of pre-written gold claims, using a local entailment judge
+        validated by a negative control against the cosine proxy it replaces. Under the
+        judge, faithfulness is a modest 0.61 across four local models with contradictions in
+        about a quarter of answers, well below what a similarity proxy reports.
   \item Automated benchmarks and results for retrieval, retrieval-support
         faithfulness, visual grounding, and cross-document localization, the last
         measured against the published baselines of M3SciQA on its own data, where a
@@ -504,66 +505,59 @@ Section~\ref{sec:auto-gen}.
 
 \subsection{Generation Faithfulness}
 \label{sec:auto-gen}
-We first report the faithfulness of the system's generated answers on
-the same 51 queries, using the local model gemma4:12b~\citep{gemmateam2026gemma4} for generation. The mean
-generation-faithfulness score is 0.937: 93.7\% of the atomic claims in the generated
-answers are entailed by the retrieved context. The mean contradiction rate is 0.0, so
-no answer atom was classified as contradicting its source. Of 269 inline citations
-checked, 248 are fully supported, 21 partially supported, and none unsupported, a
-citation-support rate of 0.922. These scores measure grounding to the retrieved
-context and the absence of outright contradiction, both of which run naturally high
-for a well-behaved retrieval-augmented system, so we read them conservatively. The
-zero unsupported-citation count is automated evidence for the indirect citation
-mechanism, not a claim of perfect correctness against ground truth; assessing that is
-the job of the human evaluation (Section~\ref{sec:humaneval}).
+We decompose each generated answer into atomic claims and ask whether the retrieved evidence
+entails each one, using a local LLM entailment judge (qwen3.5:9b), not a sentence-embedding
+similarity: cosine cannot separate a claim from its negation and so structurally never reports a
+contradiction. A negative control confirms this: on gold claims deliberately corrupted (numbers
+perturbed, relations negated), a cosine proxy flagged 50\% as unfaithful and fired a contradiction
+on 0\%, whereas the judge flagged 90\% and fired a contradiction on 75\%. Scored with the judge
+over the 100 diverse cases and four models (Section~\ref{sec:auto-models}), answers reach a mean
+faithfulness of 0.61, far below the 0.94 a cosine proxy reports; about a quarter of answers (93 of
+350) contain a contradicted atom, and of 1{,}279 citations checked, 73\% are supported, 18\%
+partial, and 9\% unsupported, against the ``none unsupported'' cosine had claimed. These numbers
+are lower and honest; validating them against expert judgment is the human evaluation's job
+(Section~\ref{sec:humaneval}).
 
 \subsection{Does the Grounding Hold Across Models?}
 \label{sec:auto-models}
-ScholAR's premise is that grounding lives in the retrieval and application layer, not in the
-model, so we swapped only the generation model and re-ran the pipeline over the 100 diverse
-cases (Table~\ref{tab:models}). Only half of that premise survives. Generation faithfulness
-does \emph{not} hold constant: it ranges from 0.719 (llama3.1:8b) to 0.951 (gemma4:12b), and
-llama3.1:8b carries the only non-trivial hallucination rate (0.041). Citation support, by
-contrast, stays within a narrow band for every model (0.868 to 0.951). The layer the design
-actually controls, the evidence-identifier citation mechanism, is the stable one; the prose
-around the citations tracks the strength of the underlying model.
-
-llama3.1:8b is the instructive case: it emits the fewest citations (81, against 587 for
-qwen3.5:9b) yet has the highest support rate (0.951). It cites well but answers tersely,
-leaving more prose uncited, which drags its faithfulness down; a high support rate alone is
-therefore not evidence of a faithful answer, which is why we report both. This refines the
-model-agnostic claim rather than confirming it: the citation mechanism transfers, answer
-quality still depends on the model.
+We swap only the generation model and re-score the pipeline over the 100 diverse cases with the
+same entailment judge (Table~\ref{tab:models}). Under the judge the picture is both lower and
+flatter than a cosine proxy suggested. Generation faithfulness is uniformly modest across the
+four models (0.59 to 0.65): no local model is markedly more faithful, so grounding is
+model-agnostic in the weak sense that swapping the model changes little, though the level is
+mediocre. Citation support varies more (0.64 to 0.86), inversely with how freely a model cites:
+qwen3.5:9b emits the most citations (633) but supports the fewest (0.64), whereas gemma4:12b cites
+less and more precisely (354, 0.86). A cosine proxy reported almost the opposite (faithfulness
+spread 0.72 to 0.95, support a tight 0.87 to 0.95); the negative control of
+Section~\ref{sec:auto-gen} is why we trust the judge's lower, flatter version.
 
 \begin{table}[t]
   \centering
   \caption{The same ScholAR pipeline with only the generation model changed, on the 100
-           diverse cases. Faith.\ is mean generation faithfulness and Hall.\ the mean
-           hallucination rate; Cites is the number of inline citations the model emitted and
-           Supp.\ the fraction of them supported by the cited evidence. Faithfulness varies
-           widely across models; citation support does not.}
+           diverse cases, scored by the local entailment judge. Faith.\ is the fraction of answer
+           atoms entailed by the evidence; Hall.\ is the fraction judged \emph{contradiction};
+           Cites is the number of inline citations checked and Supp.\ the fraction of them
+           supported. Faithfulness is uniformly modest across models; citation support varies.}
   \label{tab:models}
   \setlength{\tabcolsep}{5pt}
   \begin{tabular}{lcccc}
     \toprule
     \textbf{Model} & \textbf{Faith.} & \textbf{Hall.} & \textbf{Cites} & \textbf{Supp.} \\
     \midrule
-    gemma4:12b   & \best{0.951} & \best{0.001} & 366 & \snd{0.907} \\
-    qwen3.5:9b   & \snd{0.908} & \snd{0.003} & 587 & 0.888 \\
-    mistral:7b   & 0.809 & 0.006 & 228 & 0.868 \\
-    llama3.1:8b  & 0.719 & 0.041 &  81 & \best{0.951} \\
+    gemma4:12b   & \best{0.645} & \snd{0.096} & 354 & \best{0.856} \\
+    qwen3.5:9b   & 0.594 & \best{0.094} & 633 & 0.643 \\
+    mistral:7b   & 0.602 & 0.169 & 213 & 0.718 \\
+    llama3.1:8b  & \snd{0.607} & 0.140 &  79 & \snd{0.835} \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \subsection{Visual Grounding}
 On the 18-case visual pilot, retrieval routes to the correct figure or table in all 18 cases,
-never falling back to the caption-only path. On a keyword-overlap answer-quality proxy (not an
-LLM judge) gemma4:12b scores 0.731 and qwen3.5:9b~\citep{qwenteam2026qwen35} 0.812; a
-caption-only ablation scores 0.752 against 0.731 for full vision under gemma4:12b. We do not
-read that as evidence the image is unnecessary: the proxy rewards lexical overlap rather than
-visual correctness, and many answers are restated in nearby prose. The cleaner test is
-Section~\ref{sec:auto-multidoc}, where reading the figure is worth 2.6$\times$ on MRR.
+never falling back to the caption-only path. We do not report our earlier keyword-overlap
+answer-quality proxy: it rewards lexical overlap rather than visual correctness, so it cannot tell
+whether the image was read. The cleaner evidence that vision matters is
+Section~\ref{sec:auto-multidoc}, where resolving the figure is worth 2.6$\times$ on MRR.
 
 \subsection{Multi-Document Localization}
 \label{sec:auto-multidoc}
@@ -700,13 +694,11 @@ we read this as evidence that grounding induces abstention, not as a precise rat
 
 \subsection{Local Deployability}
 \label{sec:efficiency}
-We also measured what a query costs on the target machine, timing the answering path (BM25
-retrieval, then generation) over 20 questions per model on the same laptop (Apple Silicon,
-18\,GB). Retrieval is not the bottleneck: BM25 over one paper's chunks returns in about
-40\,ms regardless of model, so latency is set almost entirely by generation. Every model fits
-the 18\,GB budget (6 to 8\,GB loaded, weights plus KV cache) and answers in single-digit to
-low-double-digit seconds (Table~\ref{tab:permodel}), the 7 to 8 billion parameter text-only
-models fastest at about 6 seconds. No cloud call and no GPU cluster: one laptop runs the loop.
+We also timed the answering path over 20 questions per model on the same laptop (Apple Silicon,
+18\,GB). Retrieval is not the bottleneck: BM25 returns in about 40\,ms regardless of model, so
+latency is generation-bound. Every model fits the 18\,GB budget (6 to 8\,GB loaded) and answers
+in single-digit to low-double-digit seconds (Table~\ref{tab:permodel}). No cloud call and no GPU
+cluster: one laptop runs the loop.
 
 % -----------------------------------------------------------------------
 \section{Human Evaluation (In Progress)}
@@ -765,9 +757,10 @@ remain the higher-precision anchor. The visual benchmark (18 cases) is small and
 so its deltas fall within noise and carry no significance testing, and the abstention probe is
 likewise small and synthetic (20 auto-constructed negatives scored by a validated refusal
 detector), so its near-total rates indicate a tendency, not a guarantee. The
-generation-faithfulness metric rewards grounding to retrieved context and the absence of
-contradiction, leaving it insensitive to subtle unfaithfulness; closing that gap is what the
-human evaluation exists for.
+generation-faithfulness metric is now a local LLM entailment judge, which our negative control
+shows catches contradictions a cosine proxy misses, but it is still an automated judge calibrated
+on a small pilot and not yet validated against human ratings; closing that gap is what the human
+evaluation exists for.
 
 Our comparison (Section~\ref{sec:auto-compare}) is against local reimplementations of
 PDF-chat, vanilla RAG, and PaperQA2's rerank-and-summarize step, not against the
@@ -783,13 +776,14 @@ same task, so the cross-document setting stays the weakest part of the system.
 % -----------------------------------------------------------------------
 \section{Conclusion}
 % -----------------------------------------------------------------------
-We presented ScholAR, a fully local retrieval-augmented system for grounded scientific
+We presented ScholAR, a local-inference retrieval-augmented system for grounded scientific
 document comprehension combining page-preserving chunking with indirect citation grounding,
-extended to visual and multi-document questions. Its generated answers are grounded with a
-mean score of 0.937 and 92\% fully supported citations, none unsupported; retrieval reaches Recall@5 of 0.93
-across 25 papers; it matches a PaperQA2-style pipeline on correctness and faithfulness
-within confidence intervals, with a simpler design; and on unanswerable questions the
-models decline rather than fabricate on our small probe set.
+extended to visual and multi-document questions. Under a validated local entailment judge its
+generated answers reach a modest faithfulness of 0.61 across four models, with contradictions in
+about a quarter of them, well below what a cosine proxy reports; retrieval reaches Recall@5 of
+0.93 across 25 papers; it matches a PaperQA2-style pipeline on correctness and faithfulness within
+confidence intervals, with a simpler design; and on unanswerable questions the models decline
+rather than fabricate on our small probe set.
 Swapping the generation model shows the citation layer transfers while answer faithfulness
 does not, so grounding is model-agnostic only where the design enforces it. On M3SciQA,
 resolving the anchor figure locally lifts cross-document localization from near-chance to

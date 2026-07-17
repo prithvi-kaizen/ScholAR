@@ -111,6 +111,17 @@ def summarize(rows: list[dict]) -> dict:
                                  "supported_pct": round(sup / tot, 3) if tot else None}}
 
 
+CHECKPOINT_EVERY = 10  # write after this many freshly-scored answers (survives kills)
+
+
+def _save(blob: dict) -> None:
+    blob["generated_at"] = datetime.now().isoformat(timespec="seconds")
+    for m, rows in blob["raw"].items():
+        if rows:
+            blob["summary"][m] = summarize(rows)
+    OUT.write_text(json.dumps(blob, indent=2))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="all")
@@ -120,36 +131,35 @@ def main() -> None:
     answers = json.loads(ANS.read_text())
     models = sorted({a["model"] for a in answers}) if args.model == "all" else [args.model]
 
-    blob = {"judge": os.getenv("FAITH_JUDGE_MODEL", "qwen3.5:9b"),
-            "generated_at": datetime.now().isoformat(timespec="seconds"),
-            "summary": {}, "raw": {}}
+    blob = {"judge": os.getenv("FAITH_JUDGE_MODEL", "qwen3.5:9b"), "summary": {}, "raw": {}}
     if OUT.exists():
         blob = json.loads(OUT.read_text())
-        blob["generated_at"] = datetime.now().isoformat(timespec="seconds")
+    blob.setdefault("raw", {})
+    blob.setdefault("summary", {})
+    done = {(m, r["case_id"]) for m, rows in blob["raw"].items() for r in rows}
+    print(f"resume: {len(done)} answers already scored")
 
     cache: dict = {}
-    for model in models:
-        recs = [a for a in answers if a["model"] == model]
-        if args.limit:
-            recs = recs[:args.limit]
-        rows = []
-        for i, rec in enumerate(recs, 1):
-            r = score_answer(rec, cache)
-            if r:
-                rows.append(r)
-            if i % 20 == 0:
-                print(f"  [{model}] {i}/{len(recs)}")
-        if not rows:
-            continue
-        blob["raw"][model] = rows
-        blob["summary"][model] = summarize(rows)
-        OUT.write_text(json.dumps(blob, indent=2))
-        s = blob["summary"][model]
+    fresh = 0
+    todo = [a for a in answers if a["model"] in models and (a["model"], a["case_id"]) not in done]
+    if args.limit:
+        todo = todo[:args.limit]
+    print(f"to score this run: {len(todo)}")
+    for j, rec in enumerate(todo, 1):
+        r = score_answer(rec, cache)
+        if r:
+            blob["raw"].setdefault(rec["model"], []).append(r)
+            fresh += 1
+            if fresh % CHECKPOINT_EVERY == 0:
+                _save(blob)
+                print(f"  checkpoint {j}/{len(todo)} (saved {sum(len(v) for v in blob['raw'].values())} total)")
+    _save(blob)
+    for m, s in blob["summary"].items():
         c = s["citation_support"]
-        print(f"== {model}: faith {s['mean_gen_faithfulness']}  halluc {s['mean_hallucination_rate']}  "
-              f"answers-with-contradiction {s['answers_with_a_contradiction']}/{s['n_answers']}  "
+        print(f"== {m}: faith {s['mean_gen_faithfulness']}  halluc {s['mean_hallucination_rate']}  "
+              f"contra-answers {s['answers_with_a_contradiction']}/{s['n_answers']}  "
               f"cites {c['supported']}/{c['partial']}/{c['unsupported']} (sup {c['supported_pct']})")
-    print(f"wrote {OUT.relative_to(ROOT)}")
+    print(f"wrote {OUT.relative_to(ROOT)}  ({len(todo)-0} attempted, {fresh} scored this run)")
 
 
 if __name__ == "__main__":
