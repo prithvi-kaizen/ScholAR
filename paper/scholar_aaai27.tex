@@ -88,19 +88,17 @@ over four local models whose expert scoring is pending.
 \section{Introduction}
 % -----------------------------------------------------------------------
 Reading an unfamiliar paper is slowest at the moments that matter most: checking that a stated
-number, a method detail, or a figure actually says what you think it says. Uploading the PDF to a
-general-purpose chat model helps with fluency but brings a new failure mode: such systems
-summarize confidently while inventing page references and attributing quotes to places they do not
-appear, because a generic chat pipeline puts no hard constraint between a citation and the text the
-model was conditioned on.
+number, a method detail, or a figure says what you think it says. General-purpose chat over the PDF
+helps with fluency but brings a new failure mode: it summarizes confidently while inventing page
+references and attributing quotes to places they do not appear, because a generic chat pipeline puts
+no hard constraint between a citation and the text the model was conditioned on.
 
-Purpose-built scientific RAG systems close part of this gap but assume resources most readers do
-not have. OpenScholar~\citep{asai2024openscholar}, PaperQA2~\citep{lala2024paperqa2}, and
-SciRAG~\citep{ding2025scirag} depend on cloud-hosted frontier models, and OpenScholar additionally
-on a datastore of tens of millions of papers. We ask a narrower question: what does grounded,
-citable question answering over a scientific document look like under a hard local-only constraint,
-with a single sub-15-billion-parameter model, no cloud API, and a retrieval design simple enough to
-audit end to end?
+Purpose-built scientific RAG systems close part of this gap but assume resources most readers lack.
+OpenScholar~\citep{asai2024openscholar}, PaperQA2~\citep{lala2024paperqa2}, and
+SciRAG~\citep{ding2025scirag} depend on cloud-hosted frontier models, and OpenScholar on a datastore
+of tens of millions of papers. We ask a narrower question: what does grounded, citable question
+answering over a scientific document look like under a hard local-only constraint, with a single
+sub-15-billion-parameter model and a retrieval design simple enough to audit end to end?
 
 Two ideas carry ScholAR. \textbf{Page-preserving chunking} segments a document so that every
 retrieved chunk lies entirely within one PDF page, making a citation resolve to an exact,
@@ -142,58 +140,45 @@ Our contributions are:
 % -----------------------------------------------------------------------
 
 \paragraph{Retrieval-augmented generation.}
-RAG conditions generation on retrieved evidence~\citep{lewis2020rag}. Lexical retrieval via
-BM25~\citep{robertson2009bm25} remains a strong baseline, and BEIR~\citep{thakur2021beir}
-documents that zero-shot dense retrievers often fail to beat it, which is why ScholAR keeps
-BM25 primary and treats dense retrieval as a fusion component.
+RAG conditions generation on retrieved evidence~\citep{lewis2020rag}. Lexical BM25~\citep{robertson2009bm25}
+remains a strong baseline that zero-shot dense retrievers often fail to beat~\citep{thakur2021beir},
+which is why ScholAR keeps BM25 primary and treats dense retrieval as a fusion component.
 
 \paragraph{Scientific-literature RAG systems.}
-PaperQA and PaperQA2~\citep{lala2023paperqa,lala2024paperqa2} are agentic systems reporting high
-accuracy with frontier backends; OpenScholar~\citep{asai2024openscholar} synthesizes over a large
-open datastore, and SciRAG~\citep{ding2025scirag} adds citation-graph-aware, outline-guided
-synthesis. All three assume cloud-hosted or large self-hosted models. ScholAR instead targets a
-single local sub-15B model on consumer hardware, trading raw capability for zero data exposure.
-Closest to our citation mechanism, Pleias-RAG~\citep{pleias2025rag} \emph{trains} small models to
-emit literal source quotes; we take the complementary route of putting the grounding in the
-retrieval and application layer, so it works with any local model rather than a model taught to
-quote.
+PaperQA and PaperQA2~\citep{lala2023paperqa,lala2024paperqa2} are agentic systems with frontier
+backends; OpenScholar~\citep{asai2024openscholar} synthesizes over a large open datastore, and
+SciRAG~\citep{ding2025scirag} adds outline-guided synthesis. All three assume cloud-hosted or large
+self-hosted models; ScholAR instead targets a single local sub-15B model, trading capability for
+zero data exposure. Closest to our citation mechanism, Pleias-RAG~\citep{pleias2025rag}
+\emph{trains} small models to emit source quotes; we instead put the grounding in the retrieval and
+application layer, so it works with any local model rather than one taught to quote.
 
 \paragraph{Citation and faithfulness evaluation.}
-\citet{gao2023attributing} formalize citation precision and recall via entailment between cited
-passages and statements. SummaC~\citep{laban2022summac} scores consistency with zero-shot
-sentence-level entailment, FActScore~\citep{min2023factscore} decomposes text into atomic facts,
-and RAGAS~\citep{es2024ragas} automates RAG faithfulness scoring. Our generation-faithfulness
-metric adopts FActScore-style atomic decomposition and scores each atom with a local LLM
-entailment judge, applied to the system's own generated answers rather than to gold claims; a
-lighter cosine-similarity signal is used only for retrieval-support scoring.
+\citet{gao2023attributing} formalize citation precision and recall via entailment;
+SummaC~\citep{laban2022summac}, FActScore~\citep{min2023factscore}, and RAGAS~\citep{es2024ragas}
+score consistency, atomic-fact support, and RAG faithfulness respectively. Our
+generation-faithfulness metric uses FActScore-style atomic decomposition scored by a local LLM
+entailment judge on the system's own answers; a lighter cosine signal is used only for
+retrieval-support scoring.
 
 \paragraph{Visual and multi-document scientific QA.}
 ColPali~\citep{faysse2024colpali} indexes pages as visual embeddings without OCR; ScholAR keeps
-text retrieval primary and routes only figure and table questions to a cropped-region vision call.
-M3SciQA~\citep{li2024m3sciqa} pairs each anchor paper with its cited references and finds that even
-large foundation models trail human experts at cross-paper reasoning; we evaluate directly on it
-(Section~\ref{sec:auto-multidoc}). GROBID~\citep{lopez2009grobid} and
-Nougat~\citep{blecher2023nougat} target structured extraction and are complementary to our chunking.
+text retrieval primary and routes only figure and table queries to a cropped-region vision call.
+M3SciQA~\citep{li2024m3sciqa} finds even large models trail human experts at cross-paper reasoning;
+we evaluate directly on it (Section~\ref{sec:auto-multidoc}). GROBID~\citep{lopez2009grobid} and
+Nougat~\citep{blecher2023nougat} target structured extraction, complementary to our chunking.
 
 % -----------------------------------------------------------------------
 \section{Problem Formulation}
 % -----------------------------------------------------------------------
-Given a scientific PDF $D$, a user question $q$, and a set of extracted chunks
-$\mathcal{C} = \{c_1, \ldots, c_n\}$ derived from $D$ (and, in multi-document mode,
-from $D$'s cited references), the system retrieves a ranked subset
-$\mathcal{C}_q \subseteq \mathcal{C}$ and generates an answer $\hat{a}$ grounded in
-that evidence:
-\begin{equation}
-  \hat{a} = \underset{a}{\arg\max}\; P(a \mid q,\, \mathcal{C}_q),
-  \quad
-  \mathcal{C}_q = \mathrm{Retrieve}(q, \mathcal{C}, k).
-\end{equation}
-Each chunk $c_i$ carries a source page number and, in multi-document mode, a source
-paper identifier, so $\mathcal{C}_q$ always resolves to a specific page of a
-specific document. Generation attaches each claim in $\hat{a}$ to an evidence
-identifier referencing a specific $c_i \in \mathcal{C}_q$ rather than a free-form
-page number, so citations are constrained to what was actually retrieved,
-independent of $\mathrm{Retrieve}$'s own precision.
+Given a scientific PDF $D$, a question $q$, and extracted chunks
+$\mathcal{C} = \{c_1, \ldots, c_n\}$ (in multi-document mode also from $D$'s cited references), the
+system retrieves a ranked subset $\mathcal{C}_q = \mathrm{Retrieve}(q, \mathcal{C}, k)$ and
+generates a grounded answer. Each chunk $c_i$ carries a source page number and, across documents, a
+source paper identifier, so $\mathcal{C}_q$ resolves to a specific page of a specific document.
+Generation attaches each claim to an evidence identifier referencing a specific
+$c_i \in \mathcal{C}_q$ rather than a free-form page number, so citations are constrained to what
+was actually retrieved, independent of $\mathrm{Retrieve}$'s own precision.
 
 % -----------------------------------------------------------------------
 \section{Method}
@@ -354,28 +339,18 @@ citation is labeled with its source paper.
 
 \subsection{Faithfulness Metrics}
 \label{sec:method-faith}
-We evaluate faithfulness with a zero-shot, sentence-level entailment approach in the
-SummaC style~\citep{laban2022summac}, decomposing text into atomic claims in the
-FActScore style~\citep{min2023factscore}. For an atom $a_i$ and a chunk
-$\mathcal{C}_j$ we take the maximum cosine similarity between the atom and the
-chunk's sentences under the local all-MiniLM-L6-v2 encoder, and label the atom
-entailment, neutral, or contradiction against thresholds $\tau_e{=}0.42$ and
-$\tau_n{=}0.25$. A Combined Faithfulness Score (CFS) blends three tiers:
-\begin{equation}
-  \mathrm{CFS} = 0.50\,\mathrm{NLI} + 0.30\,\mathrm{SCR} + 0.20\,\mathrm{KFP},
-\end{equation}
-where NLI is the entailment fraction, SCR is whole-claim to best-chunk cosine
-similarity, and KFP is boundary-matched recall of numbers and technical terms. The
-thresholds and the $\mathrm{CFS}{\geq}0.55$ faithful cutoff were calibrated on a
-small pilot set; we did not run a systematic sensitivity sweep.
-
-We apply this metric in two ways that answer different questions.
-\emph{Retrieval-support CFS} scores a pre-written gold claim against the retrieved
-chunks, measuring whether retrieval surfaces support for a known fact
-(answerability). \emph{Generation faithfulness} scores the system's \emph{actual
-generated answer} against its retrieved context, measuring whether the output stays
-grounded and avoids contradicting its source. The second is the quantity our
-hallucination claim rests on, and it is the result we foreground.
+We use two measures for two questions, both over atoms decomposed in the FActScore
+style~\citep{min2023factscore}. \emph{Generation faithfulness} scores the system's actual answer
+against its retrieved context, classifying each atom entailment / neutral / contradiction with a
+local LLM entailment judge; we report the entailment fraction and a hallucination (contradiction)
+rate. We deliberately do not use embedding cosine here: cosine cannot separate a claim from its
+negation, and a negative control (Section~\ref{sec:auto-gen}) confirms the judge catches
+contradictions it misses. \emph{Retrieval-support} instead scores a pre-written gold claim against
+the retrieved chunks (answerability) with a cheaper zero-shot cosine signal in the SummaC
+style~\citep{laban2022summac}; its Combined Faithfulness Score blends the cosine entailment
+fraction (0.50), whole-claim similarity SCR (0.30), and boundary-matched key-fact recall KFP
+(0.20), with the $\mathrm{CFS}{\geq}0.55$ cutoff calibrated on a small pilot. The generation judge
+is what our faithfulness claims rest on and the result we foreground.
 
 \subsection{System Architecture}
 The backend is a local application that stores parsed PDFs as JSON on disk; the
@@ -752,31 +727,25 @@ remaining step, so Table~\ref{tab:human} reports placeholders, not estimates.
   \end{tabular}
 \end{table}
 
-We also report, once available, the Friedman-test result on the Faithfulness
-dimension (to be filled) and the human-to-automated Faithfulness correlation
-(to be filled), which together test whether ScholAR's grounding holds across local
-models and whether the automated metric tracks expert judgment.
+Once available, a Friedman test across models and the human-to-automated Faithfulness correlation
+(both to be filled) will test whether grounding holds across local models and whether our judge
+tracks expert judgment.
 
 % -----------------------------------------------------------------------
 \section{Discussion and Limitations}
 % -----------------------------------------------------------------------
-ScholAR's contribution is a fully local integration whose two genuinely novel
-elements, page-preserving chunking and indirect citation grounding, are simple and
-auditable, and in which the generated answers are measurably grounded, with no
-contradictions and no unsupported citations on the studied set. The limits of that
-evidence set the agenda for the rest of this section.
-
-The retrieval and retrieval-support benchmarks span 100 cases across 25 papers, but their
-gold chunks are auto-derived from mined facts rather than hand-labeled, and the mined queries
-carry lexical overlap that likely flatters lexical retrieval; the 3-paper hand-labeled sets
-remain the higher-precision anchor. The visual benchmark (18 cases) is small and hand-labeled,
-so its deltas fall within noise and carry no significance testing, and the abstention probe is
-likewise small and synthetic (20 auto-constructed negatives scored by a validated refusal
-detector), so its near-total rates indicate a tendency, not a guarantee. The
-generation-faithfulness metric is now a local LLM entailment judge, which our negative control
-shows catches contradictions a cosine proxy misses, but it is still an automated judge calibrated
-on a small pilot and not yet validated against human ratings; closing that gap is what the human
-evaluation exists for.
+ScholAR's contribution is a local-inference integration whose two elements, page-preserving
+chunking and indirect citation grounding, are simple and auditable and make a cited page correct
+by construction. Under a real entailment judge, though, the generated answers are only modestly
+grounded (faithfulness 0.61, contradictions in about a quarter of answers), and the limits of our
+evidence set this section's agenda. The retrieval and retrieval-support benchmarks span 100 cases
+across 25 papers, but their gold chunks are auto-derived from mined facts whose lexical overlap
+likely flatters lexical retrieval; the 3-paper hand-labeled sets remain the higher-precision
+anchor. The visual (18 cases) and abstention (20 synthetic negatives) probes are small, so their
+deltas carry no significance testing and indicate tendencies, not guarantees. And the
+generation-faithfulness judge, though it catches contradictions a cosine proxy misses (our negative
+control), is itself calibrated on a small pilot and unvalidated against human ratings; closing that
+gap is what the human evaluation exists for.
 
 Our comparison (Section~\ref{sec:auto-compare}) is against local reimplementations of
 PDF-chat, vanilla RAG, and PaperQA2's rerank-and-summarize step, not against the
