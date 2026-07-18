@@ -66,22 +66,20 @@ identifiers that map to chunks it actually retrieved, so it cannot write a page 
 of its own. We evaluate retrieval, answer faithfulness, visual grounding, and
 cross-document localization on labeled benchmarks. Scored by a local entailment judge, which a
 negative control shows detects the contradictions a similarity proxy misses, generated answers
-reach a mean faithfulness of 0.61 across four local models on 100 cases; about a quarter contain a
+reach a mean faithfulness of 0.61 across four local models on the diverse benchmark; about a quarter contain a
 contradicted claim and roughly 9\% of citations are unsupported, numbers a cosine proxy had put at
-0.94 with none unsupported. BM25-primary retrieval reaches Recall@5 of 0.93 across 25 papers, and figure and table
-questions route to the correct visual element in all 18 pilot cases. On M3SciQA's
+0.85 with none unsupported. Cited pages are valid by construction but support their claim only 66\%
+of the time, no better than a free-form baseline (71\%): the mechanism buys provenance, not
+faithfulness. BM25-primary retrieval reaches Recall@5 of 0.93 across 25 papers (within noise of
+plain BM25 and a keyword baseline), and figure and table questions route correctly in all 18 pilot cases. On M3SciQA's
 cross-document localization task, retrieving from the question alone sits near chance,
 but resolving the anchor figure with the same local multimodal model first reaches an
-MRR of 0.474, ahead of every open-source baseline reported there and close to GPT-4o
-(0.500), while running on one machine. Against local reimplementations of PDF-chat, vanilla RAG, and a
-PaperQA2-style pipeline, ScholAR matches the strongest (a PaperQA2-style pipeline) on
-answer correctness and faithfulness within bootstrap 95\% confidence intervals, with a
-simpler design, and
-when a question's answer is absent from the retrieved paper the local models decline
-rather than fabricate on 90 to 100\% of a provably-unanswerable set, each within an
-18\,GB single-machine budget. We also contribute a 100-case benchmark across 25 papers spanning text,
-mathematical, and figure questions; a model-agnostic human-evaluation protocol over four local
-models is designed, but its expert scoring is pending and we do not report it as a result.
+MRR of 0.474, close to GPT-4o (0.500) and ahead of the open-source baselines reported there (on a
+different split), while running on one machine. Against local reimplementations of PDF-chat,
+vanilla RAG, and a PaperQA2-style pipeline, ScholAR matches the strongest within bootstrap 95\% CIs
+with a simpler design, and on unanswerable questions the local models abstain (18--20 of 20), each
+within an 18\,GB budget. We also contribute a 100-case, 25-paper benchmark; a designed human
+evaluation is pending.
 \end{abstract}
 
 % -----------------------------------------------------------------------
@@ -149,8 +147,9 @@ which is why ScholAR keeps BM25 primary and treats dense retrieval as a fusion c
 PaperQA and PaperQA2~\citep{lala2023paperqa,lala2024paperqa2} are agentic systems with frontier
 backends; OpenScholar~\citep{asai2024openscholar} synthesizes over a large open datastore, and
 SciRAG~\citep{ding2025scirag} adds outline-guided synthesis. All three assume cloud-hosted or large
-self-hosted models; ScholAR instead targets a single local sub-15B model, trading capability for
-zero data exposure. Closest to our citation mechanism, Pleias-RAG~\citep{pleias2025rag}
+self-hosted models; ScholAR instead targets a single local sub-15B model, trading capability so
+that no document content leaves the machine (only public arXiv/S2 identifier lookups touch the
+network). Closest to our citation mechanism, Pleias-RAG~\citep{pleias2025rag}
 \emph{trains} small models to emit source quotes; we instead put the grounding in the retrieval and
 application layer, so it works with any local model rather than one taught to quote.
 
@@ -389,8 +388,8 @@ from benchmark-dataset papers, reference lists, and worked examples were filtere
 out. Because each case carries exact substrings copied from its source passage, we
 recover a gold supporting chunk for every case at no extra labeling cost: it is the
 chunk that contains those substrings, disambiguated by the recorded page. This yields
-a 100-case, 25-paper labeled set for retrieval and retrieval-support faithfulness, an
-order of magnitude larger and eight times more papers than the hand-labeled set. The
+a 100-case, 25-paper labeled set for retrieval and retrieval-support faithfulness, seven times
+the 14-case retrieval set and eight times the papers of the hand-labeled set. The
 labels are weaker than hand annotation, and the questions, being mined from passages,
 carry lexical overlap that can favor lexical retrieval; we therefore report the scaled
 set alongside the 3-paper hand-labeled set rather than in place of it. This diverse
@@ -498,7 +497,8 @@ contradiction. A negative control confirms this: on gold claims deliberately cor
 perturbed, relations negated), a cosine proxy flagged 50\% as unfaithful and fired a contradiction
 on 0\%, whereas the judge flagged 90\% and fired a contradiction on 75\%. Scored with the judge
 over the 100 diverse cases and four models (Section~\ref{sec:auto-models}), answers reach a mean
-faithfulness of 0.61, far below the 0.94 a cosine proxy reports; about a quarter of answers (93 of
+faithfulness of 0.61, far below the 0.85 macro-mean a cosine proxy reports on the same four models
+(0.94 on the 3-paper single-model anchor); about a quarter of answers (93 of
 350) contain a contradicted atom, and of 1{,}279 citation occurrences checked (a source cited in
 several sentences is checked each time; Table~\ref{tab:benchstats} counts the 829 distinct
 markers), 73\% are supported, 18\%
@@ -521,11 +521,12 @@ Section~\ref{sec:auto-gen} is why we trust the judge's lower, flatter version.
 
 \begin{table}[t]
   \centering
-  \caption{The same ScholAR pipeline with only the generation model changed, on the 100
-           diverse cases, scored by the local entailment judge. Faith.\ is the fraction of answer
-           atoms entailed by the evidence; Hall.\ is the fraction judged \emph{contradiction};
-           Cites is the number of inline citations checked and Supp.\ the fraction of them
-           supported. Faithfulness is uniformly modest across models; citation support varies.}
+  \caption{The same ScholAR pipeline with only the generation model changed, scored by the local
+           entailment judge. The two multimodal models run all 100 diverse cases; the text-only
+           models (llama3.1, mistral) run the 75 non-visual cases, so counts differ (350 answers,
+           not 400). Faith.\ is the fraction of answer atoms entailed; Hall.\ the fraction judged
+           \emph{contradiction}; Cites the inline citations checked, Supp.\ the fraction supported.
+           Faithfulness is uniformly modest across models; citation support varies.}
   \label{tab:models}
   \setlength{\tabcolsep}{5pt}
   \begin{tabular}{lcccc}
@@ -655,9 +656,9 @@ questions, each posed against a different paper in which the queried fact is pro
 substring), so the correct response is to abstain. All four models decline on the large majority
 (Table~\ref{tab:permodel}): qwen3.5:9b and llama3.1:8b on every question, gemma4:12b on 19 of 20,
 mistral:7b on 18. The few non-abstentions are a benign overlap, not invention (a wrongly paired
-paper that independently reports a minibatch size). The set is small and synthetic, scored by a
-refusal detector we validated by reading every output, so we read it as evidence that grounding
-induces abstention, not as a precise rate.
+paper that independently reports a minibatch size). The set is small and synthetic (n=20, so all
+four models are statistically indistinguishable) and we ran no ungrounded control, so we read this
+as a tendency of the grounded pipeline, not a causal claim or a precise rate.
 
 \begin{table}[t]
   \centering

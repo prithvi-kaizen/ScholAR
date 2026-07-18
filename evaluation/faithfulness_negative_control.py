@@ -76,25 +76,31 @@ def main() -> None:
         bad_claim = corrupt(true_claim)
         t = scorer.score_full(true_claim, chunks, top_k=1)
         b = scorer.score_full(bad_claim, chunks, top_k=1)
-        rows.append({"id": c["id"], "true_cfs": t["cfs"], "corrupt_cfs": b["cfs"],
-                     "corrupt_contradicted": b["n_contradicted"], "corrupt_atoms": b["n_atoms"],
-                     "corrupt_claim": bad_claim})
-        print(f"  {c['id']:26} true={t['cfs']:.2f}  corrupt={b['cfs']:.2f}  "
-              f"contra={b['n_contradicted']}/{b['n_atoms']}")
+        rows.append({"id": c["id"], "true_cfs": t["cfs"], "true_contradicted": t["n_contradicted"],
+                     "corrupt_cfs": b["cfs"], "corrupt_contradicted": b["n_contradicted"],
+                     "corrupt_atoms": b["n_atoms"], "corrupt_claim": bad_claim})
+        print(f"  {c['id']:26} true={t['cfs']:.2f}(contra {t['n_contradicted']})  "
+              f"corrupt={b['cfs']:.2f}(contra {b['n_contradicted']})")
 
     n = len(rows)
     mean_true = round(sum(r["true_cfs"] for r in rows) / n, 3)
     mean_bad = round(sum(r["corrupt_cfs"] for r in rows) / n, 3)
-    # fraction of corrupted claims the metric flags as unfaithful (CFS below the 0.5 cutoff)
+    # SENSITIVITY: does the metric drop on corrupted claims?
     caught = round(sum(1 for r in rows if r["corrupt_cfs"] < 0.5) / n, 3)
     any_contra = round(sum(1 for r in rows if r["corrupt_contradicted"] > 0) / n, 3)
+    # SPECIFICITY: does the metric spuriously flag TRUE (uncorrupted, entailed) claims?
+    true_flagged = round(sum(1 for r in rows if r["true_cfs"] < 0.5) / n, 3)
+    true_false_contra = round(sum(1 for r in rows if r["true_contradicted"] > 0) / n, 3)
     summary = {"mode": scorer._mode, "n": n, "mean_true_cfs": mean_true,
                "mean_corrupt_cfs": mean_bad, "separation": round(mean_true - mean_bad, 3),
-               "corrupt_caught_rate": caught, "corrupt_contradiction_rate": any_contra}
+               "corrupt_caught_rate": caught, "corrupt_contradiction_rate": any_contra,
+               "true_flagged_unfaithful_rate": true_flagged,
+               "true_false_contradiction_rate": true_false_contra}
     OUT.write_text(json.dumps({"summary": summary, "rows": rows}, indent=2))
-    print(f"\n== negative control ({scorer._mode}) ==")
-    print(f"  mean CFS  true={mean_true}  corrupted={mean_bad}  (separation {summary['separation']})")
-    print(f"  corrupted flagged unfaithful: {caught*100:.0f}%   fired contradiction: {any_contra*100:.0f}%")
+    print(f"\n== validation ({scorer._mode}, n={n}) ==")
+    print(f"  SENSITIVITY  corrupted flagged unfaithful {caught*100:.0f}%, fired contradiction {any_contra*100:.0f}%")
+    print(f"  SPECIFICITY  TRUE claims wrongly flagged unfaithful {true_flagged*100:.0f}%, "
+          f"spurious contradiction {true_false_contra*100:.0f}%")
     print(f"wrote {OUT.relative_to(ROOT)}")
 
 
