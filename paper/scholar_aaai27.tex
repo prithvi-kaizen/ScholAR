@@ -64,8 +64,8 @@ every retrieved unit inside a single PDF page, so a citation resolves to one
 highlightable location. Indirect citation grounding lets the model cite only evidence
 identifiers that map to chunks it actually retrieved, so it cannot write a page number
 of its own. We evaluate retrieval, answer faithfulness, visual grounding, and
-cross-document localization on labeled benchmarks. Scored by a local entailment judge, which a
-negative control shows detects the contradictions a similarity proxy misses, generated answers
+cross-document localization on labeled benchmarks. Scored by a local entailment judge that catches the
+contradictions a similarity proxy misses (shown by a negative control), generated answers
 reach a mean faithfulness of 0.61 across four local models on the diverse benchmark; about a quarter contain a
 contradicted claim and roughly 9\% of citations are unsupported, numbers a cosine proxy had put at
 0.85 with none unsupported. Cited pages are valid by construction but support their claim only 66\%
@@ -603,7 +603,7 @@ beats it with a local one.
     \textbf{ScholAR + vision (gemma4)}        & 0.455 & \snd{0.572} \\
     GPT-4V$^\dagger$ (cloud)                  & 0.400 & -- \\
     text-emb-3-large$^\dagger$ (cloud)        & 0.297 & -- \\
-    \textbf{ScholAR BM25} (text only)         & 0.180 & 0.242 \\
+    \textbf{ScholAR BM25} (text-only)         & 0.180 & 0.242 \\
     Best open-source LMM$^\dagger$            & 0.144 & -- \\
     BM25$^\dagger$ / Random$^\dagger$         & 0.127 / 0.126 & -- \\
     \bottomrule
@@ -622,9 +622,9 @@ PaperQA2-style pipeline by a margin that does not resolve on 40 cases (paired 95
 $+0.013\,[-0.104,+0.133]$, spanning zero). On generation \emph{faithfulness}, though, the judge
 places ScholAR second from the bottom (0.453): the two systems that retrieve fewer, cleaner
 passages, vanilla RAG (0.735) and the PaperQA2-style reranker (0.779), are markedly more grounded,
-and only long-context PDF-chat (0.439) is worse. Correctness and faithfulness come apart here,
-indirect grounding helps the model answer but not stay within its evidence, while all four still
-clearly beat PDF-chat on correctness (0.267): retrieval beats putting the whole document in context. We compare
+and only long-context PDF-chat (0.439) is worse. Correctness and faithfulness come apart here:
+indirect grounding helps the model answer but not stay within its evidence. All four still
+clearly beat PDF-chat on correctness (0.267), since retrieval beats putting the whole document in context. We compare
 against local reimplementations, not the hosted OpenScholar, PaperQA2, or SciRAG; a resource-matched
 local comparison, not a claim to frontier-scale quality.
 
