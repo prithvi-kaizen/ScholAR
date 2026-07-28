@@ -248,10 +248,10 @@ application rather than by the model.
 \draw[->] (ev)--(llm); \draw[->] (llm)--(rw);
 \draw[->] (gGr)--(ans);
 \draw[->] (crop)--(mm);
-\draw[->] (gRet.south) -- (gVis.north);            % figure query routes to vision
-\draw[->] (gVis.east) -| (llm.south);              % vision answer joins the grounded answer
+\draw[->] (bm25.south) -- (bm25.south |- gVis.north);   % figure query routes to vision (straight)
+\draw[->] (gVis.east) -| (llm.south);                   % vision answer joins the grounded answer
 \draw[->] (bib)--(rank);
-\draw[->] (gMd.north) -- (gIng.south);             % ranked reference is ingested like any paper
+\draw[->] (rank.north) -- (rank.north |- gIng.south);   % ranked reference ingested (straight)
 \end{tikzpicture}%
 }
 \caption{The ScholAR architecture. A question enters at the left and leaves as an answer whose
