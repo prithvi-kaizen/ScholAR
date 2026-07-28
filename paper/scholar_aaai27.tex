@@ -105,7 +105,7 @@ short-lived evidence identifier and instructs the model to cite only those ident
 free-form page number;
 the application then rewrites each identifier into a numbered reference that maps deterministically
 to a page. The model decides only which evidence supports a claim, and the evidence-to-page mapping
-is application logic rather than a model guess (Figure~\ref{fig:ui}). Beyond single-document text,
+is application logic rather than a model guess. Beyond single-document text,
 ScholAR routes figure and table questions to a locally run multimodal model and extends to a
 paper's own cited references for cross-document questions.
 
@@ -302,20 +302,6 @@ chunk's page for highlighting. The model decides only which evidence supports a
 claim; the mapping from evidence to page is deterministic application logic. This
 prevents page-number hallucination by construction rather than by asking the model
 to be careful.
-
-\begin{figure*}[t]
-  \centering
-  \includegraphics[width=0.82\textwidth]{scholar_ui}
-  \caption{Indirect citation grounding as the reader sees it, captured from the running system.
-           The question (top right) is answered by a local model (gemma4:12b) whose prose carries
-           only numbered references, never a page number: the model emitted evidence identifiers and
-           the application rewrote them into $[1]$ and $[2]$, resolving each to a page. Selecting
-           $[1]$ (highlighted under Sources) scrolls the document to page~5 and boxes the exact
-           sentence the claim rests on, ``Each SGD update direction is computed using a minibatch of
-           80 sentences.'' The cited page is a lookup rather than a generation, so the highlight
-           cannot disagree with the citation. Everything shown runs on one laptop.}
-  \label{fig:ui}
-\end{figure*}
 
 \subsection{Visual Grounding}
 When a query references visual content, through cue terms such as ``figure'' or an explicit
