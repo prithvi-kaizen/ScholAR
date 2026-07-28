@@ -76,8 +76,9 @@ cross-document localization task, retrieving from the question alone sits near c
 but resolving the anchor figure with the same local multimodal model first reaches an
 MRR of 0.474, close to GPT-4o (0.500) and ahead of the open-source baselines reported there (on a
 different split), while running on one machine. Against local reimplementations of PDF-chat,
-vanilla RAG, and a PaperQA2-style pipeline, ScholAR matches the strongest within bootstrap 95\% CIs
-with a simpler design, and on unanswerable questions the local models abstain (18--20 of 20), each
+vanilla RAG, and a PaperQA2-style pipeline, ScholAR answers the most correctly (within bootstrap
+95\% CIs of the strongest baseline) but is the least grounded of the retrieval baselines under the
+same judge, and on unanswerable questions the local models abstain (18--20 of 20), each
 within an 18\,GB budget. We also contribute a 100-case, 25-paper benchmark; a designed human
 evaluation is pending.
 \end{abstract}
@@ -616,18 +617,22 @@ three baselines on the same model (qwen3.5:9b) and the same cases (51 labeled an
 diverse): long-context PDF-chat, which puts the whole paper in the model's context;
 vanilla RAG, with fixed cross-page chunks and dense retrieval; and a local
 reimplementation of the rerank-and-summarize step of PaperQA2~\citep{lala2024paperqa2}.
-In Table~\ref{tab:compare} ScholAR tops generation faithfulness (0.892) and answer correctness
-(0.563), but the margin over the PaperQA2-style system is not resolvable on 91 cases (paired 95\%
-CIs $+0.020\,[-0.020,+0.059]$ and $+0.013\,[-0.104,+0.133]$, both spanning zero). ScholAR therefore
-\emph{matches} a PaperQA2-style pipeline with a simpler design, while both clearly beat long-context
-PDF-chat (correctness 0.267): retrieval beats putting the whole document in context. We compare
+In Table~\ref{tab:compare} ScholAR is the most \emph{correct} system (0.563), edging the
+PaperQA2-style pipeline by a margin that does not resolve on 40 cases (paired 95\% CI
+$+0.013\,[-0.104,+0.133]$, spanning zero). On generation \emph{faithfulness}, though, the judge
+places ScholAR second from the bottom (0.453): the two systems that retrieve fewer, cleaner
+passages, vanilla RAG (0.735) and the PaperQA2-style reranker (0.779), are markedly more grounded,
+and only long-context PDF-chat (0.439) is worse. Correctness and faithfulness come apart here,
+indirect grounding helps the model answer but not stay within its evidence, while all four still
+clearly beat PDF-chat on correctness (0.267): retrieval beats putting the whole document in context. We compare
 against local reimplementations, not the hosted OpenScholar, PaperQA2, or SciRAG; a resource-matched
 local comparison, not a claim to frontier-scale quality.
 
 \begin{table}[t]
   \centering
   \caption{ScholAR versus local baselines on the shared model (qwen3.5:9b) and cases
-           (51 labeled + 40 diverse). Faith. is generation faithfulness; Correct. is
+           (51 labeled + 40 diverse). Faith. is generation faithfulness under the same local
+           entailment judge as Table~\ref{tab:models} (not the cosine proxy); Correct. is
            must-include recall; Cite-F1 is citation F1 in the sense of
            \citet{gao2023attributing}. All systems emit in-range page numbers
            (invalid-page rate 0); this checks only that a cited page exists, not that it
@@ -638,10 +643,10 @@ local comparison, not a claim to frontier-scale quality.
     \toprule
     \textbf{System} & \textbf{Faith.} & \textbf{Correct.} & \textbf{Cite-F1} \\
     \midrule
-    PDF-chat (long-context)      & 0.801 & 0.267 & 0.742 \\
-    Vanilla RAG                  & 0.860 & 0.340 & \best{0.802} \\
-    PaperQA2-style (RCS, local)  & \snd{0.872} & \snd{0.550} & \snd{0.782} \\
-    \textbf{ScholAR}             & \best{0.892} & \best{0.563} & 0.760 \\
+    PDF-chat (long-context)      & 0.439 & 0.267 & 0.742 \\
+    Vanilla RAG                  & \snd{0.735} & 0.340 & \best{0.802} \\
+    PaperQA2-style (RCS, local)  & \best{0.779} & \snd{0.550} & \snd{0.782} \\
+    \textbf{ScholAR}             & 0.453 & \best{0.563} & 0.760 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -773,8 +778,8 @@ document comprehension combining page-preserving chunking with indirect citation
 extended to visual and multi-document questions. Under a validated local entailment judge its
 generated answers reach a modest faithfulness of 0.61 across four models (contradictions in about a
 quarter), well below what a cosine proxy reports; retrieval reaches Recall@5 0.93 across 25 papers;
-and it matches a PaperQA2-style pipeline on correctness and faithfulness within CIs, with a simpler
-design. Indirect citation grounding guarantees a cited page is real and was retrieved, but a
+and it answers as correctly as a PaperQA2-style pipeline (within CIs) with a simpler design, though
+the same judge finds it less grounded than plain RAG baselines. Indirect citation grounding guarantees a cited page is real and was retrieved, but a
 page-support check (66\%, no better than a free-form baseline) shows it does not make the page
 support the claim: a provenance guarantee, not a faithfulness fix. On M3SciQA, resolving the anchor
 figure locally lifts localization to MRR 0.474, ahead of every open-source baseline there and close
