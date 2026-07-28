@@ -98,7 +98,7 @@ of tens of millions of papers. We ask a narrower question: what does grounded, c
 answering over a scientific document look like under a hard local-only constraint, with a single
 sub-15-billion-parameter model and a retrieval design simple enough to audit end to end?
 
-Two ideas carry ScholAR. \textbf{Page-preserving chunking} segments a document so that every
+Two ideas do the real work in ScholAR. \textbf{Page-preserving chunking} segments a document so that every
 retrieved chunk lies entirely within one PDF page, making a citation resolve to an exact,
 highlightable location. \textbf{Indirect citation grounding} assigns each retrieved passage a
 short-lived evidence identifier and instructs the model to cite only those identifiers, never a
@@ -415,8 +415,10 @@ Table~\ref{tab:benchstats} summarizes the corpus and the benchmarks built on it.
 Table~\ref{tab:retrieval} reports retrieval on the 100-case scaled set. The system we deploy,
 BM25-primary (BM25 with lightweight heuristic reranking), reaches Recall@5 0.93 and MRR 0.861;
 plain BM25 is within noise (0.94, 0.863), and a keyword-overlap baseline even edges Recall@5
-(0.95), so no lexical variant is clearly best and the reranking heuristics add nothing measurable
-here. The clear loser is single-pass dense retrieval (0.74, 0.572): on 25 diverse papers it trails
+(0.95), so no lexical variant is clearly best. Table~\ref{tab:retrieval-ablation} isolates the
+reranking heuristics: layering semantic and section boosts onto plain BM25 costs 0.002 MRR, and the
+page-hint boost the system actually deploys adds exactly 0.000, so the heuristics earn their keep on
+robustness, not on the aggregate numbers. The clear loser is single-pass dense retrieval (0.74, 0.572): on 25 diverse papers it trails
 every lexical configuration, the expected BEIR outcome~\citep{thakur2021beir} and the reverse of
 the 3-paper anchor where dense led. We read BM25's margin cautiously, since the mined queries share
 lexical surface with their source passages, but the direction, lexical over single-pass dense at
@@ -438,6 +440,24 @@ scale, is the one BM25-primary assumes.
     BM25-Only       & \best{0.810} & \best{0.910} & \snd{0.940} & \best{0.863} & \best{0.828} \\
     BM25-primary    & \best{0.810} & \best{0.910} & 0.930 & \snd{0.861} & \snd{0.824} \\
     Dense-Only      & 0.470 & 0.650 & 0.740 & 0.572 & 0.523 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \caption{Retrieval ablation on the 100-case set: the marginal effect of layering each reranking
+           heuristic onto plain BM25. Neither layer improves aggregate retrieval, and the page-hint
+           boost the system deploys changes nothing measurable.}
+  \label{tab:retrieval-ablation}
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Configuration} & \textbf{R@5} & \textbf{MRR} & \textbf{NDCG@5} \\
+    \midrule
+    Plain BM25                      & 0.940 & 0.863 & 0.828 \\
+    \; + semantic/section rerank    & 0.930 & 0.861 & 0.824 \\
+    \; + page-hint boost (deployed) & 0.930 & 0.861 & 0.824 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -722,10 +742,10 @@ tracks expert judgment.
 \section{Discussion and Limitations}
 % -----------------------------------------------------------------------
 ScholAR's contribution is a local-inference integration whose two elements, page-preserving
-chunking and indirect citation grounding, are simple and auditable and make a cited page correct
+chunking and indirect citation grounding, are simple, auditable, and make a cited page correct
 by construction. Under a real entailment judge, though, the generated answers are only modestly
-grounded (faithfulness 0.61, contradictions in about a quarter of answers), and the limits of our
-evidence set this section's agenda. The retrieval and retrieval-support benchmarks span 100 cases
+grounded (faithfulness 0.61, contradictions in about a quarter of answers), and the rest of this
+section is where our evidence runs thin. The retrieval and retrieval-support benchmarks span 100 cases
 across 25 papers, but their gold chunks are auto-derived from mined facts whose lexical overlap
 likely flatters lexical retrieval; the 3-paper hand-labeled sets remain the higher-precision
 anchor. The visual (18 cases) and abstention (20 synthetic negatives) probes are small, so their

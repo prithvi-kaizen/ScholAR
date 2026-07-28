@@ -48,6 +48,15 @@ VISION_PROMPT = (
     "Reply with the answer only.\n\nQuestion: {q}"
 )
 
+# Blind control (ablation): the SAME model-then-BM25 pipeline, but the model never sees the figure,
+# so any lift over text-only BM25 is the model's world knowledge, not the image. If blind ~= vision,
+# the image is not what helps; if blind ~= the text floor, the image drives the win.
+BLIND_PROMPT = (
+    "Answer this question about a scientific paper in at most 12 words. Name the specific "
+    "model, method, dataset or system the question asks about. Reply with the answer only."
+    "\n\nQuestion: {q}"
+)
+
 
 def pseudo_chunks(candidates: list[dict]) -> list[dict]:
     """Each candidate reference paper becomes one retrievable unit (title + abstract)."""
@@ -84,21 +93,23 @@ def rank_all(query: str, cands: list[dict], embedder) -> dict[str, list[int]]:
     return out
 
 
-async def vision_entity(case: dict, model: str) -> str:
-    fig = ROOT / case["figure_path"] if case.get("figure_path") else None
-    if not fig or not fig.exists():
-        return ""
-    b64 = base64.b64encode(fig.read_bytes()).decode()
+async def vision_entity(case: dict, model: str, use_image: bool = True) -> str:
+    imgs = None
+    if use_image:
+        fig = ROOT / case["figure_path"] if case.get("figure_path") else None
+        if not fig or not fig.exists():
+            return ""
+        imgs = [base64.b64encode(fig.read_bytes()).decode()]
+    prompt = (VISION_PROMPT if use_image else BLIND_PROMPT).format(q=case["question"])
     try:
-        return (await generate(VISION_PROMPT.format(q=case["question"]),
-                               temperature=0.1, images=[b64], model=model)).strip()
+        return (await generate(prompt, temperature=0.1, images=imgs, model=model)).strip()
     except Exception as exc:
         return f"[ERROR {type(exc).__name__}]"
 
 
 async def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--tier", choices=["text", "vision"], default="text")
+    ap.add_argument("--tier", choices=["text", "vision", "blind"], default="text")
     ap.add_argument("--model", default="qwen3.5:9b", help="multimodal model (vision tier)")
     ap.add_argument("--limit", type=int, default=0)
     args = ap.parse_args()
@@ -126,17 +137,18 @@ async def main() -> None:
             if rk:
                 blob["summary"][k] = metrics(rk, pools)
     else:
+        use_image = args.tier == "vision"
         rows, ranks, pools = [], [], []
         for i, c in enumerate(cases, 1):
-            ent = await vision_entity(c, args.model)
+            ent = await vision_entity(c, args.model, use_image=use_image)
             q = f"{c['question']} {ent}".strip()
             r = rank_all(q, c["candidates"], embedder)["bm25"]
             rk = rank_of(r, c["gold_index"])
             ranks.append(rk)
             pools.append(len(c["candidates"]))
             rows.append({"case_id": c["case_id"], "entity": ent, "rank": rk})
-            print(f"  [{args.model}] {i}/{len(cases)} rank={rk} :: {ent[:60]}")
-        key = f"vision_bm25::{args.model}"
+            print(f"  [{args.tier}:{args.model}] {i}/{len(cases)} rank={rk} :: {ent[:60]}")
+        key = f"{'vision' if use_image else 'blind'}_bm25::{args.model}"
         blob["summary"][key] = metrics(ranks, pools)
         blob["raw"][key] = rows
 
