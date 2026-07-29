@@ -50,38 +50,20 @@
 \maketitle
 
 \begin{abstract}
-Understanding a scientific paper means being able to trace each claim back to the
-exact place it came from. General-purpose chat over an uploaded PDF is fluent but
-unreliable for this: nothing ties a cited page number to the text the model was
-actually shown. The scientific retrieval-augmented systems that do better tend to
-rely on cloud-hosted frontier models or datastores of millions of papers. We present
-ScholAR (\textbf{S}mart \textbf{C}ompanion for \textbf{H}olistic \textbf{O}rganization,
-\textbf{L}iterature \textbf{A}nalysis \& \textbf{R}esearch), a retrieval-augmented generation
-system for scientific documents that runs
-on a local model server, with no cloud API for
-text or vision (only public paper lookups touch the network). Two design choices carry the system. Page-preserving chunking keeps
-every retrieved unit inside a single PDF page, so a citation resolves to one
-highlightable location. Indirect citation grounding lets the model cite only evidence
-identifiers that map to chunks it actually retrieved, so it cannot write a page number
-of its own. Making citations verifiable by construction, however, does not make answers
-faithful, and that gap is our central finding. We evaluate retrieval, answer faithfulness, visual grounding, and
-cross-document localization on labeled benchmarks. Scored by a local entailment judge that catches
-contradictions a similarity proxy misses (shown by a negative control), generated answers
-reach a mean faithfulness of 0.61 across four local models. About a quarter contain a
-contradicted claim and roughly 9\% of citations are unsupported, numbers a cosine proxy had put at
-0.85 with none unsupported. Cited pages are valid by construction but support their claim only 66\%
-of the time, no better than a free-form baseline (71\%): the mechanism buys provenance, not
-faithfulness. BM25-primary retrieval reaches Recall@5 of 0.93 across 25 papers (within noise of
-plain BM25 and a keyword baseline), and figure and table questions route correctly in all 18 pilot cases. On M3SciQA's
-cross-document localization task, retrieving from the question alone sits near chance,
-but resolving the anchor figure with the same local multimodal model first reaches an
-MRR of 0.474, close to GPT-4o (0.500) and ahead of the open-source baselines reported there (on a
-different split), while running on one machine. Against local reimplementations of PDF-chat,
-vanilla RAG, and a PaperQA2-style pipeline, ScholAR reaches the highest answer correctness
-(must-include recall, within bootstrap 95\% CIs of the strongest baseline) but is the least
-grounded of the retrieval baselines under the same judge, and on unanswerable questions the local
-models abstain (18--20 of 20), each within an 18\,GB budget. We also contribute a 100-case,
-25-paper benchmark.
+Understanding a scientific paper means tracing each claim back to the exact place it came from, yet
+general-purpose chat over a PDF invents page references, and the retrieval systems that do better
+rely on cloud-hosted frontier models. We present ScholAR (\textbf{S}mart \textbf{C}ompanion for
+\textbf{H}olistic \textbf{O}rganization, \textbf{L}iterature \textbf{A}nalysis \& \textbf{R}esearch),
+a fully local retrieval-augmented system for scientific documents, with no cloud API for text or
+vision. Two ideas carry it: page-preserving chunking, so a citation resolves to one highlightable
+page, and indirect citation grounding, where the model cites only retrieved evidence identifiers and
+cannot write a page number of its own. Making citations verifiable by construction, however, does not
+make answers faithful, and that gap is our central finding. Scored by a validated local entailment
+judge, generation faithfulness is a modest 0.61, far below the 0.85 an embedding-cosine proxy
+reports, and cited pages support their claim only 66\% of the time, no better than a free-form
+baseline: the mechanism buys provenance, not faithfulness. On M3SciQA cross-document localization,
+resolving the anchor figure with a local multimodal model lifts MRR from near-chance to 0.474, close
+to GPT-4o. We also contribute a 100-case, 25-paper benchmark.
 \end{abstract}
 
 % -----------------------------------------------------------------------
