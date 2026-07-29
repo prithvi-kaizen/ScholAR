@@ -63,7 +63,8 @@ text or vision (only public paper lookups touch the network). Two design choices
 every retrieved unit inside a single PDF page, so a citation resolves to one
 highlightable location. Indirect citation grounding lets the model cite only evidence
 identifiers that map to chunks it actually retrieved, so it cannot write a page number
-of its own. We evaluate retrieval, answer faithfulness, visual grounding, and
+of its own. Making citations verifiable by construction, however, does not make answers
+faithful, and that gap is our central finding. We evaluate retrieval, answer faithfulness, visual grounding, and
 cross-document localization on labeled benchmarks. Scored by a local entailment judge that catches
 contradictions a similarity proxy misses (shown by a negative control), generated answers
 reach a mean faithfulness of 0.61 across four local models. About a quarter contain a
@@ -86,14 +87,12 @@ models abstain (18--20 of 20), each within an 18\,GB budget. We also contribute 
 % -----------------------------------------------------------------------
 \section{Introduction}
 % -----------------------------------------------------------------------
-Reading an unfamiliar paper is slowest at the moments that matter most: checking that a stated
-number, a method detail, or a figure says what you think it says. Point a general-purpose chat model at the PDF
-and the answers read fluently, yet it invents page references and attributes quotes to places they
-never appear, because a generic pipeline puts no hard constraint between a citation and the text the
-model was actually shown. This is not
-hypothetical: even purpose-built systems emit citations that do not support their claims when
-attribution is measured directly~\citep{gao2023attributing}. The challenge we take on is therefore
-to make every citation checkable against a specific location, rather than trusting the model to cite
+Researchers increasingly query papers through a chat interface over the PDF, but a general-purpose
+model answers fluently while inventing page references and attributing quotes to places they never
+appear, because a generic pipeline puts no hard constraint between a citation and the text the model
+was shown. This is not hypothetical: even purpose-built systems emit citations that do not support
+their claims when attribution is measured directly~\citep{gao2023attributing}. The challenge is to
+make every citation checkable against a specific location, rather than trusting the model to cite
 well.
 
 Purpose-built scientific RAG systems close part of this gap but assume resources most readers lack.
@@ -118,23 +117,19 @@ paper's own cited references for cross-document questions.
 
 Our contributions are:
 \begin{itemize}
-  \item A local-inference RAG system for scientific documents that runs both text and
-        vision on-device (paper acquisition and reference resolution use public
-        arXiv/Semantic Scholar lookups by identifier), using page-preserving chunking and
-        an indirect citation mechanism that rules out \emph{invented} page numbers by
-        construction (though not, we find, whether the cited page supports the claim).
-  \item A validated local faithfulness judge, an entailment classifier checked by a
-        negative control against the embedding-cosine proxy it replaces, and the finding
-        that such proxies substantially inflate local-RAG faithfulness (0.85 versus 0.61
-        under the judge, on the system's \emph{generated answers} rather than pre-written
-        gold claims), with contradictions in about a quarter of answers.
-  \item Automated benchmarks and results for retrieval, retrieval-support
-        faithfulness, visual grounding, and cross-document localization, the last
-        measured against the published baselines of M3SciQA on its own data, where a
-        locally resolved figure lifts localization from near-chance to competitive with
-        a frontier cloud model.
-  \item A 100-case benchmark across 25 papers spanning text, mathematical, and
-        figure questions, with gold answers verified against their source passages.
+  \item \textbf{A fully local RAG system whose citations are correct by construction.}
+        Page-preserving chunking keeps each chunk within one PDF page, and indirect citation
+        grounding lets the model cite only retrieved evidence identifiers, so it cannot invent a
+        page number. Text and vision run on-device, and the system extends to a paper's own cited
+        references.
+  \item \textbf{A validated local faithfulness judge, and a measurement.} An entailment
+        classifier, checked by a negative control against the embedding-cosine proxy it replaces,
+        shows that such proxies substantially inflate local-RAG faithfulness (0.85 to 0.61 under the
+        judge) and that indirect grounding buys \emph{provenance}, not \emph{faithfulness}.
+  \item \textbf{A benchmark and a fully local evaluation.} A 100-case, 25-paper benchmark with
+        gold answers verified against their source passages, spanning retrieval, faithfulness,
+        visual grounding, and cross-document localization, where a locally resolved figure lifts
+        M3SciQA localization from near-chance to competitive with a frontier cloud model.
 \end{itemize}
 
 % -----------------------------------------------------------------------
@@ -148,8 +143,10 @@ guarantee: the model is prompted with evidence, yet nothing forces its answer, o
 stay within that evidence~\citep{gao2023attributing}. On the retrieval side, lexical
 BM25~\citep{robertson2009bm25} remains a strong baseline that zero-shot dense retrievers often fail
 to beat~\citep{thakur2021beir}, which is why ScholAR keeps BM25 primary and treats dense retrieval
-as a fusion component. Our citation mechanism is orthogonal to the retriever: it constrains what the
-model may cite, so provenance does not rest on the model's own restraint.
+as a fusion component. Document structure matters as much as the ranker: fixed-size windows that
+straddle page and section boundaries leave a retrieved span hard to localize, which page-preserving
+chunking is designed to avoid. Our citation mechanism is orthogonal to the retriever: it constrains
+what the model may cite, so provenance does not rest on the model's own restraint.
 
 \paragraph{Scientific-literature RAG systems.}
 PaperQA and PaperQA2~\citep{lala2023paperqa,lala2024paperqa2} are agentic systems with frontier
@@ -189,7 +186,7 @@ $c_i \in \mathcal{C}_q$ rather than a free-form page number, so citations are co
 was actually retrieved, independent of $\mathrm{Retrieve}$'s own precision.
 
 % -----------------------------------------------------------------------
-\section{Method}
+\section{Methodology}
 % -----------------------------------------------------------------------
 Figure~\ref{fig:pipeline} shows the end-to-end pipeline. A PDF is chunked one page
 at a time, ranked by BM25, and exposed to the model as evidence identifiers; the
@@ -428,10 +425,12 @@ cross-document localization; the subsections report them and the supporting metr
 \includegraphics[width=0.94\textwidth]{results.pdf}
 \caption{Results at a glance, from the same runs as Tables~\ref{tab:compare}
 and~\ref{tab:multidoc}. \textbf{(a)}~On the shared-model local comparison, ScholAR reaches the
-highest answer correctness but is among the least faithful under the entailment judge: correctness
-and grounding come apart. \textbf{(b)}~On M3SciQA cross-document localization, resolving the anchor
+highest answer correctness (must-include recall) but is among the least faithful under the entailment
+judge: correctness and grounding come apart. \textbf{(b)}~On M3SciQA cross-document localization, resolving the anchor
 figure with a local multimodal model lifts MRR from the text-only floor (0.18) to near GPT-4o
-(0.47 vs 0.50), on one laptop.}
+(0.47 vs 0.50), on one laptop. \textbf{(c)}~Faithfulness, hallucination, and citation support per
+generation model (Table~\ref{tab:models}); shading marks rank within each column (darker is better,
+with hallucination inverted).}
 \label{fig:results}
 \end{figure*}
 
