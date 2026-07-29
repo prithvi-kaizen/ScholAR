@@ -123,11 +123,11 @@ Our contributions are:
         arXiv/Semantic Scholar lookups by identifier), using page-preserving chunking and
         an indirect citation mechanism that rules out \emph{invented} page numbers by
         construction (though not, we find, whether the cited page supports the claim).
-  \item An evaluation that scores the faithfulness of the system's \emph{generated
-        answers} rather than of pre-written gold claims, using a local entailment judge
-        validated by a negative control against the cosine proxy it replaces. Under the
-        judge, faithfulness is a modest 0.61 across four local models with contradictions in
-        about a quarter of answers, well below what a similarity proxy reports.
+  \item A validated local faithfulness judge, an entailment classifier checked by a
+        negative control against the embedding-cosine proxy it replaces, and the finding
+        that such proxies substantially inflate local-RAG faithfulness (0.85 versus 0.61
+        under the judge, on the system's \emph{generated answers} rather than pre-written
+        gold claims), with contradictions in about a quarter of answers.
   \item Automated benchmarks and results for retrieval, retrieval-support
         faithfulness, visual grounding, and cross-document localization, the last
         measured against the published baselines of M3SciQA on its own data, where a
@@ -404,16 +404,16 @@ Table~\ref{tab:benchstats} summarizes the corpus and the benchmarks built on it.
     \multicolumn{2}{c}{\emph{Corpus}} & \multicolumn{2}{c}{\emph{Diverse benchmark}} \\
     \cmidrule(lr){1-2}\cmidrule(lr){3-4}
     Papers            & 25       & Questions           & 100 \\
-    Pages / paper     & 34.5     & \ \ text/math/vis.  & 50/25/25 \\
-    Chunks / paper    & 34.8     & Question words      & 12.9 \\
-    Words / paper     & 17{,}694 & Gold facts / q.     & 2.8 \\
+    Pages per paper   & 34.5     & \ \ text/math/vis.  & 50/25/25 \\
+    Chunks per paper  & 34.8     & Question words      & 12.9 \\
+    Words per paper   & 17{,}694 & Gold facts per q.   & 2.8 \\
     \midrule
     \multicolumn{2}{c}{\emph{Labeled sets (hand / auto)}} & \multicolumn{2}{c}{\emph{Generated answers}} \\
     \cmidrule(lr){1-2}\cmidrule(lr){3-4}
     Retrieval         & 14 / 100 & Answers             & 350 \\
     Faithfulness      & 51 / 100 & Local models        & 4 \\
     Visual / multi-doc& 18 / 18  & Inline citations    & 829 \\
-    Unanswerable      & 20       & Citations / answer  & 2.4 \\
+    Unanswerable      & 20       & Citations per answer & 2.4 \\
     \bottomrule
   \end{tabular}
 \end{table}
