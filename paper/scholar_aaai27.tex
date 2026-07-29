@@ -38,7 +38,7 @@
 
 \setcounter{secnumdepth}{2}
 
-\title{ScholAR: Page-Grounded Retrieval-Augmented Generation\\for Scientific Document Comprehension}
+\title{ScholAR: Local, Page-Grounded Retrieval-Augmented Generation\\with Verifiable Citations for Scientific Papers}
 
 \author{
     Anonymous Submission
@@ -53,7 +53,7 @@
 Understanding a scientific paper means being able to trace each claim back to the
 exact place it came from. General-purpose chat over an uploaded PDF is fluent but
 unreliable for this: nothing ties a cited page number to the text the model was
-actually shown, and the scientific retrieval-augmented systems that do better tend to
+actually shown. The scientific retrieval-augmented systems that do better tend to
 rely on cloud-hosted frontier models or datastores of millions of papers. We present
 ScholAR (\textbf{S}mart \textbf{C}ompanion for \textbf{H}olistic \textbf{O}rganization,
 \textbf{L}iterature \textbf{A}nalysis \& \textbf{R}esearch), a retrieval-augmented generation
@@ -64,9 +64,9 @@ every retrieved unit inside a single PDF page, so a citation resolves to one
 highlightable location. Indirect citation grounding lets the model cite only evidence
 identifiers that map to chunks it actually retrieved, so it cannot write a page number
 of its own. We evaluate retrieval, answer faithfulness, visual grounding, and
-cross-document localization on labeled benchmarks. Scored by a local entailment judge that catches the
+cross-document localization on labeled benchmarks. Scored by a local entailment judge that catches
 contradictions a similarity proxy misses (shown by a negative control), generated answers
-reach a mean faithfulness of 0.61 across four local models on the diverse benchmark; about a quarter contain a
+reach a mean faithfulness of 0.61 across four local models. About a quarter contain a
 contradicted claim and roughly 9\% of citations are unsupported, numbers a cosine proxy had put at
 0.85 with none unsupported. Cited pages are valid by construction but support their claim only 66\%
 of the time, no better than a free-form baseline (71\%): the mechanism buys provenance, not
@@ -76,28 +76,34 @@ cross-document localization task, retrieving from the question alone sits near c
 but resolving the anchor figure with the same local multimodal model first reaches an
 MRR of 0.474, close to GPT-4o (0.500) and ahead of the open-source baselines reported there (on a
 different split), while running on one machine. Against local reimplementations of PDF-chat,
-vanilla RAG, and a PaperQA2-style pipeline, ScholAR answers the most correctly (within bootstrap
-95\% CIs of the strongest baseline) but is the least grounded of the retrieval baselines under the
-same judge, and on unanswerable questions the local models abstain (18--20 of 20), each
-within an 18\,GB budget. We also contribute a 100-case, 25-paper benchmark; a designed human
-evaluation is pending.
+vanilla RAG, and a PaperQA2-style pipeline, ScholAR reaches the highest answer correctness
+(must-include recall, within bootstrap 95\% CIs of the strongest baseline) but is the least
+grounded of the retrieval baselines under the same judge, and on unanswerable questions the local
+models abstain (18--20 of 20), each within an 18\,GB budget. We also contribute a 100-case,
+25-paper benchmark.
 \end{abstract}
 
 % -----------------------------------------------------------------------
 \section{Introduction}
 % -----------------------------------------------------------------------
 Reading an unfamiliar paper is slowest at the moments that matter most: checking that a stated
-number, a method detail, or a figure says what you think it says. General-purpose chat over the PDF
-helps with fluency but brings a new failure mode: it summarizes confidently while inventing page
-references and attributing quotes to places they do not appear, because a generic chat pipeline puts
-no hard constraint between a citation and the text the model was conditioned on.
+number, a method detail, or a figure says what you think it says. Point a general-purpose chat model at the PDF
+and the answers read fluently, yet it invents page references and attributes quotes to places they
+never appear, because a generic pipeline puts no hard constraint between a citation and the text the
+model was actually shown. This is not
+hypothetical: even purpose-built systems emit citations that do not support their claims when
+attribution is measured directly~\citep{gao2023attributing}. The challenge we take on is therefore
+to make every citation checkable against a specific location, rather than trusting the model to cite
+well.
 
 Purpose-built scientific RAG systems close part of this gap but assume resources most readers lack.
 OpenScholar~\citep{asai2024openscholar}, PaperQA2~\citep{lala2024paperqa2}, and
 SciRAG~\citep{ding2025scirag} depend on cloud-hosted frontier models, and OpenScholar on a datastore
 of tens of millions of papers. We ask a narrower question: what does grounded, citable question
 answering over a scientific document look like under a hard local-only constraint, with a single
-sub-15-billion-parameter model and a retrieval design simple enough to audit end to end?
+sub-15-billion-parameter model and a retrieval design simple enough to audit end to end? We use no
+cloud model such as GPT-4o anywhere in the pipeline; where such models appear, it is only as
+published reference points on a shared benchmark.
 
 Two ideas do the real work in ScholAR. \textbf{Page-preserving chunking} segments a document so that every
 retrieved chunk lies entirely within one PDF page, making a citation resolve to an exact,
@@ -128,10 +134,7 @@ Our contributions are:
         locally resolved figure lifts localization from near-chance to competitive with
         a frontier cloud model.
   \item A 100-case benchmark across 25 papers spanning text, mathematical, and
-        figure questions, with gold answers verified against their source passages. A
-        model-agnostic human-evaluation protocol over these cases is described in
-        Section~\ref{sec:humaneval}; its expert scoring is pending, so we do not list it
-        among our results.
+        figure questions, with gold answers verified against their source passages.
 \end{itemize}
 
 % -----------------------------------------------------------------------
@@ -140,9 +143,13 @@ Our contributions are:
 % -----------------------------------------------------------------------
 
 \paragraph{Retrieval-augmented generation.}
-RAG conditions generation on retrieved evidence~\citep{lewis2020rag}. Lexical BM25~\citep{robertson2009bm25}
-remains a strong baseline that zero-shot dense retrievers often fail to beat~\citep{thakur2021beir},
-which is why ScholAR keeps BM25 primary and treats dense retrieval as a fusion component.
+RAG conditions generation on retrieved evidence~\citep{lewis2020rag}, but conditioning is not a
+guarantee: the model is prompted with evidence, yet nothing forces its answer, or its citations, to
+stay within that evidence~\citep{gao2023attributing}. On the retrieval side, lexical
+BM25~\citep{robertson2009bm25} remains a strong baseline that zero-shot dense retrievers often fail
+to beat~\citep{thakur2021beir}, which is why ScholAR keeps BM25 primary and treats dense retrieval
+as a fusion component. Our citation mechanism is orthogonal to the retriever: it constrains what the
+model may cite, so provenance does not rest on the model's own restraint.
 
 \paragraph{Scientific-literature RAG systems.}
 PaperQA and PaperQA2~\citep{lala2023paperqa,lala2024paperqa2} are agentic systems with frontier
@@ -342,7 +349,9 @@ is what our faithfulness claims rest on and the result we foreground.
 \subsection{System Architecture}
 The backend is a local application that stores parsed PDFs as JSON on disk; the
 frontend highlights cited pages. All inference, both text generation and figure or
-table question answering, runs locally; the evaluation swaps among four local models,
+table question answering, runs locally; the evaluation swaps among four local models
+(qwen3.5:9b~\citep{qwenteam2026qwen35}, gemma4:12b~\citep{gemmateam2024gemma},
+llama3.1:8b~\citep{llamateam2024llama3}, mistral:7b~\citep{jiang2023mistral}),
 two of which (qwen3.5:9b, gemma4:12b) are natively multimodal and handle figure and
 table queries. No cloud API is used for inference and no user data leaves the machine. Paper
 acquisition and reference resolution use public arXiv and Semantic Scholar lookups
@@ -379,8 +388,7 @@ a 100-case, 25-paper labeled set for retrieval and retrieval-support faithfulnes
 the 14-case retrieval set and eight times the papers of the hand-labeled set. The
 labels are weaker than hand annotation, and the questions, being mined from passages,
 carry lexical overlap that can favor lexical retrieval; we therefore report the scaled
-set alongside the 3-paper hand-labeled set rather than in place of it. This diverse
-benchmark is also the dataset for the human evaluation (Section~\ref{sec:humaneval}).
+set alongside the 3-paper hand-labeled set rather than in place of it.
 Table~\ref{tab:benchstats} summarizes the corpus and the benchmarks built on it.
 
 \begin{table}[t]
@@ -412,6 +420,21 @@ Table~\ref{tab:benchstats} summarizes the corpus and the benchmarks built on it.
 
 \section{Automated Evaluation}
 \label{sec:auto}
+Figure~\ref{fig:results} previews the two headline results, the local-baseline comparison and the
+cross-document localization; the subsections report them and the supporting metrics in full.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.94\textwidth]{results.pdf}
+\caption{Results at a glance, from the same runs as Tables~\ref{tab:compare}
+and~\ref{tab:multidoc}. \textbf{(a)}~On the shared-model local comparison, ScholAR reaches the
+highest answer correctness but is among the least faithful under the entailment judge: correctness
+and grounding come apart. \textbf{(b)}~On M3SciQA cross-document localization, resolving the anchor
+figure with a local multimodal model lifts MRR from the text-only floor (0.18) to near GPT-4o
+(0.47 vs 0.50), on one laptop.}
+\label{fig:results}
+\end{figure*}
+
 \subsection{Retrieval}
 Table~\ref{tab:retrieval} reports retrieval on the 100-case scaled set. The system we deploy,
 BM25-primary (BM25 with lightweight heuristic reranking), reaches Recall@5 0.93 and MRR 0.861;
@@ -510,8 +533,7 @@ faithfulness of 0.61, far below the 0.85 macro-mean a cosine proxy reports on th
 several sentences is checked each time; Table~\ref{tab:benchstats} counts the 829 distinct
 markers), 73\% are supported, 18\%
 partial, and 9\% unsupported, against the ``none unsupported'' cosine had claimed. These numbers
-are lower and honest; validating them against expert judgment is the human evaluation's job
-(Section~\ref{sec:humaneval}).
+are lower and honest; validating them against expert judgment remains future work.
 
 \subsection{Does the Grounding Hold Across Models?}
 \label{sec:auto-models}
@@ -704,46 +726,6 @@ in single-digit to low-double-digit seconds (Table~\ref{tab:permodel}). No cloud
 cluster: one laptop runs the loop.
 
 % -----------------------------------------------------------------------
-\section{Human Evaluation (In Progress)}
-\label{sec:humaneval}
-% -----------------------------------------------------------------------
-Automated metrics measure component behavior, not whether a reader would judge an answer
-correct and well-cited. Following the practice of comparable
-systems~\citep{asai2024openscholar,ding2025scirag,lala2024paperqa2}, we designed a
-model-agnostic human evaluation over the 100-case diverse benchmark
-(Section~\ref{sec:datasets}). Each question is answered by the four local models (qwen3.5:9b,
-gemma4:12b, llama3.1:8b~\citep{llamateam2024llama3}, mistral:7b~\citep{jiang2023mistral})
-running the \emph{same} pipeline, so only the generation model changes. Blind and in randomized
-order, expert evaluators score every answer on four anchored 1--5 dimensions (Relevance,
-Coverage, Faithfulness, Usefulness) and grade each inline citation Supported / Partial /
-Unsupported. From these we compute per-model means, citation precision, recall and F1, a
-Friedman test of whether grounding is model-agnostic, and the correlation between human
-faithfulness and our automated metric. All 350 answers are generated; expert scoring is the
-remaining step, so Table~\ref{tab:human} reports placeholders, not estimates.
-
-\begin{table}[t]
-  \centering
-  \caption{Human-evaluation results (in progress). Values are placeholders pending
-           expert scoring; they are not estimated. Dimensions are mean 1--5.}
-  \label{tab:human}
-  \setlength{\tabcolsep}{4pt}
-  \begin{tabular}{lccccc}
-    \toprule
-    \textbf{Model} & \textbf{Rel.} & \textbf{Cov.} & \textbf{Faith.} & \textbf{Use.} & \textbf{Cite-F1} \\
-    \midrule
-    qwen3.5:9b   & -- & -- & -- & -- & -- \\
-    gemma4:12b   & -- & -- & -- & -- & -- \\
-    llama3.1:8b  & -- & -- & -- & -- & -- \\
-    mistral:7b   & -- & -- & -- & -- & -- \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-Once available, a Friedman test across models and the human-to-automated Faithfulness correlation
-(both to be filled) will test whether grounding holds across local models and whether our judge
-tracks expert judgment.
-
-% -----------------------------------------------------------------------
 \section{Discussion and Limitations}
 % -----------------------------------------------------------------------
 ScholAR's contribution is a local-inference integration whose two elements, page-preserving
@@ -757,7 +739,7 @@ anchor. The visual (18 cases) and abstention (20 synthetic negatives) probes are
 deltas carry no significance testing and indicate tendencies, not guarantees. And the
 generation-faithfulness judge, though it catches contradictions a cosine proxy misses (our negative
 control), is itself calibrated on a small pilot and unvalidated against human ratings; closing that
-gap is what the human evaluation exists for.
+gap with a human study is future work.
 
 Our comparison (Section~\ref{sec:auto-compare}) is against local reimplementations of
 PDF-chat, vanilla RAG, and PaperQA2's rerank-and-summarize step, not against the
