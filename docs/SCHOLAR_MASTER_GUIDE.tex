@@ -1,0 +1,344 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+\usepackage{listings}
+\usepackage{microtype}
+
+% Color definitions
+\definecolor{primary}{HTML}{1E3A8A}     % Deep Navy Blue
+\definecolor{secondary}{HTML}{0D9488}   % Deep Teal
+\definecolor{accent}{HTML}{2563EB}      % Royal Blue
+\definecolor{darktext}{HTML}{1E293B}    % Slate 800
+\definecolor{lightbg}{HTML}{F8FAFC}     % Slate 50
+\definecolor{bordercolor}{HTML}{E2E8F0} % Slate 200
+\definecolor{codebg}{HTML}{F1F5F9}      % Slate 100
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=accent,
+    filecolor=secondary,
+    urlcolor=accent,
+    pdftitle={ScholAR: System & Architecture Master Guide},
+    pdfauthor={ScholAR Research Team}
+}
+
+% Page style
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small \textbf{\color{primary}ScholAR} — System \& Architecture Master Guide}
+\fancyhead[R]{\small \color{darktext}Technical Reference}
+\fancyfoot[C]{\small \thepage}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.5pt}
+
+% Section formatting
+\titleformat{\section}{\Large\bfseries\color{primary}}{\thesection}{1em}{}[\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{secondary}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{darktext}}{\thesubsubsection}{1em}{}
+
+% Listings setup
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small\color{darktext},
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{bordercolor},
+    keywordstyle=\color{primary}\bfseries,
+    commentstyle=\color{gray},
+    stringstyle=\color{secondary},
+    showstringspaces=false,
+    tabsize=2
+}
+
+% Callout box setup
+\tcbset{
+    colback=lightbg,
+    colframe=secondary,
+    fonttitle=\bfseries\color{white},
+    coltitle=white,
+    boxrule=1pt,
+    arc=4pt,
+    left=6pt, right=6pt, top=6pt, bottom=6pt
+}
+
+\begin{document}
+
+% Title Block
+\begin{center}
+    {\huge \bfseries \color{primary} ScholAR: System \& Architecture Master Guide} \\[6pt]
+    {\large \bfseries \color{secondary} Smart Companion for Holistic Organization, Literature Analysis \& Research} \\[4pt]
+    {\normalsize \color{darktext} Local-First, Privacy-Preserving Scientific RAG with Verifiable Page Citations \& Multimodal Grounding} \\[4pt]
+    \rule{\textwidth}{1pt}
+\end{center}
+
+\vspace{-0.5em}
+
+\begin{tcolorbox}[title=Executive Summary, colback=lightbg, colframe=primary]
+ScholAR is an on-device AI research assistant that operates 100\% locally via Ollama:
+\begin{itemize}[leftmargin=1.5em, itemsep=2pt]
+    \item \textbf{Zero Cloud Leakage:} Ingests arXiv papers or custom PDFs; inference, vision processing, and embeddings remain entirely on-device.
+    \item \textbf{Verifiable Citations:} Maps short-lived evidence tokens (\texttt{[E1]}, \texttt{[E2]}) to immutable PDF pages, eliminating hallucinated page numbers.
+    \item \textbf{Visual Grounding:} Directly routes figure and table queries to a local Vision LLM with high-resolution 3$\times$ zoom image crops.
+    \item \textbf{Multi-Document Reasoning:} Resolves bibliographies via Semantic Scholar API to dynamically ingest and cross-read referenced works.
+\end{itemize}
+\end{tcolorbox}
+
+\section{System Architecture \& Data Flow}
+
+ScholAR decouples PDF parsing, lexical/dense retrieval, local model routing, and evidence-ID citation translation into a modular, high-throughput pipeline.
+
+\begin{center}
+    \includegraphics[width=0.92\textwidth]{/Users/prithvirajsangramsinhpatil/Downloads/ScholAR/docs/architecture/ScholAR_architecture_flow.png}
+\end{center}
+
+\subsection{Core Services Map}
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l p{5.5cm} X}
+\toprule
+\textbf{Component} & \textbf{Source File} & \textbf{Core Functionality} \\
+\midrule
+\textbf{API Entrypoint} & \texttt{backend/main.py} & FastAPI orchestration, REST endpoints (\texttt{/chat}, \texttt{/study-goals}, \texttt{/references}). \\
+\textbf{PDF Extraction} & \texttt{backend/services/pdf\_service.py} & PyMuPDF text parsing, bounding-box detection, 3$\times$ zoom page PNG rendering. \\
+\textbf{Chunking} & \texttt{backend/services/chunking\_service.py} & Page-preserving sliding window (1400 words, 120 overlap). Never crosses pages. \\
+\textbf{Retrieval} & \texttt{backend/services/retrieval\_service.py} & BM25 primary scoring + page hint (+1.25), section (+0.5), and visual (+1.5) boosts. \\
+\textbf{Ollama Router} & \texttt{backend/services/ollama\_service.py} & Ollama client managing context windows for \texttt{qwen3.5:9b}, \texttt{gemma4:12b}, etc. \\
+\textbf{Vision Service} & \texttt{backend/services/vision\_service.py} & Multimodal figure Q\&A with base64 image encoding and caption fallback. \\
+\textbf{Reference Service} & \texttt{backend/services/reference\_service.py} & Semantic Scholar bibliography resolution and S2 title-search for uploaded PDFs. \\
+\textbf{Frontend UI} & \texttt{frontend/app/ \& components/} & Next.js 15 + React workspace (\texttt{StudyWorkspace}, \texttt{PdfViewer}, \texttt{ChatBox}). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\newpage
+
+\section{Deep-Dive into RAG Pipeline Components}
+
+\subsection{1. Ingestion \& Page-Preserving Chunking Strategy}
+Standard RAG frameworks split text by arbitrary token lengths, frequently cutting across page boundaries. When an LLM cites that chunk, it cannot point to an exact single page.
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Our Rule:} $\text{One Chunk} \in \text{One Page}$. No chunk ever spans across multiple pages.
+    \item \textbf{Sliding Window Parameters:} Target word count = 1400 words, word overlap = 120 words per page.
+    \item \textbf{Visual Crop Extraction:} Bounding box detection automatically crops figures/tables at \textbf{3$\times$ zoom} for optical clarity.
+\end{itemize}
+
+\subsection{2. Embedding Model \& Primary Retrieval Engine}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Lexical Primary (BM25):} Used as the primary signal because scientific literature requires exact matching on numbers, dataset names, formulas, and parameters (e.g., \textit{BLEU 28.4}, \textit{lr=1e-4}, \textit{WMT14}).
+    \item \textbf{Dense Embedding Model:} Pure PyTorch implementation of \texttt{all-MiniLM-L6-v2} (384-dimensional dense vectors). Runs completely locally without heavy external dependencies.
+    \item \textbf{Reciprocal Rank Fusion (RRF, $k=60$):} Combines lexical and dense ranks for research evaluation:
+    $$\text{RRF Score}(d) = \frac{1}{60 + \text{Rank}_{\text{BM25}}(d)} + \frac{1}{60 + \text{Rank}_{\text{Dense}}(d)}$$
+\end{itemize}
+
+\subsection{3. Heuristic Re-Ranking Boosts}
+Before passing chunks to the LLM, BM25 scores are dynamically adjusted based on query intent:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Page Hint Boost (+1.25):} If the query asks \textit{"What is discussed on page 4?"}, page 4 chunks are prioritized.
+    \item \textbf{Section Hint Boost (+0.5 to +1.0):} Boosts Abstract, Methods, Results, or Limitations sections when implied.
+    \item \textbf{Visual Cue Boost (+1.5):} If a query mentions \textit{"Figure 2"} or \textit{"Table 1"}, figure chunks jump to Rank 1.
+    \item \textbf{Query Expansion:} Synonym expansion for research vocabulary (e.g., \textit{result} $\rightarrow$ \textit{accuracy, BLEU, F1, score}).
+\end{itemize}
+
+\subsection{4. Multimodal Vision Routing}
+When a query targets a visual element:
+\begin{enumerate}[leftmargin=1.5em, itemsep=1pt]
+    \item Retrieval ranks the figure chunk as top-1.
+    \item The high-resolution 3$\times$ zoom PNG crop of that figure is base64-encoded.
+    \item Sent directly to the local Vision LLM (\texttt{qwen3.5:9b} or \texttt{gemma4:12b}) along with the question.
+    \item \textbf{Caption Fallback:} If the vision model is unreachable, it automatically falls back to caption text QA.
+\end{enumerate}
+
+\subsection{5. Indirect Evidence ID Citation Grounding}
+To eliminate invented or hallucinated page numbers:
+\begin{enumerate}[leftmargin=1.5em, itemsep=1pt]
+    \item \textbf{Prompt Ingestion:} Retrieved chunks are labeled as \texttt{[E1]}, \texttt{[E2]}, \texttt{[E3]} in the LLM prompt.
+    \item \textbf{Constrained Output:} The model is strictly instructed to cite using only \texttt{[E1]}, \texttt{[E2]} and cannot write page numbers.
+    \item \textbf{Application Translation:} Backend maps \texttt{[E1]} to the source chunk's verified metadata $\rightarrow$ rendering a clickable \textbf{[1] (Page 3)} chip in the UI.
+    \item \textbf{Guarantee:} \textbf{100\% of cited page numbers exist on real PDF pages by construction.}
+\end{enumerate}
+
+\subsection{6. Multi-Document Expansion (Citation Graph)}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Semantic Scholar API:} Queries S2 by arXiv ID or paper title to fetch up to 500 reference papers.
+    \item \textbf{On-Demand Ingestion:} Users can ingest any cited paper with one click. It is downloaded, chunked, and tagged with \texttt{source\_paper\_id}.
+    \item \textbf{Cross-Paper Retrieval:} Queries search across the anchor paper and all ingested secondary papers simultaneously.
+\end{itemize}
+
+\newpage
+
+\section{Academic Baseline Papers \& Related Works}
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{3.2cm} p{3.2cm} X}
+\toprule
+\textbf{Baseline Paper} & \textbf{Focus Area} & \textbf{Comparison to ScholAR} \\
+\midrule
+\textbf{OpenScholar}\newline \textit{(Asai et al., 2024)} & Cloud Scientific RAG & Relies on a 45M+ paper cloud datastore and frontier LLMs. ScholAR is 100\% on-device and privacy-preserving. \\
+\addlinespace
+\textbf{PaperQA2}\newline \textit{(Skarlinski et al., 2024)} & Scientific Agents & Uses Rerank-Clean-Summarize (RCS) agent loop. Reimplemented locally as our primary baseline. \\
+\addlinespace
+\textbf{SciRAG}\newline \textit{(Ding et al., 2025)} & Outline-Guided RAG & Citation-aware multi-doc synthesis; informed our human eval precision/recall framework. \\
+\addlinespace
+\textbf{M3SciQA}\newline \textit{(Li et al., EMNLP 2024)} & Multimodal Scientific QA & Benchmark for finding which reference answers a figure question. ScholAR scored \textbf{0.474 MRR}. \\
+\addlinespace
+\textbf{ColPali}\newline \textit{(Faysse et al., ICLR 2025)} & Visual Doc Retrieval & Patch-level VLM page embeddings; theoretical foundation for our planned visual retrieval engine. \\
+\addlinespace
+\textbf{SummaC}\newline \textit{(Laban et al., 2022)} & NLI Faithfulness & Entailment consistency metric; forms Tier 1 of our NLI-CFS scorer. \\
+\addlinespace
+\textbf{FActScore}\newline \textit{(Min et al., 2023)} & Atomic Fact Verification & Atomic claim decomposition; foundation for our factual precision evaluations. \\
+\addlinespace
+\textbf{BEIR}\newline \textit{(Thakur et al., 2021)} & Zero-Shot Retrieval & Established BM25 superiority over dense embeddings on specialized technical domains. \\
+\addlinespace
+\textbf{SlideTailor}\newline \textit{(Zeng et al., 2026)} & PDF Slide Generation & Upstream PDF extraction bottleneck mirrors ScholAR's extraction goals. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{What Is Done (Completed Inventory)}
+
+\begin{itemize}[leftmargin=1.5em, itemsep=2pt]
+    \item[$\boxtimes$] \textbf{Full Backend \& REST API:} Complete ingestion, chunking, retrieval, vision, and reference routing.
+    \item[$\boxtimes$] \textbf{Next.js 15 Frontend:} Resizable split layout, PDF viewer, interactive citation chips (\texttt{[1]}), inline figure cards.
+    \item[$\boxtimes$] \textbf{100-Case / 25-Paper Benchmark:} Mined and source-verified covering 8 scientific claim types.
+    \item[$\boxtimes$] \textbf{NLI-CFS \& LLM Entailment Judge:} 3-tier faithfulness metric + strict LLM contradiction detector.
+    \item[$\boxtimes$] \textbf{Visual Grounding Pipeline:} 3$\times$ zoom page crop rendering with local VLM reasoning (\texttt{qwen3.5:9b}).
+    \item[$\boxtimes$] \textbf{Multi-Document Ingestion:} S2 API bibliography resolution with individual reference paper ingestion.
+    \item[$\boxtimes$] \textbf{Research Paper Manuscript:} 8-page compiled draft (\texttt{paper/manuscript.pdf}) and compliance checklist.
+    \item[$\boxtimes$] \textbf{Human Evaluation Interface:} Offline blinded scoring tool (\texttt{score\_sheet.html}) with 350 pre-generated model outputs.
+\end{itemize}
+
+\section{Experimentation Results \& Key Benchmarks}
+
+\subsection{A. Primary Retrieval Benchmark (100 cases, 25 papers)}
+\textit{Finding: Lexical BM25 significantly outperforms Dense MiniLM embeddings on technical text.}
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabularx}{0.75\textwidth}{X r r r}
+\toprule
+\textbf{Retrieval Method} & \textbf{Recall@1} & \textbf{Recall@5} & \textbf{MRR} \\
+\midrule
+\texttt{dense\_only} (\texttt{all-MiniLM-L6-v2}) & 0.470 & 0.740 & 0.572 \\
+\texttt{keyword\_overlap} & 0.670 & 0.950 & 0.779 \\
+\textbf{\texttt{bm25\_primary} (Ours)} & \textbf{0.810} & \textbf{0.930} & \textbf{0.861} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{B. Resource-Matched Local Baseline Comparison (91 cases on \texttt{qwen3.5:9b})}
+\textit{Finding: ScholAR leads in generation correctness and faithfulness while guaranteeing valid page citations.}
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabularx}{\textwidth}{X r r r c}
+\toprule
+\textbf{System} & \textbf{Generation Faithfulness} & \textbf{Answer Correctness} & \textbf{Citation F1} & \textbf{Provenance Valid} \\
+\midrule
+Long-Context PDF-Chat & 0.801 & 0.267 & 0.742 & No \\
+Vanilla RAG & 0.860 & 0.340 & \textbf{0.802} & No \\
+PaperQA2-Style (Local RCS) & 0.872 & 0.550 & 0.782 & No \\
+\textbf{ScholAR (Ours)} & \textbf{0.892} & \textbf{0.563} & 0.760 & \textbf{100\%} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\newpage
+
+\subsection{C. M3SciQA Multi-Document Locality Benchmark (297 cases)}
+\textit{Finding: Visual entity resolution unlocks cross-document search where text retrieval fails.}
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabularx}{0.85\textwidth}{X l r r}
+\toprule
+\textbf{System} & \textbf{Deployment Mode} & \textbf{MRR} & \textbf{Recall@5} \\
+\midrule
+Human Expert \textit{(published)} & Manual Review & 0.796 & — \\
+GPT-4o \textit{(published)} & Cloud Frontier API & 0.500 & — \\
+\textbf{ScholAR + Local Vision (\texttt{qwen3.5:9b})} & \textbf{Local Laptop (On-Device)} & \textbf{0.474} & \textbf{0.606} \\
+\textbf{ScholAR + Local Vision (\texttt{gemma4:12b})} & \textbf{Local Laptop (On-Device)} & 0.455 & 0.572 \\
+GPT-4V \textit{(published)} & Cloud Frontier API & 0.400 & — \\
+text-embedding-3-large \textit{(published)} & Cloud API & 0.297 & — \\
+ScholAR Text-only BM25 & Local Laptop & 0.180 & 0.242 \\
+Best Open-Source LMM \textit{(published)} & Cloud / Server & 0.144 & — \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{D. Abstention on Unanswerable Queries (20 negative control cases)}
+\textit{Finding: ScholAR abstains rather than hallucinating when information is absent.}
+\begin{itemize}[leftmargin=1.5em, itemsep=1pt]
+    \item \texttt{qwen3.5:9b}: \textbf{100\% Abstain} (0\% hallucination / fabrication)
+    \item \texttt{llama3.1:8b}: \textbf{100\% Abstain} (0\% hallucination / fabrication)
+    \item \texttt{gemma4:12b}: 95\% Abstain (5\% partial overlap)
+    \item \texttt{mistral:7b}: 90\% Abstain (10\% partial overlap)
+\end{itemize}
+
+\subsection{E. On-Device Hardware Efficiency (Apple Silicon 18 GB RAM)}
+\begin{itemize}[leftmargin=1.5em, itemsep=1pt]
+    \item \textbf{BM25 Retrieval Latency:} $\sim$40 ms (instantaneous).
+    \item \textbf{Generation Throughput:} 22--27 tokens/s across all 7B--12B local models.
+    \item \textbf{End-to-End Turnaround:} 6.1 s (\texttt{mistral:7b}), 6.3 s (\texttt{llama3.1:8b}), 11.4 s (\texttt{qwen3.5:9b}), 8.8 s (\texttt{gemma4:12b}).
+\end{itemize}
+
+\section{Critical Research Takeaways (Honest Findings)}
+
+\begin{enumerate}[leftmargin=1.5em, itemsep=4pt]
+    \item \textbf{Cosine Faithfulness Inflates Scores by 2$\times$:} Embedding cosine similarity cannot catch contradictions (\textit{"Model A works"} vs \textit{"Model A fails"} look identical in vector space). Our strict LLM Entailment Judge fixes this and provides honest grounding metrics ($\sim$0.61 vs inflated $\sim$0.85).
+    \item \textbf{Provenance vs. Faithfulness:} Ephemeral evidence IDs guarantee that 100\% of cited page numbers exist, but claim support still depends on retrieval quality (66\% support rate). ID grounding buys provenance and auditability.
+    \item \textbf{The M3SciQA Win:} Breaking figure questions into two steps (Vision VLM reads figure $\rightarrow$ BM25 ranks bibliography) delivers \textbf{0.474 MRR} locally—beating open-source baselines and approaching GPT-4o.
+\end{enumerate}
+
+\section{Future Roadmap \& Unfinished Backlog}
+
+\begin{itemize}[leftmargin=1.5em, itemsep=2pt]
+    \item[$\square$] \textbf{Human Study Execution:} Run the 350-case human evaluation on \texttt{score\_sheet.html} and compute Krippendorff's $\alpha$.
+    \item[$\square$] \textbf{Structured Document Parsing:} Benchmark Nougat / Grobid against PyMuPDF for table and equation preservation.
+    \item[$\square$] \textbf{ColPali Visual Page Retrieval:} Index full PDF pages directly with VLM patch embeddings.
+    \item[$\square$] \textbf{LaTeX Math Tokenizer \& UI Rendering:} Add symbol-level math tokens and KaTeX rendering to the chat interface.
+    \item[$\square$] \textbf{Interactive Citation Graph:} Build a Connected Papers-style D3 force-directed citation network in the UI.
+\end{itemize}
+
+\section{Developer Quickstart \& Runbook}
+
+\subsection{Prerequisites \& Setup}
+\begin{lstlisting}[language=bash]
+# 1. Start Ollama and pull default models
+ollama serve
+ollama pull qwen3.5:9b      # Default model
+ollama pull gemma4:12b     # Optional evaluation model
+
+# 2. Start the Backend API (FastAPI on http://localhost:8000)
+make backend
+
+# 3. Start the Frontend UI (Next.js on http://localhost:3000)
+make frontend
+\end{lstlisting}
+
+\subsection{Evaluation Execution}
+\begin{lstlisting}[language=bash]
+python3 evaluation/run_retrieval_eval.py --scaled   # Scaled 100-case retrieval
+python3 evaluation/run_comparison_eval.py          # Baseline comparisons
+python3 evaluation/run_abstention_eval.py          # Abstention evaluation
+python3 evaluation/run_efficiency_eval.py          # Latency & memory profile
+\end{lstlisting}
+
+\end{document}
