@@ -2,49 +2,85 @@
 # Run all commands from the project root: /path/to/ScholAR/
 #
 # Usage:
-#   make backend       — start the backend (hot-reload)
-#   make frontend      — start the Next.js frontend
-#   make eval          — run single-document retrieval eval
-#   make multidoc-eval — run multi-document eval (papers must be seeded first)
-#   make seed          — seed the 10 secondary benchmark papers (needs backend running)
-#   make dev           — start backend + frontend together (requires tmux or run manually)
+#   make setup         Install backend and frontend dependencies
+#   make doctor        Check whether the local environment is ready
+#   make backend       Start the backend (hot-reload)
+#   make frontend      Start the Next.js frontend
+#   make check         Run Python syntax and frontend type checks
+#   make eval          Run the hand-labeled retrieval evaluation
+#   make eval-scaled   Run the 100-case retrieval evaluation
+#   make multidoc-eval Run multi-document evaluation (papers must be seeded first)
+#   make seed          Seed the secondary benchmark papers (needs backend running)
 
-.PHONY: backend frontend eval multidoc-eval seed help
+.PHONY: setup doctor backend frontend check frontend-build eval eval-scaled multidoc-eval seed help
+
+PYTHON ?= .venv/bin/python
+
+# ── First-time setup ─────────────────────────────────────────────────────────
+setup:
+	python3 -m venv .venv
+	$(PYTHON) -m pip install --upgrade pip
+	$(PYTHON) -m pip install -r requirements.txt
+	cd frontend && npm ci
+	@if [ ! -f backend/.env ]; then cp backend/.env.example backend/.env; echo "Created backend/.env"; else echo "Keeping existing backend/.env"; fi
+	@if [ ! -f frontend/.env.local ]; then cp frontend/.env.local.example frontend/.env.local; echo "Created frontend/.env.local"; else echo "Keeping existing frontend/.env.local"; fi
+	@echo "Setup complete. Pull the Ollama model with: ollama pull qwen3.5:9b"
+	@echo "Then run: make doctor"
+
+doctor:
+	$(PYTHON) scripts/doctor.py
 
 # ── Backend ──────────────────────────────────────────────────────────────────
 backend:
 	@echo "Starting backend on http://localhost:8000"
 	@echo "NOTE: always run from the ScholAR/ root, never from inside backend/"
-	uvicorn backend.main:app --reload --reload-dir backend
+	$(PYTHON) -m uvicorn backend.main:app --reload --reload-dir backend
 
 # ── Frontend ─────────────────────────────────────────────────────────────────
 frontend:
 	@echo "Starting frontend on http://localhost:3000"
 	cd frontend && npm run dev
 
+# ── Validation ───────────────────────────────────────────────────────────────
+check:
+	$(PYTHON) -m compileall -q backend evaluation
+	cd frontend && npm run typecheck
+
+frontend-build:
+	cd frontend && npm run build
+
 # ── Evaluation ───────────────────────────────────────────────────────────────
 eval:
-	python3 evaluation/run_retrieval_eval.py
+	$(PYTHON) evaluation/run_retrieval_eval.py
+
+eval-scaled:
+	$(PYTHON) evaluation/run_retrieval_eval.py \
+		--cases evaluation/benchmark_cases_scaled.json --tag scaled
 
 multidoc-eval:
-	python3 evaluation/run_multidoc_eval.py --no-ingest
+	$(PYTHON) evaluation/run_multidoc_eval.py --no-ingest
 
 # Seed secondary papers for the multi-doc eval.
 # Requires the backend to be running in another terminal (make backend).
 seed:
-	python3 evaluation/seed_eval_papers.py
+	$(PYTHON) evaluation/seed_eval_papers.py
 
 # ── Help ─────────────────────────────────────────────────────────────────────
 help:
 	@echo ""
 	@echo "ScholAR make targets:"
+	@echo "  make setup          Install dependencies and create local env files"
+	@echo "  make doctor         Diagnose the local setup"
 	@echo "  make backend        Start FastAPI backend (from project root)"
 	@echo "  make frontend       Start Next.js frontend"
+	@echo "  make check          Run Python syntax and frontend type checks"
+	@echo "  make frontend-build Run the frontend production build"
 	@echo "  make eval           Run single-doc retrieval eval (14 cases)"
+	@echo "  make eval-scaled    Run scaled retrieval eval (100 cases)"
 	@echo "  make seed           Seed secondary papers for multi-doc eval"
 	@echo "  make multidoc-eval  Run multi-doc eval (seed first)"
 	@echo ""
 	@echo "IMPORTANT: Always run from ScholAR/ root, not from backend/"
 	@echo "  WRONG:  cd backend && uvicorn main:app"
-	@echo "  RIGHT:  uvicorn backend.main:app --reload"
+	@echo "  RIGHT:  make backend"
 	@echo ""

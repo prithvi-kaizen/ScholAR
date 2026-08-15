@@ -1,12 +1,12 @@
 # -----------------------------------------------------------------------
-# Makefile for ScholAR AAAI-27 paper
+# Makefile for the venue-neutral ScholAR manuscript
 # Usage:
 #   make        -> compile to PDF (full 3-pass)
 #   make clean  -> remove build artifacts
 #   make open   -> open the compiled PDF
 # -----------------------------------------------------------------------
 
-MAIN = scholar_aaai27
+MAIN = manuscript
 LATEX = pdflatex
 BIBTEX = bibtex
 

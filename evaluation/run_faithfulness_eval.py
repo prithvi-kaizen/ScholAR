@@ -4,8 +4,8 @@ run_faithfulness_eval.py  (v3 — NLI-based, research-grade)
 ScholAR — Citation Faithfulness Evaluation
 Direction 1.1 of RESEARCH_ROADMAP.md
 
-METHODOLOGY (AAAI-27 publishable):
------------------------------------
+METHODOLOGY:
+------------
 This script implements a three-tier faithfulness evaluation pipeline
 aligned with 2024-2026 state-of-the-art practices:
 

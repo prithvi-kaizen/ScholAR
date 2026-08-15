@@ -7,8 +7,7 @@ in any Python 3.11+ environment.
 Inputs:
   - one or more evaluator exports (evaluation/human_eval/exports/*.json), each the
     file produced by the "Export scores" button in score_sheet.html
-  - evaluation/human_eval/cases.json (capability + link to the faithfulness benchmark)
-  - evaluation/results/faithfulness_eval_results_v3.json (automated NLI-CFS)
+  - evaluation/results/faithfulness_judged.json (generated-answer entailment judge)
 
 Outputs:
   - evaluation/human_eval/human_eval_results.json
@@ -28,8 +27,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-CASES = HERE / "cases.json"
-FAITH = ROOT / "evaluation" / "results" / "faithfulness_eval_results_v3.json"
+JUDGED = ROOT / "evaluation" / "results" / "faithfulness_judged.json"
 OUT_JSON = HERE / "human_eval_results.json"
 OUT_MD = HERE / "human_eval_report.md"
 
@@ -200,7 +198,6 @@ def main():
     ap.add_argument("--exports", default=str(HERE / "exports"))
     args = ap.parse_args()
 
-    cases = {c["case_id"]: c for c in json.loads(CASES.read_text(encoding="utf-8"))}
     evaluators = load_exports(Path(args.exports))
     if not evaluators:
         raise SystemExit(f"No evaluator exports found in {args.exports}. "
@@ -329,32 +326,52 @@ def main():
             "evaluators": [a["name"], b["name"]],
         }
 
-    # 5. human faithfulness vs automated NLI-CFS (single-doc cases linked to the benchmark)
+    # 5. Human ratings vs the generated-answer entailment judge. Match the exact
+    # (case, model) output that each evaluator saw. The older implementation
+    # compared human answer ratings with retrieval-support cosine scores for an
+    # oracle claim, which was not a valid metric-validation comparison.
     validation = None
-    if FAITH.exists():
-        faith = json.loads(FAITH.read_text(encoding="utf-8"))
-        auto = {}
-        for sys_key in ("hybrid", "bm25"):
-            for rr in faith.get(sys_key, {}).get("results", []):
-                auto.setdefault(rr["case_id"], {})[sys_key] = rr
-        hx, ax_cfs, ax_nli = [], [], []
-        for cid, case in cases.items():
-            fid = case.get("source_faithfulness_id")
-            if not fid or fid not in auto or "hybrid" not in auto[fid]:
+    if JUDGED.exists():
+        judged = json.loads(JUDGED.read_text(encoding="utf-8"))
+        auto = {
+            (record["case_id"], model): record
+            for model, records in judged.get("raw", {}).items()
+            for record in records
+        }
+        human_faith, judge_faith = [], []
+        human_support, judge_support = [], []
+        for cid, model in sorted({(r["case_id"], r["model"]) for r in rows}):
+            record = auto.get((cid, model))
+            if record is None:
                 continue
-            hvals = [r["faithfulness"] for r in rows if r["case_id"] == cid and r.get("faithfulness") is not None]
-            if not hvals:
-                continue
-            hx.append(mean(hvals))
-            ax_cfs.append(auto[fid]["hybrid"]["combined_cfs"])
-            ax_nli.append(auto[fid]["hybrid"]["nli_cfs"])
-        if len(hx) >= 3:
+            pair_rows = [r for r in rows if r["case_id"] == cid and r["model"] == model]
+            hvals = [r["faithfulness"] for r in pair_rows if r.get("faithfulness") is not None]
+            if hvals:
+                human_faith.append(mean(hvals))
+                judge_faith.append(record["gen_faithfulness"])
+
+            hsup = hpar = huns = 0
+            for row in pair_rows:
+                s, p, u = citation_stats(row.get("citations", []))
+                hsup += s; hpar += p; huns += u
+            htotal = hsup + hpar + huns
+            jtotal = record.get("cit_supported", 0) + record.get("cit_partial", 0) + record.get("cit_unsupported", 0)
+            if htotal and jtotal:
+                human_support.append(hsup / htotal)
+                judge_support.append(record.get("cit_supported", 0) / jtotal)
+
+        if len(human_faith) >= 3:
             validation = {
-                "n_cases": len(hx),
-                "human_faithfulness_vs_combined_cfs": {
-                    "pearson": r3(pearson(hx, ax_cfs)), "spearman": r3(spearman(hx, ax_cfs))},
-                "human_faithfulness_vs_nli_cfs": {
-                    "pearson": r3(pearson(hx, ax_nli)), "spearman": r3(spearman(hx, ax_nli))},
+                "n_answer_pairs": len(human_faith),
+                "human_faithfulness_vs_judge": {
+                    "pearson": r3(pearson(human_faith, judge_faith)),
+                    "spearman": r3(spearman(human_faith, judge_faith)),
+                },
+                "n_citation_pairs": len(human_support),
+                "human_citation_support_vs_judge": {
+                    "pearson": r3(pearson(human_support, judge_support)),
+                    "spearman": r3(spearman(human_support, judge_support)),
+                },
             }
 
     results = {
@@ -366,7 +383,7 @@ def main():
         "friedman_faithfulness": friedman_faith,
         "friedman_citation_support": friedman_support,
         "inter_annotator_agreement": agreement,
-        "validation_vs_automated_nli_cfs": validation,
+        "validation_vs_entailment_judge": validation,
     }
     OUT_JSON.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
     write_report(results)
@@ -391,11 +408,11 @@ def write_report(r):
     for m in r["models"]:
         rk = r["ranking"][m]
         L.append(f"| {m} | {rk['first_place']} | {rk['mean_rank']} | {rk['n_ranked']} |")
-    L += ["", "## Model-agnostic tests (Friedman across models, same questions)", ""]
+    L += ["", "## Across-model tests (Friedman, same questions)", ""]
     ff = r["friedman_faithfulness"]; fs = r["friedman_citation_support"]
     if ff:
         L.append(f"- Faithfulness: Q={ff['Q']}, df={ff['df']}, p={ff['p_value']} over {ff['n_questions']} questions. "
-                 f"{'No significant difference across models (supports model-agnostic grounding).' if ff['p_value'] > 0.05 else 'Significant difference across models (report which model differs).'}")
+                 f"{'No significant difference detected; this is not proof of equivalence.' if ff['p_value'] > 0.05 else 'A significant across-model difference was detected; follow with paired comparisons.'}")
     if fs:
         L.append(f"- Citation-support rate: Q={fs['Q']}, df={fs['df']}, p={fs['p_value']} over {fs['n_questions']} questions.")
     if r["inter_annotator_agreement"]:
@@ -404,15 +421,16 @@ def write_report(r):
               f"- Overlap answers: {a['overlap_answers']} ({', '.join(a['evaluators'])})",
               f"- Faithfulness Pearson: {a['faithfulness_pearson']}",
               f"- Citation-label Cohen's kappa: {a['citation_label_kappa']}"]
-    if r["validation_vs_automated_nli_cfs"]:
-        v = r["validation_vs_automated_nli_cfs"]
-        L += ["", "## Validation: human faithfulness vs automated NLI-CFS", "",
-              f"On {v['n_cases']} single-document cases linked to the automated faithfulness benchmark:",
-              f"- Human faithfulness vs Combined CFS: Pearson {v['human_faithfulness_vs_combined_cfs']['pearson']}, "
-              f"Spearman {v['human_faithfulness_vs_combined_cfs']['spearman']}",
-              f"- Human faithfulness vs NLI-CFS: Pearson {v['human_faithfulness_vs_nli_cfs']['pearson']}, "
-              f"Spearman {v['human_faithfulness_vs_nli_cfs']['spearman']}",
-              "", "A strong positive correlation indicates the automated metric tracks expert judgment."]
+    if r["validation_vs_entailment_judge"]:
+        v = r["validation_vs_entailment_judge"]
+        hf = v["human_faithfulness_vs_judge"]
+        hc = v["human_citation_support_vs_judge"]
+        L += ["", "## Validation: human ratings vs generated-answer entailment judge", "",
+              f"Matched answer pairs: {v['n_answer_pairs']}.",
+              f"- Human faithfulness vs judge: Pearson {hf['pearson']}, Spearman {hf['spearman']}",
+              f"- Human citation support vs judge over {v['n_citation_pairs']} pairs: "
+              f"Pearson {hc['pearson']}, Spearman {hc['spearman']}",
+              "", "Interpret correlation with the judge's negative-control false-positive rate and an audit of disagreements."]
     OUT_MD.write_text("\n".join(L) + "\n", encoding="utf-8")
 
 

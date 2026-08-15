@@ -2,49 +2,45 @@
 % ScholAR: Page-Grounded Retrieval-Augmented Generation
 %          for Scientific Document Comprehension
 %
-% AAAI-2027 Anonymous Submission. Formatted against the official AAAI-2027
-% Author Kit (aaai2027.sty / aaai2027.bst).
+% Venue-neutral working manuscript. Apply a conference template only after
+% the research contribution and target venue have been selected.
 %
 % Compile: pdflatex; bibtex; pdflatex; pdflatex
 % -----------------------------------------------------------------------
 
-\documentclass[letterpaper]{article} % DO NOT CHANGE THIS
-\usepackage[submission]{aaai2027}  % DO NOT CHANGE THIS
-\usepackage[hyphens]{url}  % DO NOT CHANGE THIS
-\usepackage{graphicx} % DO NOT CHANGE THIS
-\urlstyle{rm} % DO NOT CHANGE THIS
-\def\UrlFont{\rm}  % DO NOT CHANGE THIS
-\usepackage{natbib}  % DO NOT CHANGE THIS AND DO NOT ADD ANY OPTIONS TO IT
-\usepackage{caption} % DO NOT CHANGE THIS AND DO NOT ADD ANY OPTIONS TO IT
-\frenchspacing  % DO NOT CHANGE THIS
-
+\documentclass[11pt,letterpaper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[hyphens]{url}
+\usepackage{graphicx}
+\usepackage[round,authoryear]{natbib}
+\usepackage{caption}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{mathtools}
 \usepackage{booktabs}
 \usepackage{microtype}
 \usepackage{tikz}
+\usepackage[colorlinks=true,allcolors=blue]{hyperref}
 \usetikzlibrary{arrows.meta,positioning,fit,backgrounds}
 \graphicspath{{figures/}}
+\urlstyle{rm}
+\hypersetup{
+  pdftitle={ScholAR: Local Citation Grounding for Scientific Papers, Provenance over Faithfulness},
+  pdfauthor={ScholAR research project},
+  pdfsubject={Venue-neutral working research manuscript}
+}
 
 % Results-table emphasis, following the field convention (PaperQA2, M3SciQA):
 % \best marks the best value in a column, \snd the second best.
 \newcommand{\best}[1]{\textbf{#1}}
 \newcommand{\snd}[1]{\underline{#1}}
 
-\pdfinfo{
-/TemplateVersion (2027.1)
-}
-
 \setcounter{secnumdepth}{2}
 
 \title{ScholAR: Local Citation Grounding for Scientific Papers,\\Provenance over Faithfulness}
-
-\author{
-    Anonymous Submission
-}
-\affiliations{
-}
+\author{Working research draft}
+\date{Venue-neutral version}
 
 \begin{document}
 \maketitle
@@ -748,6 +744,7 @@ support the claim: a provenance guarantee, not a faithfulness fix. On M3SciQA, r
 figure locally lifts localization to MRR 0.474, ahead of every open-source baseline there and close
 to GPT-4o but far below expert humans. We also contribute a 100-case, 25-paper benchmark.
 
+\bibliographystyle{plainnat}
 \bibliography{scholar_references}
 
 \end{document}

@@ -1,7 +1,7 @@
 """
 hybrid_retrieval.py — Hybrid BM25 + Dense + RRF Retrieval
 ==========================================================
-Implements the industry-standard hybrid retrieval pipeline for AAAI-27:
+Implements the experimental hybrid retrieval pipeline used by ScholAR:
 
   Score_hybrid(q, d) = RRF(rank_BM25(q,d), rank_dense(q,d))
   RRF score = 1/(k + rank_BM25) + 1/(k + rank_dense), k=60

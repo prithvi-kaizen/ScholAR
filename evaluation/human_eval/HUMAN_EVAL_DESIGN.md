@@ -1,14 +1,14 @@
 # ScholAR Human Evaluation: Design Specification
 
-This document specifies the human evaluation pipeline for ScholAR. It is grounded in the published human-evaluation methodology of the leading scholarly-RAG systems (OpenScholar, SciRAG, PaperQA2), the general LLM-answer evaluation conventions (MT-Bench, Chatbot Arena), and the foundational citation-evaluation framework (ALCE). It defines the exact questions asked of the evaluator, the 4-model comparative structure, the 100-case set, the annotation protocol, and the scoring plan. A separate `BUILD_PROMPT.md` turns this specification into runnable artifacts.
+This document specifies the human evaluation pipeline for ScholAR. It is grounded in the published human-evaluation methodology of the leading scholarly-RAG systems (OpenScholar, SciRAG, PaperQA2), the general LLM-answer evaluation conventions (MT-Bench, Chatbot Arena), and the foundational citation-evaluation framework (ALCE). It defines the exact questions asked of the evaluator, the 4-model comparative structure, the 100-case set, the annotation protocol, and the scoring plan. Runnable artifacts live in this directory and are documented in `README.md`.
 
 ## 1. Purpose
 
-The ScholAR paper currently reports only automated metrics: retrieval Recall@K/MRR, the NLI-CFS faithfulness score (SummaC-ZS + SCR + KFP), and keyword-overlap answer-quality proxies. Every comparable system in this space includes a human evaluation, so its absence is a reviewer-facing gap. This pipeline has two goals:
+ScholAR currently reports automated retrieval metrics, cosine-based retrieval-support CFS, and a generated-answer entailment judge calibrated with a small negative control. The negative control shows that the judge catches contradictions the cosine proxy misses, but it also falsely flags some true claims. Independent human evaluation is therefore required before treating the judge as a dependable research metric. This pipeline has two goals:
 
-1. **Demonstrate model-agnostic grounding.** Each question is answered by 4 different local models plugged into the same ScholAR retrieval and citation-grounding pipeline. Only the generation LLM changes. If all 4 models score similarly on Faithfulness and citation support, that shows ScholAR's grounding is robust to the choice of local model, which is a core claim for a fully local system where the user might swap models.
+1. **Measure model sensitivity.** Each question is answered by 4 different local models plugged into the same ScholAR retrieval and citation pipeline. Only the generation LLM changes. The study measures whether human faithfulness and citation support differ across models. A non-significant test does not prove equivalence, and any real gap must be reported.
 
-2. **Validate the automated NLI-CFS metric.** By collecting human Faithfulness judgments on the same answers the automated metric scores, we can report the correlation between the two. This upgrades the paper's central claim from "we used automated proxies" to "we validated those proxies against expert human judgment."
+2. **Validate or falsify the generated-answer entailment judge.** Human Faithfulness and citation-support labels are matched to the same case and model outputs scored in `faithfulness_judged.json`. Correlation and disagreement analysis show whether the automated judge tracks expert judgment. The older retrieval-support CFS is not the metric being validated because it scores oracle claims against retrieved chunks, not the generated answers shown to evaluators.
 
 ## 2. How comparable systems run human evaluation
 
@@ -36,9 +36,9 @@ ScholAR therefore uses multiple 1-5 dimension questions plus per-citation gradin
 
 Each question is answered by 4 local models. The retrieval, chunking, page-preserving segmentation, and indirect citation grounding are identical across all four; only the generation LLM that writes the final answer changes. This isolates the effect of model choice on answer quality and citation faithfulness.
 
-- **Models**: qwen3.5:9b, gemma4:12b, llama3.1:8b, mistral:7b. Four vendors (Alibaba, Google, Meta, Mistral) spanning 7-12B, all run one at a time on the 18GB target hardware. Confirm the exact set with the professor before building.
+- **Models**: qwen3.5:9b, gemma4:12b, llama3.1:8b, mistral:7b. Four vendors (Alibaba, Google, Meta, Mistral) spanning 7-12B, all run one at a time on the 18GB target hardware. The prepared `answers.json` contains this fixed set.
 - **Visual cases**: only qwen3.5:9b and gemma4:12b are natively multimodal, so the 4-model comparison runs on the 75 text and mathematical cases. The 25 visual cases are human-evaluated with the 2 vision-capable models using the same instrument, which also upgrades the paper's existing 2-model visual comparison from an automated proxy to human judgment.
-- **Model-agnostic claim**: supported if the 4 models show low variance on Faithfulness and citation-support even if fluency or usefulness varies. Any real gap is reported honestly rather than hidden.
+- **Across-model hypothesis**: the instrument tests how much answer quality and citation support change when only the model changes. Low variance is descriptive evidence, not proof that grounding is model-agnostic.
 
 ## 5. Why ScholAR's citation grounding fits the claim-level scheme exactly
 
@@ -50,7 +50,7 @@ The evaluator answers Q1 to Q6 for each of the 4 model answers to a question, th
 
 ### Part A: answer-level rubric (four 1-5 Likert questions, anchored 1/3/5)
 
-ScholAR follows SciRAG and OpenScholar, with one deliberate substitution: it replaces "Organization" with "Faithfulness". Organization matters less for ScholAR's short grounded answers, and Faithfulness is the core contribution and the dimension that validates NLI-CFS.
+ScholAR follows SciRAG and OpenScholar, with one deliberate substitution: it replaces "Organization" with "Faithfulness". Organization matters less for ScholAR's short grounded answers, and Faithfulness is the dimension needed to evaluate the generated-answer entailment judge.
 
 **Q1 Relevance**: Does the answer stay on topic and directly address the question?
 - 1: Does not address the question, or is off-topic.
@@ -136,11 +136,11 @@ The `gold_answer` and `must_include` fields are the evaluator's ground truth. Th
 
 The pipeline computes and reports:
 
-1. **Per-model mean Likert** (Relevance, Coverage, Faithfulness, Usefulness), overall and per capability, with cross-model variance. Low variance on Faithfulness and citation-support is the model-agnostic evidence.
+1. **Per-model mean Likert** (Relevance, Coverage, Faithfulness, Usefulness), overall and per capability, with cross-model variance.
 2. **Per-model citation precision, recall, F1**, plus the raw Supported/Partial/Unsupported distribution.
 3. **Ranking summary**: how often each model ranks first, and mean rank per model.
-4. **Significance test**: a Friedman test across the 4 models on the same questions for the Faithfulness dimension and the citation-support rate. A non-significant difference supports model-agnostic grounding; any significant fluency or usefulness gap is reported honestly.
-5. **Validation result**: Pearson and Spearman correlation between the per-answer human Faithfulness score (1-5) and ScholAR's automated NLI-CFS (0-1), pooled across models and per model, plus the correlation between the per-answer citation-support rate and the SCHR / KFP components of NLI-CFS. A strong positive correlation demonstrates the automated metric tracks expert judgment, which is the result that most strengthens the paper.
+4. **Significance test**: a Friedman test across the 4 models on the same questions for the Faithfulness dimension and citation-support rate. A non-significant result means the study did not detect a difference at its available power; it does not establish equivalence.
+5. **Validation result**: Pearson and Spearman correlation between per-answer human Faithfulness and the generated-answer entailment-judge score, matched by case and model. The same analysis compares human citation-support rates with judge citation-support rates. Disagreements must be audited alongside the correlations.
 
 ## 10. References
 

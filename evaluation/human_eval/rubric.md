@@ -1,9 +1,12 @@
-
     ![1784031605126](image/rubric/1784031605126.png)
 
 # ScholAR Human Evaluation: Evaluator Guideline
 
 Thank you for evaluating ScholAR. This guideline tells you exactly what to judge and how to score it. It follows the evaluation practice of comparable scientific-QA systems (SciRAG, OpenScholar, PaperQA2). Please read it once before you start, and keep it open while you score.
+
+
+
+
 
 ## What you are evaluating
 

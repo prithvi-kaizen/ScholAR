@@ -1,6 +1,6 @@
 # ScholAR Human Evaluation Pipeline
 
-A model-agnostic, citation-grounded human evaluation for ScholAR. Each of 100 questions
+A blinded, citation-grounded human evaluation for ScholAR. Each of 100 questions
 is answered by several local models running the same ScholAR pipeline (only the
 generation model changes), and expert evaluators score every answer on four 1-5
 dimensions plus per-citation grading. Design and grounding are in `HUMAN_EVAL_DESIGN.md`;
@@ -24,7 +24,6 @@ every gold answer was verified to appear in its source passage (`mine_cases.py` 
 | `generate_answers.py` | Runs every case through each model via the live backend, writes `answers.json` |
 | `_build_score_sheet.py` | Builds the self-contained `score_sheet.html` from cases + answers (blinded, randomized) |
 | `compute_scores.py` | Aggregates evaluator exports into `human_eval_results.json` + `human_eval_report.md` |
-| `BUILD_PROMPT.md` | The original build specification (kept for provenance) |
 
 ## Models
 
@@ -71,15 +70,15 @@ python3 evaluation/human_eval/compute_scores.py              # -> human_eval_res
 browser's localStorage, and shows the 4 answers per question in randomized blind order
 (Answer A/B/C/D). The real model identity is restored only on export.
 
-## What the results show
+## What the analysis will report
 
 `compute_scores.py` reports, per model: mean Relevance/Coverage/Faithfulness/Usefulness,
 citation precision/recall/F1, and the Supported/Partial/Unsupported distribution. It runs
-a Friedman test across the models on faithfulness and citation-support (a non-significant
-difference is the model-agnostic evidence), reports inter-annotator agreement when two or
-more evaluator files are present, and correlates human faithfulness against the automated
-NLI-CFS metric on the single-document cases that overlap the faithfulness benchmark.
+a Friedman test across the models on faithfulness and citation support, reports
+inter-annotator agreement when two or more evaluator files are present, and correlates
+human faithfulness and citation support with the generated-answer entailment judge on the
+same case and model outputs. A non-significant model difference is not proof of equivalence.
 
-Generated artifacts (`answers.json`, `score_sheet.html`, `exports/`, `human_eval_results.json`,
-`human_eval_report.md`) are produced by the steps above and are not committed until a real
-run is done.
+`answers.json` is committed as the frozen set to annotate. `score_sheet.html` and evaluator
+exports are generated locally. Commit only de-identified aggregate results after a real run;
+never commit evaluator names or raw files that could identify them.

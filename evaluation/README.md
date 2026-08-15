@@ -18,8 +18,8 @@ intentionally small: enough for real ablations, not for a broad research claim.
 
 | Script | Measures | Model / backend |
 |---|---|---|
-| `run_retrieval_eval.py` | Retrieval R@k, MRR, NDCG@k: keyword vs BM25 vs dense vs hybrid (14 hand-labeled; `--cases scaled` for the 100-case / 25-paper set) | none |
-| `run_faithfulness_eval.py` | Retrieval-support CFS: gold claim vs retrieval, BM25 vs hybrid (51 hand-labeled; `--cases scaled` for the 100-case / 25-paper set) | none |
+| `run_retrieval_eval.py` | Retrieval R@k, MRR, NDCG@k: keyword vs BM25 vs dense vs hybrid (14 hand-labeled; pass `--cases evaluation/benchmark_cases_scaled.json --tag scaled` for the 100-case set) | none |
+| `run_faithfulness_eval.py` | Retrieval-support CFS: gold claim vs retrieval, BM25 vs hybrid (51 hand-labeled; pass `--cases evaluation/faithfulness_cases_scaled.json --tag scaled` for the 100-case set) | none |
 | `run_generation_faithfulness_eval.py` | Faithfulness of the **generated answer** vs its context (single model) | backend + model |
 | `run_generation_faithfulness_matrix.py` | The above across the 4 models, accumulated per run (resumable) | backend + models |
 | `run_visual_eval.py` | Figure/table routing R@5 + answer-quality proxy (18 cases) | model |
@@ -36,17 +36,24 @@ intentionally small: enough for real ablations, not for a broad research claim.
 | `build_abstention_benchmark.py` | Builds the 20 provably-unanswerable cross-paper negatives | none |
 
 Shared components: `embedder.py` (local all-MiniLM-L6-v2, pure PyTorch), `hybrid_retrieval.py`
-(BM25 + dense + RRF), `nli_faithfulness.py` (SummaC-ZS-style scorer). Ground-truth files:
+(BM25 + dense + RRF), `nli_faithfulness.py` (cosine-based retrieval-support scorer), and
+`llm_entailment.py` (local generated-claim entailment judge). Ground-truth files:
 `benchmark_cases.json` / `faithfulness_cases.json` (3-paper hand-labeled anchors),
 `benchmark_cases_scaled.json` / `faithfulness_cases_scaled.json` (auto-labeled 25-paper),
 `abstention_cases.json` (unanswerable negatives), `visual_benchmark.json`, `multidoc_benchmark.json`.
 
 ## Headline results (traceable to `results/*.json`)
 
+The latest entailment-judge rescoring supersedes the older cosine-proxy headline
+numbers for generated-answer faithfulness. The cosine matrix is retained for
+provenance and as evidence of why metric validation matters.
+
 - **Retrieval (scaled, 100 cases / 25 papers):** BM25-primary R@5 0.93, MRR 0.861; plain BM25 within noise (0.94, 0.863); dense-only trails (0.74, 0.572). At scale BM25 beats dense, reversing the 3-paper anchor where dense topped a tiny set, which is why ScholAR keeps BM25 primary.
 - **Retrieval-support CFS (scaled):** BM25 0.785, Hybrid 0.782; SCHR@5 0.860 → 0.750; 93/100 and 92/100 faithful.
-- **Generation faithfulness across the 4 models (100 diverse cases):** faithfulness varies widely (gemma4 0.951, qwen3.5 0.908, mistral 0.809, llama3.1 0.719) while citation support stays in a narrow band (0.868–0.951). The citation layer the design enforces is what transfers across models; answer quality does not.
-- **Local comparison (qwen3.5:9b, 91 cases):** ScholAR leads on generation faithfulness (0.892) and answer correctness (0.563), ahead of PaperQA2-style RCS (0.872 / 0.550) and long-context PDF-chat (0.801 / 0.267); every emitted page citation is valid.
+- **Generation faithfulness across the 4 models (350 answers):** the local entailment judge measures a modest 0.594 to 0.645 mean faithfulness, with 93 of 350 answers containing at least one contradicted atom. Citation support ranges from 0.643 to 0.856. The older cosine proxy reported 0.719 to 0.951 and materially overstated the result.
+- **Faithfulness negative control (20 true and corrupted claims):** the entailment judge catches 90% of corruptions and marks 75% as contradictions, compared with 50% and 0% for the cosine scorer. The judge also falsely marks 25% of true claims unfaithful, so human validation remains necessary.
+- **Local comparison (qwen3.5:9b, 91 shared cases):** under the entailment judge, ScholAR scores 0.453 generation faithfulness, below vanilla RAG at 0.735 and PaperQA2-style RCS at 0.779. ScholAR retains the highest must-include answer recall at 0.563 versus 0.550 for PaperQA2-style, but that difference is not significant under paired bootstrap intervals.
+- **Page support:** ScholAR's page is valid by construction, but only 249 of 378 audited cited pages support the attached claim (0.659), compared with 202 of 283 for PDF-chat (0.714). The mechanism guarantees provenance, not entailment.
 - **Abstention (20 unanswerable questions):** qwen3.5 and llama3.1 decline 100%, gemma4 95%, mistral 90%; the rare non-abstentions are a benign minibatch-size overlap, not free invention.
 - **Efficiency (per query, Apple Silicon 18 GB):** BM25 retrieval ~40 ms (model-independent); end-to-end 6 to 11 s; 6 to 8 GB loaded; 16 to 27 tok/s across the four models.
 - **Visual:** correct figure/table routing on all 18 pilot cases, zero caption fallback.
@@ -66,5 +73,5 @@ something to silently overwrite.
 
 ## Human evaluation
 
-The model-agnostic, citation-grounded human study lives in `human_eval/` — see
+The blinded, multi-model, citation-grounded human study lives in `human_eval/`; see
 `human_eval/README.md` for the run order and `human_eval/HUMAN_EVAL_DESIGN.md` for the instrument.

@@ -1,6 +1,6 @@
 "use client";
 
-import { UIEvent, useEffect, useMemo, useRef, useState } from "react";
+import { UIEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, FileText, ZoomIn, ZoomOut } from "lucide-react";
 import type { Citation } from "../types/paper";
 
@@ -41,10 +41,17 @@ export function PdfViewer({ paperId, activeCitation }: PdfViewerProps) {
 
   const pages = useMemo(() => Array.from({ length: totalPages }, (_, index) => index + 1), [totalPages]);
 
+  const scrollToPage = useCallback((pageNumber: number) => {
+    const safePage = Math.min(Math.max(pageNumber, 1), totalPages);
+    setPage(safePage);
+    setErroredPages(new Set());
+    document.getElementById(`pdf-page-${safePage}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [totalPages]);
+
   useEffect(() => {
     if (!activeCitation?.page) return;
     scrollToPage(activeCitation.page);
-  }, [activeCitation]);
+  }, [activeCitation, scrollToPage]);
 
   function pageImageUrl(pageNumber: number) {
     const params = new URLSearchParams({ zoom: zoom.toFixed(2) });
@@ -53,13 +60,6 @@ export function PdfViewer({ paperId, activeCitation }: PdfViewerProps) {
       params.set("highlightVersion", "2");
     }
     return `${backendUrl}/api/papers/${encodeURIComponent(paperId)}/page/${pageNumber}.png?${params.toString()}`;
-  }
-
-  function scrollToPage(pageNumber: number) {
-    const safePage = Math.min(Math.max(pageNumber, 1), totalPages);
-    setPage(safePage);
-    setErroredPages(new Set());
-    document.getElementById(`pdf-page-${safePage}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function handleScroll(event: UIEvent<HTMLDivElement>) {
@@ -135,6 +135,8 @@ export function PdfViewer({ paperId, activeCitation }: PdfViewerProps) {
                     Could not render page {pageNumber}. Try preparing the paper again.
                   </div>
                 ) : (
+                  // PDF pages are rendered by the local backend with dynamic highlight query parameters.
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={pageImageUrl(pageNumber)}
                     alt={`Page ${pageNumber} of ${title}`}
