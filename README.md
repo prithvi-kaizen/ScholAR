@@ -2,7 +2,6 @@
 
 ScholAR is a **local-first, privacy-preserving RAG system** for deep reading and Q&A over scientific PDFs. It combines page-grounded citation retrieval, multi-modal visual grounding, and multi-document reasoning into a unified research assistant.
 
-> **Thesis-track submission to AAAI-27** (The Forty-First AAAI Conference on Artificial Intelligence). Abstract due July 21, 2026; full paper due July 28, 2026.
 
 ---
 
