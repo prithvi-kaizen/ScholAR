@@ -1,4 +1,4 @@
-# ScholAR — Smart Companion for Holistic Organization, Literature Analysis & Research
+# ScholAR (Smart Companion for Holistic Organization, Literature Analysis & Research)
 
 ScholAR is a **local-first, privacy-preserving RAG system** for deep reading and Q&A over scientific PDFs. It combines page-grounded citation retrieval, multi-modal visual grounding, and multi-document reasoning into a unified research assistant.
 
