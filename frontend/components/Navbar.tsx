@@ -2,53 +2,102 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { HelpCircle } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { HelpCircle, GitCompare, BarChart3, Activity, ShieldCheck } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { ShortcutsModal } from "./ShortcutsModal";
 
 export function Navbar() {
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const pathname = usePathname();
+
+  const isCompare = pathname === "/compare";
+  const isBenchmark = pathname === "/benchmark";
+  const isTelemetry = pathname === "/telemetry";
+  const isHome = pathname === "/";
 
   return (
     <>
-      <nav className="flex h-16 items-center justify-between border-b border-line bg-ink/95 px-5">
-        <Link href="/" className="flex items-center gap-3 rounded-md outline-none transition hover:opacity-80 focus-visible:ring-2 focus-visible:ring-acid">
-          <div className="grid h-8 w-8 place-items-center rounded-md border border-acid/40 bg-acid/10 text-sm font-bold text-acid">
-            AR
+      <nav className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-line/60 bg-ink/85 px-6 backdrop-blur-md transition-colors">
+        <div className="flex items-center gap-6">
+          <Link
+            href="/"
+            className="flex items-center gap-3 rounded-xl outline-none transition-all hover:opacity-90 focus-visible:ring-2 focus-visible:ring-acid"
+          >
+            <div className="grid h-9 w-9 place-items-center rounded-xl border border-acid/30 bg-acid/10 text-sm font-black text-acid shadow-sm shadow-acid/10 transition-transform hover:scale-105">
+              AR
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
+                ScholAR
+                <span className="rounded bg-acid/20 px-1.5 py-0.2 text-[9px] font-mono font-semibold uppercase text-acid tracking-wide">
+                  v1.0
+                </span>
+              </span>
+              <span className="text-[10px] text-zinc-400 font-medium hidden sm:inline">
+                Local Multi-Level Reasoning Engine
+              </span>
+            </div>
+          </Link>
+
+          <div className="hidden lg:flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-950/30 px-2.5 py-1 text-[11px] font-medium text-emerald-400">
+            <ShieldCheck size={13} className="text-emerald-400" />
+            <span>100% Local Compute</span>
+            <span className="text-emerald-500/60">·</span>
+            <span className="text-[10px] text-emerald-300/80">Zero Egress</span>
           </div>
-          <span className="text-base font-semibold text-white">ScholAR</span>
-        </Link>
-        <div className="flex items-center gap-3">
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/compare"
-            className="flex items-center gap-1.5 rounded-lg border border-line bg-panel px-2.5 py-1.5 text-xs text-zinc-300 transition hover:border-purple-500/50 hover:text-white"
+            className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${
+              isCompare
+                ? "border-purple-500/50 bg-purple-500/15 text-white shadow-sm shadow-purple-500/10"
+                : "border-line/60 bg-panel/80 text-zinc-400 hover:border-purple-500/40 hover:text-zinc-200"
+            }`}
           >
-            <span className="font-semibold text-purple-400">Cross-Paper</span>
+            <GitCompare size={13} className={isCompare ? "text-purple-400" : "text-zinc-400"} />
+            <span className="hidden md:inline">Cross-Paper</span>
             <span>Compare</span>
           </Link>
+
           <Link
             href="/benchmark"
-            className="flex items-center gap-1.5 rounded-lg border border-line bg-panel px-2.5 py-1.5 text-xs text-zinc-300 transition hover:border-acid/50 hover:text-white"
+            className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${
+              isBenchmark
+                ? "border-acid/50 bg-acid/15 text-white shadow-sm shadow-acid/10"
+                : "border-line/60 bg-panel/80 text-zinc-400 hover:border-acid/40 hover:text-zinc-200"
+            }`}
           >
+            <BarChart3 size={13} className={isBenchmark ? "text-acid" : "text-zinc-400"} />
             <span className="font-semibold text-acid">EACL &apos;27</span>
-            <span>Benchmark</span>
+            <span className="hidden sm:inline">Benchmark</span>
           </Link>
+
           <Link
             href="/telemetry"
-            className="flex items-center gap-1.5 rounded-lg border border-line bg-panel px-2.5 py-1.5 text-xs text-zinc-300 transition hover:border-emerald-500/50 hover:text-white"
+            className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${
+              isTelemetry
+                ? "border-emerald-500/50 bg-emerald-500/15 text-white shadow-sm shadow-emerald-500/10"
+                : "border-line/60 bg-panel/80 text-zinc-400 hover:border-emerald-500/40 hover:text-zinc-200"
+            }`}
           >
-            <span className="font-semibold text-emerald-400">System</span>
+            <Activity size={13} className={isTelemetry ? "text-emerald-400" : "text-zinc-400"} />
+            <span className="hidden md:inline">System</span>
             <span>Telemetry</span>
           </Link>
+
+          <div className="h-4 w-px bg-line/60 mx-1 hidden sm:block" />
+
           <button
             type="button"
             onClick={() => setShowShortcuts(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-line bg-panel px-2.5 py-1.5 text-xs text-zinc-400 transition hover:border-zinc-500 hover:text-white"
+            className="flex items-center gap-1.5 rounded-xl border border-line/60 bg-panel/80 px-2.5 py-1.5 text-xs text-zinc-400 transition-all hover:border-zinc-500 hover:text-white"
             title="Keyboard shortcuts (?)"
           >
             <HelpCircle size={14} />
-            <span className="hidden sm:inline">Shortcuts</span>
-            <kbd className="rounded border border-zinc-700 bg-zinc-800 px-1 py-0.2 text-[10px] font-mono text-zinc-300">?</kbd>
+            <kbd className="hidden sm:inline rounded border border-zinc-700 bg-zinc-800/80 px-1 py-0.2 text-[10px] font-mono text-zinc-300">?</kbd>
           </button>
           <ThemeToggle />
         </div>

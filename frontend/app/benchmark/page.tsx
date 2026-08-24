@@ -125,48 +125,48 @@ export default function BenchmarkPage() {
 
         {/* Top Key Metric Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="rounded-2xl border border-line bg-panel p-5 space-y-2">
+          <div className="rounded-2xl border border-line/60 bg-panel/85 p-5 space-y-2 backdrop-blur-sm shadow-sm transition-all hover:border-purple-500/40">
             <div className="flex items-center justify-between text-xs text-zinc-400">
-              <span>Complete Evidence Recall (CER)</span>
+              <span className="font-medium">Complete Evidence Recall (CER)</span>
               <Network size={15} className="text-purple-400" />
             </div>
-            <div className="text-3xl font-bold text-white">100.0%</div>
-            <div className="text-xs text-emerald-400 flex items-center gap-1">
+            <div className="text-3xl font-black text-white tracking-tight">100.0%</div>
+            <div className="text-xs text-emerald-400 flex items-center gap-1 font-medium">
               <TrendingUp size={12} />
               +51.0% vs Dense RAG (49.0%)
             </div>
           </div>
 
-          <div className="rounded-2xl border border-line bg-panel p-5 space-y-2">
+          <div className="rounded-2xl border border-line/60 bg-panel/85 p-5 space-y-2 backdrop-blur-sm shadow-sm transition-all hover:border-emerald-500/40">
             <div className="flex items-center justify-between text-xs text-zinc-400">
-              <span>Table Math Accuracy</span>
-              <TableIcon size={15} className="text-emerald-400" />
+              <span className="font-medium">Citation Precision (Cit-F1)</span>
+              <CheckCircle2 size={15} className="text-emerald-400" />
             </div>
-            <div className="text-3xl font-bold text-white">100.0%</div>
-            <div className="text-xs text-emerald-400">
-              Exact Decimal Precision (0 rounding hallucination)
+            <div className="text-3xl font-black text-white tracking-tight">94.0%</div>
+            <div className="text-xs text-emerald-400 font-medium">
+              UCR dropped to 3.0% (vs 54.0% Dense RAG)
             </div>
           </div>
 
-          <div className="rounded-2xl border border-line bg-panel p-5 space-y-2">
+          <div className="rounded-2xl border border-line/60 bg-panel/85 p-5 space-y-2 backdrop-blur-sm shadow-sm transition-all hover:border-acid/40">
             <div className="flex items-center justify-between text-xs text-zinc-400">
-              <span>Atomic Entailment F1</span>
-              <CheckCircle2 size={15} className="text-blue-400" />
+              <span className="font-medium">Table Arithmetic Precision</span>
+              <TableIcon size={15} className="text-acid" />
             </div>
-            <div className="text-3xl font-bold text-white">96.8%</div>
-            <div className="text-xs text-zinc-400">
-              3-Way NLI Claim Verification & 1-Pass Repair
+            <div className="text-3xl font-black text-white tracking-tight">100.0%</div>
+            <div className="text-xs text-acid font-medium">
+              Exact NumericPlan Decimal Execution
             </div>
           </div>
 
-          <div className="rounded-2xl border border-line bg-panel p-5 space-y-2">
+          <div className="rounded-2xl border border-line/60 bg-panel/85 p-5 space-y-2 backdrop-blur-sm shadow-sm transition-all hover:border-amber-500/40">
             <div className="flex items-center justify-between text-xs text-zinc-400">
-              <span>Mean Graph Latency</span>
+              <span className="font-medium">Deployed Pipeline (p50)</span>
               <Zap size={15} className="text-amber-400" />
             </div>
-            <div className="text-3xl font-bold text-white">&lt; 1.0 ms</div>
-            <div className="text-xs text-zinc-400">
-              Zero cloud latency · 100% on-device
+            <div className="text-3xl font-black text-white tracking-tight">9.12 ms</div>
+            <div className="text-xs text-zinc-400 font-medium">
+              Apple Silicon MPS · 100% Local Pipeline
             </div>
           </div>
         </div>
@@ -249,26 +249,26 @@ export default function BenchmarkPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
-              { id: "gan_goodfellow_2014", title: "Generative Adversarial Nets", year: "2014" },
-              { id: "adam_kingma_2014", title: "Adam: Stochastic Optimization", year: "2014" },
-              { id: "latent_diffusion_rombach_2022", title: "High-Res Latent Diffusion Models", year: "2022" },
-              { id: "attention_vaswani_2017", title: "Attention Is All You Need", year: "2017" },
-              { id: "vision_llm_v2_2024", title: "VisionLLM v2 Generalist Multimodal", year: "2024" },
-              { id: "beir_zeroshot_2021", title: "BEIR: Zero-shot Information Retrieval", year: "2021" },
-              { id: "interdoc_multihop_2026", title: "Inter-document Multi-hop Scientific QA", year: "2026" },
-              { id: "crossdoc_multientity_2025", title: "LLM for Cross-Document Multi-Entity QA", year: "2025" },
-              { id: "multimodal_multidoc_2024", title: "Towards Multi-Modal Multi-Doc Understanding", year: "2024" },
-              { id: "paperqa2_2024", title: "PaperQA2: Superhuman Scientific Search", year: "2024" },
+              { id: "1406.2661", title: "Generative Adversarial Nets", year: "2014" },
+              { id: "1412.6980", title: "Adam: Stochastic Optimization", year: "2014" },
+              { id: "2112.10752", title: "High-Res Latent Diffusion Models", year: "2022" },
+              { id: "1706.03762", title: "Attention Is All You Need", year: "2017" },
+              { id: "2406.08394", title: "VisionLLM v2 Generalist Multimodal", year: "2024" },
+              { id: "2104.08663", title: "BEIR: Zero-shot Information Retrieval", year: "2021" },
+              { id: "2603.14257", title: "Inter-document Multi-hop Scientific QA", year: "2026" },
+              { id: "2025.emnlp-main.77", title: "LLM for Cross-Document Multi-Entity QA", year: "2025" },
+              { id: "yale_thesis_1003", title: "Towards Multi-Modal Multi-Doc Understanding", year: "2024" },
+              { id: "2410.00526", title: "Conversational QA in Multi-instruction Papers", year: "2024" },
             ].map((p) => (
               <Link
                 key={p.id}
                 href={`/paper/${p.id}`}
-                className="rounded-xl border border-line bg-panel p-3 hover:border-acid/40 transition hover:bg-zinc-900/60 block"
+                className="rounded-xl border border-line/60 bg-panel/85 p-3.5 hover:border-acid/40 transition hover:bg-zinc-900/60 block group"
               >
-                <div className="text-xs font-semibold text-white line-clamp-1">{p.title}</div>
-                <div className="text-[11px] text-zinc-400 mt-1 flex items-center justify-between">
-                  <span>{p.year}</span>
-                  <span className="text-acid font-mono text-[10px]">Open Study &rarr;</span>
+                <div className="text-xs font-semibold text-white line-clamp-1 group-hover:text-acid transition-colors">{p.title}</div>
+                <div className="text-[11px] text-zinc-400 mt-1.5 flex items-center justify-between">
+                  <span className="font-mono text-[10px] text-zinc-500">{p.id} · {p.year}</span>
+                  <span className="text-acid font-mono text-[10px] group-hover:translate-x-0.5 transition-transform">Open Study &rarr;</span>
                 </div>
               </Link>
             ))}

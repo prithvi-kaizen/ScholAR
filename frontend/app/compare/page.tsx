@@ -127,11 +127,16 @@ export default function CrossPaperComparePage() {
           </div>
 
           {/* Comparative Prompt Input */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-              Comparative Research Question
-            </label>
-            <div className="flex items-center gap-2 rounded-xl border border-line bg-zinc-900 px-3 py-2">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                Comparative Research Question
+              </label>
+              <span className="text-[11px] text-zinc-500">
+                Joint evidence extraction across both documents
+              </span>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl border border-line/60 bg-zinc-900/90 px-3.5 py-2.5 transition-focus focus-within:border-purple-500/60 focus-within:ring-1 focus-within:ring-purple-500/30">
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -141,11 +146,51 @@ export default function CrossPaperComparePage() {
               <button
                 onClick={handleCompare}
                 disabled={loading || !query.trim()}
-                className="flex items-center gap-1.5 rounded-lg bg-purple-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-purple-500 disabled:opacity-40 shadow-lg shadow-purple-600/30"
+                className="flex items-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2 text-xs font-bold text-white transition-all hover:bg-purple-500 disabled:opacity-40 shadow-md shadow-purple-600/25 active:scale-98"
               >
                 <Sparkles size={13} />
                 <span>{loading ? "Synthesizing..." : "Synthesize Graph"}</span>
               </button>
+            </div>
+
+            {/* Quick Comparative Prompt Chips */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                Suggested Prompts:
+              </span>
+              {[
+                {
+                  label: "Vaswani vs. Rombach Attention",
+                  pA: "1706.03762",
+                  pB: "2112.10752",
+                  q: "How does the self-attention mechanism in Vaswani 2017 compare with the cross-attention conditioning in Rombach 2022?",
+                },
+                {
+                  label: "Adam vs. GAN Optimization",
+                  pA: "1412.6980",
+                  pB: "1406.2661",
+                  q: "How do the moment estimates in Adam resolve gradient saturation in early GAN generator training?",
+                },
+                {
+                  label: "VisionLLM v2 vs. PaperQA2",
+                  pA: "2406.08394",
+                  pB: "2410.00526",
+                  q: "How does multimodal grounding in VisionLLM v2 differ from text-only chunk extraction in PaperQA2?",
+                },
+              ].map((chip, cIdx) => (
+                <button
+                  key={cIdx}
+                  type="button"
+                  onClick={() => {
+                    setPrimaryPaperId(chip.pA);
+                    setSecondaryPaperId(chip.pB);
+                    setQuery(chip.q);
+                  }}
+                  className="rounded-lg border border-line/50 bg-zinc-900/60 px-2.5 py-1 text-[11px] text-zinc-400 hover:border-purple-500/40 hover:text-zinc-200 transition-all active:scale-98"
+                >
+                  {chip.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
