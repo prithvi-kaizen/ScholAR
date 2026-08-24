@@ -53,6 +53,36 @@ async def generate(prompt: str, temperature: float = 0.2, images: list[str] | No
     return data.get("response", "").strip()
 
 
+async def generate_stream(
+    prompt: str,
+    temperature: float = 0.2,
+    images: list[str] | None = None,
+    model: str | None = None,
+):
+    """Async generator yielding streaming response tokens from local Ollama instance."""
+    payload: dict[str, Any] = {
+        "model": model or OLLAMA_MODEL,
+        "prompt": prompt,
+        "stream": True,
+        "think": False,
+        "options": _ollama_options(temperature),
+    }
+    if images:
+        payload["images"] = images
+    async with httpx.AsyncClient(timeout=float(os.getenv("OLLAMA_TIMEOUT", "240")), trust_env=False) as client:
+        async with client.stream("POST", f"{OLLAMA_BASE_URL}/api/generate", json=payload) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if line:
+                    try:
+                        data = json.loads(line)
+                        yield data.get("response", "")
+                        if data.get("done", False):
+                            break
+                    except Exception:
+                        continue
+
+
 def _source_pages_from_chunks(chunks: list[dict[str, Any]] | None, fallback: int = 1) -> list[int]:
     pages = []
     for chunk in chunks or []:
@@ -101,12 +131,28 @@ def _title_hint(title: str) -> str:
     return " ".join(words[:7]) or "the paper"
 
 
-def fallback_goals(metadata: dict[str, Any] | None = None, chunks: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+def fallback_goals(
+    metadata: dict[str, Any] | None = None,
+    chunks: list[dict[str, Any]] | None = None,
+    figures: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     paper_title = (metadata or {}).get("title") or "this paper"
     pages = _source_pages_from_chunks(chunks)
     summary = (metadata or {}).get("summary") or ""
     context = f"{summary} {_chunk_context(chunks)}"
     hint = _title_hint(paper_title)
+
+    # Discover sections and figures
+    sections = list(dict.fromkeys(
+        c.get("section_title") for c in (chunks or [])
+        if c.get("section_title") and c.get("section_title") not in ("Body", "Abstract")
+    ))[:5]
+    table_labels = [f.get("label") for f in (figures or []) if "table" in (f.get("label") or "").lower() or f.get("figure_type") == "table"]
+    figure_labels = [f.get("label") for f in (figures or []) if "figure" in (f.get("label") or "").lower() or f.get("figure_type") == "figure"]
+
+    table_ref = table_labels[0] if table_labels else "Key Tables"
+    figure_ref = figure_labels[0] if figure_labels else "Figure 1"
+    sec_ref = sections[0] if sections else "Methodology"
 
     motivation = _find_sentence(
         context,
@@ -139,66 +185,148 @@ def fallback_goals(metadata: dict[str, Any] | None = None, chunks: list[dict[str
         "Look for assumptions, scope limits, missing experiments, or cases where the method may not apply.",
     )
 
-    goals = [
-        (
-            f"Understand the {hint} problem setting",
-            f"Use this motivation as the anchor: {motivation} Study what failure mode or research gap the paper is isolating, why existing evaluation is insufficient, and what practical risk the authors want the reader to notice.",
-        ),
-        (
-            f"Explain the paper's main contribution",
-            f"Use the paper's own framing: {contribution} Identify the new framework, representation, model, or evaluation protocol, and separate the paper's actual contribution from background concepts it builds on.",
-        ),
-        (
-            "Trace the method step by step",
-            f"Use this method anchor: {method} Break the approach into inputs, transformations, decision rules, outputs, and validation checks so the reader can reproduce the reasoning without relying on vague summary language.",
-        ),
-        (
-            "Map the framework components and data flow",
-            f"Create a component map using this clue: {method} Name the important stages, how information moves between them, and where measurements, probes, metrics, or model/API calls enter the pipeline.",
-        ),
-        (
-            "Inspect the experimental setup and controls",
-            f"Use the evaluation context as your checklist: {experiments} Record datasets, models, prompts, metrics, baselines, thresholds, and control conditions, then explain why each is needed for a fair test.",
-        ),
-        (
-            "Interpret the key quantitative findings",
-            f"Ground the result summary in paper evidence: {results} Extract the important numbers or comparisons, explain what changed, and decide whether the evidence supports the paper's central claim.",
-        ),
-        (
-            "Critique assumptions and limitations",
-            f"Start with this limitation clue: {limitations} Separate limitations stated by the authors from additional concerns about scope, data, compute, measurement validity, external validity, or generalization.",
-        ),
-        (
-            "Convert the paper into an implementation plan",
-            f"Translate the paper into build steps grounded in its method and evaluation: {method} Define required inputs, preprocessing, model/API calls, scoring rules, tests, expected outputs, and failure cases to check before coding.",
-        ),
-    ]
-
-    fallback_subquestions = [
-        "What problem does this part of the paper solve?",
-        "What are the main components or claims?",
-        "What assumptions does it make?",
-        "What evidence in the paper supports it?",
+    goal_specs = [
+        # Phase 1: Foundation
+        {
+            "phase": "Foundation",
+            "difficulty": "Foundational",
+            "title": f"Dissect the {hint} Problem & Failure Modes",
+            "description": f"Analyze the core problem setup: {motivation} Study what limitations in previous methods the authors isolate, and why standard baselines fall short.",
+            "estimated_minutes": 5,
+            "target_evidence": ["Introduction", "Abstract"],
+            "key_takeaways": ["Core bottleneck in prior approaches", "Specific motivation for this paper"],
+            "subquestions": [
+                f"What exact research gap or bottleneck does {hint} address?",
+                "Why were prior state-of-the-art methods inadequate for this challenge?",
+                "What assumptions does the paper make about the data or task setting?",
+            ],
+        },
+        {
+            "phase": "Foundation",
+            "difficulty": "Foundational",
+            "title": "Analyze the Core Contribution & Breakthrough Claims",
+            "description": f"Examine the paper's primary hypothesis: {contribution} Distinguish the novel representation or architecture from standard building blocks.",
+            "estimated_minutes": 6,
+            "target_evidence": ["Section 1 & 2", figure_ref],
+            "key_takeaways": ["Central theoretical or empirical claim", "Key conceptual novelty"],
+            "subquestions": [
+                "What is the single most important conceptual innovation introduced?",
+                "How do the authors differentiate their work from closely related baselines?",
+                "What primary performance or efficiency improvements are claimed?",
+            ],
+        },
+        # Phase 2: Architecture
+        {
+            "phase": "Architecture",
+            "difficulty": "Intermediate",
+            "title": f"Trace Technical Architecture & Tensor Flow ({figure_ref})",
+            "description": f"Break down the end-to-end mechanism: {method} Map inputs, intermediate layer transformations, attention or convolutional operations, and output heads.",
+            "estimated_minutes": 8,
+            "target_evidence": [figure_ref, sec_ref],
+            "key_takeaways": ["Step-by-step layer transformations", "Mathematical mechanics and tensor flow"],
+            "subquestions": [
+                f"What are the precise inputs, layer operations, and outputs shown in {figure_ref}?",
+                "How do tokens/features propagate through the forward pass?",
+                "What role do positional encodings, normalization, or residual connections play?",
+            ],
+        },
+        {
+            "phase": "Architecture",
+            "difficulty": "Advanced",
+            "title": "Deconstruct Loss Functions & Training Objectives",
+            "description": f"Examine optimization dynamics: {method} Understand the loss formulations, objective functions (e.g. cross-entropy, MLM, diffusion noise estimation), and optimization hyperparameters.",
+            "estimated_minutes": 8,
+            "target_evidence": ["Methodology", "Optimization"],
+            "key_takeaways": ["Exact loss formulation", "Training objective tradeoff"],
+            "subquestions": [
+                "What exact loss function or objective is optimized during training?",
+                "How are hyperparameters (learning rate schedule, warmups, batch size) configured?",
+                "What regularization techniques prevent overfitting or instability?",
+            ],
+        },
+        # Phase 3: Benchmarks
+        {
+            "phase": "Benchmarks",
+            "difficulty": "Intermediate",
+            "title": f"Evaluate Experimental Setup & Baselines ({table_ref})",
+            "description": f"Audit the empirical testing protocol: {experiments} Verify benchmark datasets, metric formulations, baseline configurations, and dataset splits.",
+            "estimated_minutes": 7,
+            "target_evidence": [table_ref, "Experiments"],
+            "key_takeaways": ["Benchmark datasets and evaluation metrics", "Fairness of baseline comparisons"],
+            "subquestions": [
+                "What datasets and benchmark suites are evaluated?",
+                "What evaluation metrics (e.g. BLEU, Accuracy, F1, FID) are reported?",
+                "Are the baseline comparisons matched in parameter count and training compute?",
+            ],
+        },
+        {
+            "phase": "Benchmarks",
+            "difficulty": "Advanced",
+            "title": f"Interpret Benchmark Gains & Ablation Deltas ({table_ref})",
+            "description": f"Analyze quantitative score differentials: {results} Measure metric deltas across model variants, ablations, and compute-efficiency tradeoffs.",
+            "estimated_minutes": 8,
+            "target_evidence": [table_ref, "Ablations"],
+            "key_takeaways": ["Statistically significant metric deltas", "Key findings from ablation studies"],
+            "subquestions": [
+                f"What are the top-line metric gains achieved in {table_ref}?",
+                "Which component ablations cause the largest drops in performance?",
+                "How does performance scale with model size and training tokens/compute?",
+            ],
+        },
+        # Phase 4: Implementation
+        {
+            "phase": "Implementation",
+            "difficulty": "Intermediate",
+            "title": "Critique Assumptions, Failure Modes & Limitations",
+            "description": f"Identify vulnerabilities and constraints: {limitations} Analyze computational costs, dataset biases, failure cases, and unproven claims.",
+            "estimated_minutes": 6,
+            "target_evidence": ["Limitations", "Discussion"],
+            "key_takeaways": ["Scope constraints and edge cases", "Computational and memory overhead"],
+            "subquestions": [
+                "What explicit limitations or failure modes do the authors acknowledge?",
+                "Under what data distributions or domain shifts might the model fail?",
+                "What memory or compute bottlenecks restrict deployment in production?",
+            ],
+        },
+        {
+            "phase": "Implementation",
+            "difficulty": "Advanced",
+            "title": "Synthesize a Practical Engineering Build & Code Plan",
+            "description": f"Translate research theory into an executable PyTorch implementation roadmap: Define data loaders, tensor modules, optimizer setup, validation tests, and scaling checkpoints.",
+            "estimated_minutes": 10,
+            "target_evidence": ["Method", "Appendix / Code"],
+            "key_takeaways": ["PyTorch module architecture and tensor shapes", "Step-by-step reproduction recipe"],
+            "subquestions": [
+                "What PyTorch modules and tensor shapes are needed for the core layers?",
+                "How should the training loop, loss calculation, and backprop be structured?",
+                "What unit tests and sanity checks should be run before full-scale training?",
+            ],
+        },
     ]
 
     fallback_chunks = chunks or []
     return [
         {
             "id": f"goal_{index}",
-            "title": goal_title,
-            "description": description,
+            "title": spec["title"],
+            "description": spec["description"],
+            "phase": spec["phase"],
+            "difficulty": spec["difficulty"],
+            "estimated_minutes": spec["estimated_minutes"],
+            "target_evidence": spec["target_evidence"],
+            "key_takeaways": spec["key_takeaways"],
             "source_pages": pages,
             "subquestions": [
                 {
                     "id": f"goal_{index}_q{sub_index}",
-                    "question": question,
-                    "evidence_chunks": _evidence_for_question(f"{goal_title}. {description}. {question}", fallback_chunks),
+                    "question": q,
+                    "evidence_chunks": _evidence_for_question(f"{spec['title']}. {spec['description']}. {q}", fallback_chunks),
                 }
-                for sub_index, question in enumerate(fallback_subquestions, start=1)
+                for sub_index, q in enumerate(spec["subquestions"], start=1)
             ],
             "status": "not_started",
         }
-        for index, (goal_title, description) in enumerate(goals, start=1)
+        for index, spec in enumerate(goal_specs, start=1)
     ]
 
 
@@ -279,6 +407,8 @@ def _normalize_subquestions(goal_id: str, raw: Any, title: str, description: str
 async def generate_study_goals(
     metadata: dict[str, Any],
     chunks: list[dict[str, Any]],
+    figures: list[dict[str, Any]] | None = None,
+    sections: list[str] | None = None,
     generate_func=generate,
     provider: str = "local",
 ) -> list[dict[str, Any]]:
@@ -289,40 +419,63 @@ async def generate_study_goals(
         f"[chunk: {chunk.get('chunk_id')} | p. {chunk.get('page')}]\n{chunk.get('text', '')[:char_limit]}"
         for chunk in selected_chunks[:chunk_limit]
     )
+
+    # Discover sections and figures
+    if not sections:
+        sections = list(dict.fromkeys(
+            c.get("section_title") for c in chunks
+            if c.get("section_title") and c.get("section_title") not in ("Body", "Abstract")
+        ))[:6]
+
+    sec_context = ", ".join(sections) if sections else "Introduction, Methodology, Experiments, Results, Discussion"
+
+    fig_items = []
+    for f in (figures or [])[:6]:
+        lbl = f.get("label") or "Figure"
+        cap = (f.get("caption") or "")[:80]
+        fig_items.append(f"{lbl} ({cap})" if cap else lbl)
+    fig_context = "; ".join(fig_items) if fig_items else "Key architecture diagrams and empirical result tables"
+
     prompt = f"""
-You are designing a serious guided study plan for one specific research paper.
+You are designing a state-of-the-art guided research study curriculum for this specific paper.
 
-Generate exactly 8 paper-specific study goals. These must NOT be generic checklist items.
-Each goal should help the reader understand a concrete part of this paper: its problem, claims, method, mechanism, experiments, results, limitations, and implementation implications.
+Generate exactly 8 paper-specific study goals organized into 4 pedagogical learning phases:
+- Phase 1 (Goals 1-2): "Foundation" -> Problem motivation, research gap, core breakthrough claims
+- Phase 2 (Goals 3-4): "Architecture" -> Technical mechanism, tensor flow, loss formulations, algorithms (reference figures like {fig_context[:50]})
+- Phase 3 (Goals 5-6): "Benchmarks" -> Experimental setups, datasets, metric tables, quantitative gains, ablations
+- Phase 4 (Goals 7-8): "Implementation" -> Practical limitations, failure modes, PyTorch/build implementation recipe
 
-Return only a valid JSON array with exactly 8 objects.
-Each object must contain:
-- title: a short, specific goal title tied to this paper
-- description: 2 to 4 detailed sentences explaining what the reader should learn, including paper-specific concepts, datasets, mechanisms, equations, architecture parts, claims, or results when available
-- subquestions: 3 to 5 precise subquestions that recursively break the goal into smaller research-reading questions
-- source_pages: 1 to 4 page numbers from the provided chunks where the reader should look first
+Return ONLY a valid JSON array with exactly 8 objects.
+Each object MUST contain:
+- id: "goal_1" .. "goal_8"
+- phase: "Foundation" | "Architecture" | "Benchmarks" | "Implementation"
+- difficulty: "Foundational" | "Intermediate" | "Advanced"
+- title: a concise, highly specific title tied to this paper's actual mechanisms/tables/equations
+- description: 2 to 3 detailed sentences explaining what the reader should master
+- estimated_minutes: integer (5, 6, 8, 10)
+- target_evidence: array of strings naming sections or figures to inspect (e.g. ["Section 3.1", "Table 1"])
+- key_takeaways: array of 2 short bullet points highlighting core takeaways
+- subquestions: array of 3 to 4 precise research-reading questions
+- source_pages: array of 1 to 3 integer page numbers from the provided context markers
 - status: "not_started"
 
-Rules:
-- Use only the title, abstract, and paper context below.
-- Do not use generic titles like "Explain methodology" unless you add the paper's actual method or concept.
-- If the provided context is thin, say what should be verified in the paper instead of inventing facts.
-- Page numbers must come from the context markers.
-- Make the plan precise enough that clicking a goal can produce a useful tutoring explanation.
-- Subquestions should ask about problem, components, assumptions, evidence, experiments, results, limitations, or implementation details depending on the goal.
-- Do not include markdown fences or prose outside the JSON.
-
-Title: {metadata.get("title")}
+Paper Title: {metadata.get("title")}
 Authors: {", ".join(metadata.get("authors", []))}
 Abstract: {metadata.get("summary")}
+Key Sections: {sec_context}
+Key Visual Evidence: {fig_context}
 
-Paper context:
+Paper text context:
 {context}
 """.strip()
 
     response = await generate_func(prompt, temperature=0.1)
     parsed = _extract_json_array(response) or []
     goals: list[dict[str, Any]] = []
+    
+    phases_order = ["Foundation", "Foundation", "Architecture", "Architecture", "Benchmarks", "Benchmarks", "Implementation", "Implementation"]
+    diff_order = ["Foundational", "Foundational", "Intermediate", "Advanced", "Intermediate", "Advanced", "Intermediate", "Advanced"]
+
     for index, item in enumerate(parsed[:8], start=1):
         if not isinstance(item, dict):
             continue
@@ -331,11 +484,23 @@ Paper context:
         description = str(item.get("description") or "").strip()
         if not title or not description:
             continue
+
+        assigned_phase = item.get("phase") or phases_order[index - 1]
+        assigned_diff = item.get("difficulty") or diff_order[index - 1]
+        est_min = item.get("estimated_minutes") or (6 if assigned_diff == "Foundational" else 8)
+        target_ev = item.get("target_evidence") or [sections[0] if sections else "Methodology"]
+        takeaways = item.get("key_takeaways") or ["Core theoretical mechanism", "Empirical insight"]
+
         goals.append(
             {
                 "id": f"goal_{index}",
                 "title": title,
                 "description": description,
+                "phase": assigned_phase,
+                "difficulty": assigned_diff,
+                "estimated_minutes": est_min,
+                "target_evidence": target_ev if isinstance(target_ev, list) else [str(target_ev)],
+                "key_takeaways": takeaways if isinstance(takeaways, list) else [str(takeaways)],
                 "source_pages": source_pages if isinstance(source_pages, list) else [source_pages],
                 "subquestions": _normalize_subquestions(
                     f"goal_{index}",
@@ -349,7 +514,7 @@ Paper context:
         )
 
     if len(goals) != 8:
-        defaults = fallback_goals(metadata, selected_chunks)
+        defaults = fallback_goals(metadata, selected_chunks, figures)
         goals.extend(defaults[len(goals) :])
     return goals[:8]
 

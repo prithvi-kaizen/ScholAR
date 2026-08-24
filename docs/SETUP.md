@@ -49,47 +49,46 @@ cd ScholAR
 
 All backend and evaluation commands must be run from this repository root. Running Uvicorn from inside `backend/` breaks package imports.
 
-## 4. Fast setup for macOS and Linux
+## 4. 1-Click Quickstart Setup (Recommended)
 
-From the repository root:
-
-```bash
-make setup
-```
-
-This command:
-
-1. creates `.venv/`;
-2. installs the pinned Python runtime dependencies;
-3. installs the locked frontend dependencies with `npm ci`;
-4. copies both example environment files if local copies do not exist;
-5. leaves existing local environment files unchanged.
-
-It does not install Ollama or download a model. Pull the configured default model separately:
+From the repository root, run the automated setup script:
 
 ```bash
-ollama pull qwen3.5:9b
+bash scripts/quickstart.sh
 ```
 
-If the Ollama desktop application is not already running, start its local service in a terminal:
+This script:
+1. Detects your hardware (RAM, Apple Silicon, NVIDIA GPU);
+2. Recommends and lets you download the optimal Ollama model;
+3. Sets up `.venv` and installs Python dependencies;
+4. Installs frontend dependencies;
+5. Configures environment files and runs `doctor.py`.
 
+---
+
+## 5. Hardware Sizing & Model Sizing Matrix
+
+ScholAR supports dynamic model scaling. Choose a model based on your system RAM and GPU:
+
+| Tier | System Hardware | Model | Size | Modality | Best For | Ollama Command |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Tier 1** | 8 GB RAM / CPU-only | `qwen2.5:7b` | ~4.7 GB | Text | Fast text lookup, summaries | `ollama pull qwen2.5:7b` |
+| **Tier 2** | 16 GB RAM / Apple Silicon / RTX 3060/4060 | `qwen3.5:9b` | ~6.6 GB | Multimodal | Balanced text + vision reasoning | `ollama pull qwen3.5:9b` |
+| **Tier 3** | 16-32 GB RAM / Apple Pro/Max / RTX 3080/4080 | `gemma4:12b` | ~8.5 GB | Multimodal | Complex multi-panel charts, high precision | `ollama pull gemma4:12b` |
+| **Tier 4** | 32 GB+ RAM / RTX 3090/4090 / A100 | `qwen2.5:14b` | ~9.0 GB | Text | Maximum textual depth & cross-document synthesis | `ollama pull qwen2.5:14b` |
+
+To switch models at any time, run:
 ```bash
-ollama serve
+make models
+# or
+python3 scripts/setup_models.py
 ```
 
-Do not start a second `ollama serve` process when the desktop application already owns port `11434`.
+---
 
-Run the setup diagnosis:
+## 6. Manual Setup
 
-```bash
-make doctor
-```
-
-Warnings that the backend or frontend is not running are expected at this stage. Missing dependencies or a missing model include an exact repair command in the output.
-
-## 5. Manual setup
-
-Use these commands when Make is unavailable or when you want to see each installation step.
+Use these commands when you want to execute each installation step manually.
 
 ### Backend
 
@@ -99,24 +98,20 @@ From the repository root:
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+pip install -r requirements.txt
 cp backend/.env.example backend/.env
 ```
-
-The project uses a root-level `requirements.txt`. `evaluation/requirements.txt` contains optional packages used only by some research evaluations and is not required to run the application.
 
 ### Frontend
 
 ```bash
 cd frontend
 npm ci
-cp .env.local.example .env.local
+cp .env.example .env.local
 cd ..
 ```
 
-Use `npm ci`, not `npm install`, for a first setup. It installs the exact dependency tree recorded in `package-lock.json`.
-
-### Ollama
+### Ollama Model Download
 
 ```bash
 ollama pull qwen3.5:9b

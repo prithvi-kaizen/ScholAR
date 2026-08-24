@@ -1,0 +1,22 @@
+{
+  "evidence_removal_test": {
+    "passed": true,
+    "description": "Appropriately abstains / flags insufficient evidence when supporting paragraph is removed."
+  },
+  "numeric_perturbation_test": {
+    "passed": true,
+    "computed_value": -6.76,
+    "expected_perturbed_value": -6.76,
+    "description": "Computes exact delta from document table truth (-6.76) without reverting to LLM parametric memory (+3.24)."
+  },
+  "distractor_injection_test": {
+    "passed": true,
+    "supported_count": 1,
+    "description": "Maintains correct factual grounding despite 2 high-overlap synthetic distractor blocks."
+  },
+  "citation_swap_attack": {
+    "attack_detected": true,
+    "unsupported_claims": 1,
+    "description": "Correctly flags mismatched citation attribution using 3-Way Atomic NLI Entailment."
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "iterations": 50,
+  "hardware_tier": "16GB",
+  "peak_ram_mb": 506.45,
+  "ram_delta_mb": 421.58,
+  "components": {
+    "1_question_analysis": {
+      "p50_ms": 0.021,
+      "p90_ms": 0.024,
+      "p95_ms": 0.045
+    },
+    "2_bm25_search": {
+      "p50_ms": 2.468,
+      "p90_ms": 2.528,
+      "p95_ms": 2.564
+    },
+    "3_dense_search_mps": {
+      "p50_ms": 6.431,
+      "p90_ms": 7.436,
+      "p95_ms": 7.879
+    },
+    "4_rrf_fusion": {
+      "p50_ms": 0.02,
+      "p90_ms": 0.026,
+      "p95_ms": 0.03
+    },
+    "5_cross_encoder_rerank": {
+      "p50_ms": 1.075,
+      "p90_ms": 1.143,
+      "p95_ms": 1.31
+    },
+    "6_evidence_graph_dag": {
+      "p50_ms": 0.043,
+      "p90_ms": 0.059,
+      "p95_ms": 0.07
+    },
+    "7_budgeting_prune": {
+      "p50_ms": 0.029,
+      "p90_ms": 0.038,
+      "p95_ms": 0.045
+    },
+    "8_table_arithmetic": {
+      "p50_ms": 0.029,
+      "p90_ms": 0.04,
+      "p95_ms": 0.045
+    },
+    "9_atomic_claim_verifier": {
+      "p50_ms": 0.018,
+      "p90_ms": 0.022,
+      "p95_ms": 0.03
+    },
+    "total_pipeline_no_llm": {
+      "p50_ms": 10.231,
+      "p90_ms": 11.785,
+      "p95_ms": 12.249
+    }
+  }
+}

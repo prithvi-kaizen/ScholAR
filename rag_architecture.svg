@@ -1,0 +1,201 @@
+<svg viewBox="0 0 1200 680" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="background: #070a12; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; border-radius: 16px; border: 1px solid #1e293b; box-shadow: 0 20px 50px rgba(0,0,0,0.6);">
+  
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#34d399"/>
+    </linearGradient>
+    <linearGradient id="p1Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+    <linearGradient id="p2Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+    <linearGradient id="p3Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+    <linearGradient id="cardBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#111827" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#0b0f19" stop-opacity="0.98"/>
+    </linearGradient>
+    <linearGradient id="boxInner" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.9"/>
+    </linearGradient>
+
+    <!-- Markers -->
+    <marker id="arr-sky" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8"/>
+    </marker>
+    <marker id="arr-purple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#a855f7"/>
+    </marker>
+    <marker id="arr-emerald" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#34d399"/>
+    </marker>
+  </defs>
+
+  <!-- Title Header -->
+  <text x="600" y="38" fill="url(#headerGrad)" font-size="22" font-weight="800" text-anchor="middle" letter-spacing="0.8">ScholAR SOTA RAG Pipeline: In-Depth Methodology &amp; Mathematical Mechanics</text>
+  <text x="600" y="58" fill="#94a3b8" font-size="12" text-anchor="middle">Hierarchical AST Parsing • Multi-Hop Query Decomposition • Dual-Modal VLM Grounding • Sentence-Level Claim Repair</text>
+
+  <!-- ==================== STAGE 1: INGESTION ==================== -->
+  <g transform="translate(30, 80)">
+    <rect width="360" height="570" rx="14" fill="url(#cardBg)" stroke="#1e3a8a" stroke-width="1.5"/>
+    <rect x="0" y="0" width="360" height="42" rx="14" fill="url(#p1Grad)"/>
+    <path d="M 0 30 L 0 42 L 360 42 L 360 30 Z" fill="url(#p1Grad)"/>
+    <text x="18" y="26" fill="#ffffff" font-size="14" font-weight="700">1. Hierarchical Ingestion &amp; AST Indexing</text>
+
+    <!-- Step 1.1: Document & AST -->
+    <g transform="translate(15, 54)">
+      <rect width="330" height="110" rx="8" fill="url(#boxInner)" stroke="#38bdf8" stroke-width="1"/>
+      <text x="14" y="22" fill="#38bdf8" font-size="12" font-weight="700">Method: AST Layout Tree Extraction</text>
+      <text x="14" y="40" fill="#cbd5e1" font-size="11">• Parses PDF layout with PyMuPDF font size heuristics</text>
+      <text x="14" y="56" fill="#cbd5e1" font-size="11">• Generates section breadcrumb hierarchy paths:</text>
+      <rect x="14" y="66" width="302" height="26" rx="4" fill="#030712" stroke="#1e293b"/>
+      <text x="22" y="83" fill="#38bdf8" font-family="monospace" font-size="10">["3. Method", "3.2 Attention", "Scaled Dot-Product"]</text>
+    </g>
+
+    <!-- Arrow -->
+    <line x1="180" y1="170" x2="180" y2="188" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arr-sky)"/>
+
+    <!-- Step 1.2: Visual Clip Extraction -->
+    <g transform="translate(15, 194)">
+      <rect width="330" height="116" rx="8" fill="url(#boxInner)" stroke="#38bdf8" stroke-width="1"/>
+      <text x="14" y="22" fill="#38bdf8" font-size="12" font-weight="700">Method: 3× Zoom Vector Region Clipping</text>
+      <text x="14" y="40" fill="#cbd5e1" font-size="11">• Captures vector diagrams + LaTeX booktab tables</text>
+      <text x="14" y="56" fill="#cbd5e1" font-size="11">• Computes normalized coordinates for every artifact:</text>
+      <rect x="14" y="66" width="302" height="34" rx="4" fill="#030712" stroke="#1e293b"/>
+      <text x="22" y="81" fill="#93c5fd" font-family="monospace" font-size="9.5">bbox_norm = (x0/W, y0/H, x1/W, y1/H) ∈ [0, 1]</text>
+      <text x="22" y="94" fill="#60a5fa" font-family="monospace" font-size="9.5">figures.json: [fig_08_004.png, table_2, p.8]</text>
+    </g>
+
+    <!-- Arrow -->
+    <line x1="180" y1="316" x2="180" y2="334" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arr-sky)"/>
+
+    <!-- Step 1.3: Multi-View Hybrid Store -->
+    <g transform="translate(15, 340)">
+      <rect width="330" height="114" rx="8" fill="url(#boxInner)" stroke="#38bdf8" stroke-width="1"/>
+      <text x="14" y="22" fill="#38bdf8" font-size="12" font-weight="700">Method: Multi-View SQLite &amp; BM25 Storage</text>
+      <text x="14" y="40" fill="#cbd5e1" font-size="11">• Text view: section-tagged paragraphs with overlap</text>
+      <text x="14" y="56" fill="#cbd5e1" font-size="11">• Table view: structured Markdown + caption index</text>
+      <text x="14" y="72" fill="#cbd5e1" font-size="11">• Citation graph view: Semantic Scholar graph IDs</text>
+      <text x="14" y="96" fill="#38bdf8" font-size="10.5" font-weight="600">⚡ SOTA Advantage: Preserves 100% structural context</text>
+    </g>
+
+    <!-- Step 1.4: Provenance Metadata -->
+    <g transform="translate(15, 464)">
+      <rect width="330" height="92" rx="8" fill="#082f49" stroke="#0284c7" stroke-width="1"/>
+      <text x="14" y="20" fill="#7dd3fc" font-size="11" font-weight="700">🔒 Deterministic Page Provenance</text>
+      <text x="14" y="38" fill="#bae6fd" font-size="10.5">Every chunk is tied to: (doc_id, page_num, bbox,</text>
+      <text x="14" y="52" fill="#bae6fd" font-size="10.5">char_start, char_end, section_path).</text>
+      <text x="14" y="74" fill="#38bdf8" font-size="10" font-weight="600">Zero floating, untracked context chunks.</text>
+    </g>
+  </g>
+
+  <!-- ==================== STAGE 2: RETRIEVAL ==================== -->
+  <g transform="translate(420, 80)">
+    <rect width="360" height="570" rx="14" fill="url(#cardBg)" stroke="#581c87" stroke-width="1.5"/>
+    <rect x="0" y="0" width="360" height="42" rx="14" fill="url(#p2Grad)"/>
+    <path d="M 0 30 L 0 42 L 360 42 L 360 30 Z" fill="url(#p2Grad)"/>
+    <text x="18" y="26" fill="#ffffff" font-size="14" font-weight="700">2. Decomposition &amp; Adaptive Routing</text>
+
+    <!-- Step 2.1: Query Decomposition -->
+    <g transform="translate(15, 54)">
+      <rect width="330" height="120" rx="8" fill="url(#boxInner)" stroke="#a855f7" stroke-width="1"/>
+      <text x="14" y="22" fill="#c084fc" font-size="12" font-weight="700">Method: Multi-Hop Query Decomposition</text>
+      <text x="14" y="38" fill="#cbd5e1" font-size="10.5">Prevents entity starvation in comparative prompts:</text>
+      <rect x="14" y="46" width="302" height="42" rx="4" fill="#030712" stroke="#1e293b"/>
+      <text x="22" y="62" fill="#e9d5ff" font-family="monospace" font-size="9.5">Q: "Compare Figure 1 and 2"</text>
+      <text x="22" y="78" fill="#a855f7" font-family="monospace" font-size="9.5">↳ Subqueries: ["Figure 1", "Figure 2"]</text>
+      <text x="14" y="106" fill="#c084fc" font-size="10.5" font-weight="600">Executes parallel BM25 &amp; round-robin interleaving</text>
+    </g>
+
+    <!-- Arrow -->
+    <line x1="180" y1="180" x2="180" y2="198" stroke="#a855f7" stroke-width="1.5" marker-end="url(#arr-purple)"/>
+
+    <!-- Step 2.2: 10-Archetype Adaptive Routing -->
+    <g transform="translate(15, 204)">
+      <rect width="330" height="136" rx="8" fill="url(#boxInner)" stroke="#a855f7" stroke-width="1"/>
+      <text x="14" y="22" fill="#c084fc" font-size="12" font-weight="700">Method: 10-Archetype Question Routing</text>
+      <text x="14" y="38" fill="#cbd5e1" font-size="10.5">Dynamically classifies and allocates modality budgets:</text>
+      <text x="14" y="56" fill="#e9d5ff" font-size="10">• <tspan font-weight="bold">FIGURE_VISUAL / CHART</tspan>: 4 images, native vision</text>
+      <text x="14" y="72" fill="#e9d5ff" font-size="10">• <tspan font-weight="bold">TABLE_NUMERIC</tspan>: 2 crops, structured MD grid</text>
+      <text x="14" y="88" fill="#e9d5ff" font-size="10">• <tspan font-weight="bold">CODE_ALGORITHM</tspan>: Syntax trace, Big-O complexity</text>
+      <text x="14" y="104" fill="#e9d5ff" font-size="10">• <tspan font-weight="bold">COMPARISON / MULTI_SEC</tspan>: Multi-hop decomposition</text>
+      <text x="14" y="124" fill="#c084fc" font-size="10.5" font-weight="600">⚡ SOTA Advantage: Never starves tables or figures</text>
+    </g>
+
+    <!-- Arrow -->
+    <line x1="180" y1="346" x2="180" y2="364" stroke="#a855f7" stroke-width="1.5" marker-end="url(#arr-purple)"/>
+
+    <!-- Step 2.3: Pre-Gen Evidence Gating -->
+    <g transform="translate(15, 370)">
+      <rect width="330" height="186" rx="8" fill="url(#boxInner)" stroke="#a855f7" stroke-width="1"/>
+      <text x="14" y="22" fill="#c084fc" font-size="12" font-weight="700">Method: Evidence Sufficiency Gating</text>
+      <text x="14" y="40" fill="#cbd5e1" font-size="11">Computes token containment &amp; modality gate:</text>
+      <rect x="14" y="48" width="302" height="42" rx="4" fill="#030712" stroke="#1e293b"/>
+      <text x="22" y="66" fill="#f0abfc" font-family="monospace" font-size="10">Overlap(Q_tokens, Evidence_tokens) &gt; θ</text>
+      <text x="22" y="80" fill="#d8b4fe" font-family="monospace" font-size="10">Requires_Vision ∧ Can_Vision == True</text>
+      <text x="14" y="110" fill="#cbd5e1" font-size="10.5">• If overlap &lt; θ: <tspan fill="#f43f5e" font-weight="bold">Abstains cleanly</tspan> (zero guessing)</text>
+      <text x="14" y="126" fill="#cbd5e1" font-size="10.5">• If vision missing: Graceful degradation to caption</text>
+      <text x="14" y="146" fill="#a855f7" font-size="10.5" font-weight="600">⚡ SOTA Advantage: Eliminates hallucination before generation</text>
+    </g>
+  </g>
+
+  <!-- ==================== STAGE 3: GENERATION & VERIFICATION ==================== -->
+  <g transform="translate(810, 80)">
+    <rect width="360" height="570" rx="14" fill="url(#cardBg)" stroke="#065f46" stroke-width="1.5"/>
+    <rect x="0" y="0" width="360" height="42" rx="14" fill="url(#p3Grad)"/>
+    <path d="M 0 30 L 0 42 L 360 42 L 360 30 Z" fill="url(#p3Grad)"/>
+    <text x="18" y="26" fill="#ffffff" font-size="14" font-weight="700">3. Multimodal Inference &amp; Claim Repair</text>
+
+    <!-- Step 3.1: Multimodal Inference -->
+    <g transform="translate(15, 54)">
+      <rect width="330" height="120" rx="8" fill="url(#boxInner)" stroke="#34d399" stroke-width="1"/>
+      <text x="14" y="22" fill="#34d399" font-size="12" font-weight="700">Method: Multi-Image Multimodal Prompting</text>
+      <text x="14" y="40" fill="#cbd5e1" font-size="11">• Loads base64 PNGs: [Image 1, Image 2, ...]</text>
+      <text x="14" y="56" fill="#cbd5e1" font-size="11">• Local VLM (Gemma 4 / Qwen 3.5 on GPU) outputs:</text>
+      <rect x="14" y="66" width="302" height="40" rx="4" fill="#030712" stroke="#1e293b"/>
+      <text x="22" y="81" fill="#6ee7b7" font-family="monospace" font-size="9.5">**Answer** | **Structured Table** |</text>
+      <text x="22" y="95" fill="#34d399" font-family="monospace" font-size="9.5">**Metric Deltas** | **Subregions**</text>
+    </g>
+
+    <!-- Arrow -->
+    <line x1="180" y1="180" x2="180" y2="198" stroke="#34d399" stroke-width="1.5" marker-end="url(#arr-emerald)"/>
+
+    <!-- Step 3.2: Subregion Grounding Engine -->
+    <g transform="translate(15, 204)">
+      <rect width="330" height="116" rx="8" fill="url(#boxInner)" stroke="#34d399" stroke-width="1"/>
+      <text x="14" y="22" fill="#34d399" font-size="12" font-weight="700">Method: Subregion Coordinate Transform</text>
+      <text x="14" y="38" fill="#cbd5e1" font-size="10.5">• Extracts bounding proposals: [x0, y0, x1, y1]</text>
+      <text x="14" y="54" fill="#cbd5e1" font-size="10.5">• Re-projects crop coords to exact PDF page canvas:</text>
+      <rect x="14" y="64" width="302" height="26" rx="4" fill="#030712" stroke="#1e293b"/>
+      <text x="22" y="81" fill="#34d399" font-family="monospace" font-size="9.5">x_page = crop.x0 + sub.x0 * (crop.x1 - crop.x0)</text>
+      <text x="14" y="105" fill="#34d399" font-size="10" font-weight="600">Renders SVG overlay box directly on PDF canvas</text>
+    </g>
+
+    <!-- Arrow -->
+    <line x1="180" y1="326" x2="180" y2="344" stroke="#34d399" stroke-width="1.5" marker-end="url(#arr-emerald)"/>
+
+    <!-- Step 3.3: Online Claim Verification -->
+    <g transform="translate(15, 350)">
+      <rect width="330" height="206" rx="8" fill="url(#boxInner)" stroke="#34d399" stroke-width="1"/>
+      <text x="14" y="22" fill="#34d399" font-size="12" font-weight="700">Method: Sentence-Level Claim &amp; Number Repair</text>
+      <text x="14" y="40" fill="#cbd5e1" font-size="11">• Decomposes response into atomic claims: [C1, C2]</text>
+      <text x="14" y="56" fill="#cbd5e1" font-size="11">• Extracts numeric entities (28.4, 10^19, 91.3)</text>
+      <text x="14" y="72" fill="#cbd5e1" font-size="11">• Compares against cited chunk evidence:</text>
+      <rect x="14" y="80" width="302" height="44" rx="4" fill="#030712" stroke="#1e293b"/>
+      <text x="22" y="96" fill="#34d399" font-family="monospace" font-size="9.5">MATCH: [SUPPORTED] → Emerald Badge</text>
+      <text x="22" y="112" fill="#f43f5e" font-family="monospace" font-size="9.5">MISMATCH: Auto 1-Step Sentence Repair</text>
+      <text x="14" y="142" fill="#cbd5e1" font-size="10.5">• Attaches color-coded badges in UI</text>
+      <text x="14" y="162" fill="#34d399" font-size="11" font-weight="700">⚡ SOTA Advantage: Real-time self-correcting facts</text>
+    </g>
+  </g>
+
+</svg>

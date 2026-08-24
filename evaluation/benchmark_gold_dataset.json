@@ -1,0 +1,327 @@
+{
+  "benchmark_version": "1.0-eacl2027-gold",
+  "created_at": "2026-08-24T16:45:00Z",
+  "description": "Stratified Multi-Level Reasoning Gold Benchmark across L1-L5 with ground truth evidence attribution and abstention targets.",
+  "items": [
+    {
+      "id": "gold_attn_001_l1",
+      "paper_id": "1706.03762",
+      "paper_title": "Attention Is All You Need",
+      "level": "L1",
+      "answerable": true,
+      "question": "What is the dimensionality of the hidden states d_model in the Transformer base model?",
+      "required_modalities": ["text"],
+      "gold_sections": ["3.1 Encoder and Decoder Stacks"],
+      "gold_evidence_quotes": [
+        "In the base model we use d_model = 512."
+      ],
+      "reasoning_roles": ["direct_lookup"],
+      "gold_answer": "In the base model, the dimensionality of the hidden states is d_model = 512."
+    },
+    {
+      "id": "gold_attn_002_l1",
+      "paper_id": "1706.03762",
+      "paper_title": "Attention Is All You Need",
+      "level": "L1",
+      "answerable": true,
+      "question": "How many heads h are used in the multi-head attention mechanism for the base model?",
+      "required_modalities": ["text"],
+      "gold_sections": ["3.2.2 Multi-Head Attention"],
+      "gold_evidence_quotes": [
+        "In this work we employ h = 8 parallel attention layers, or heads."
+      ],
+      "reasoning_roles": ["direct_lookup"],
+      "gold_answer": "The base model employs h = 8 parallel attention heads."
+    },
+    {
+      "id": "gold_adam_001_l1",
+      "paper_id": "1412.6980",
+      "paper_title": "Adam: A Method for Stochastic Optimization",
+      "level": "L1",
+      "answerable": true,
+      "question": "What default value is recommended for beta_1 in Adam?",
+      "required_modalities": ["text"],
+      "gold_sections": ["1 Introduction", "2 Algorithm"],
+      "gold_evidence_quotes": [
+        "Good default settings for the tested machine learning problems are alpha = 0.001, beta1 = 0.9, beta2 = 0.999 and epsilon = 10^-8."
+      ],
+      "reasoning_roles": ["direct_lookup"],
+      "gold_answer": "The recommended default setting for beta_1 is 0.9."
+    },
+    {
+      "id": "gold_gan_001_l1",
+      "paper_id": "1406.2661",
+      "paper_title": "Generative Adversarial Nets",
+      "level": "L1",
+      "answerable": true,
+      "question": "What activation function was used in the generator output layer for the MNIST dataset?",
+      "required_modalities": ["text"],
+      "gold_sections": ["4 Experiments"],
+      "gold_evidence_quotes": [
+        "The generator nets used a mixture of rectified linear activations and sigmoid activations."
+      ],
+      "reasoning_roles": ["direct_lookup"],
+      "gold_answer": "The generator nets used a mixture of rectified linear activations and sigmoid activations."
+    },
+    {
+      "id": "gold_ldm_001_l1",
+      "paper_id": "2112.10752",
+      "paper_title": "High-Resolution Image Synthesis with Latent Diffusion Models",
+      "level": "L1",
+      "answerable": true,
+      "question": "What downsampling factor f is predominantly explored for latent diffusion models?",
+      "required_modalities": ["text"],
+      "gold_sections": ["4 Experiments"],
+      "gold_evidence_quotes": [
+        "We denote models with downsampling factor f in {1, 2, 4, 8, 16, 32} (e.g. LDM-4, LDM-8)."
+      ],
+      "reasoning_roles": ["direct_lookup"],
+      "gold_answer": "Downsampling factors f in {1, 2, 4, 8, 16, 32} are explored, notably LDM-4 and LDM-8."
+    },
+    {
+      "id": "gold_attn_003_l2",
+      "paper_id": "1706.03762",
+      "paper_title": "Attention Is All You Need",
+      "level": "L2",
+      "answerable": true,
+      "question": "Why did the authors choose Scaled Dot-Product Attention over additive attention within the attention formulation?",
+      "required_modalities": ["text"],
+      "gold_sections": ["3.2.1 Scaled Dot-Product Attention"],
+      "gold_evidence_quotes": [
+        "While the two are similar in theoretical complexity, dot-product attention is much faster and more space-efficient in practice, since it can be implemented using highly optimized matrix multiplication code.",
+        "We suspect that for large values of d_k, the dot products grow large in magnitude, pushing the softmax function into regions where it has extremely small gradients. To counteract this effect, we scale the dot products by 1/sqrt(d_k)."
+      ],
+      "reasoning_roles": ["mechanism_justification", "computational_tradeoff"],
+      "gold_answer": "Dot-product attention is faster and more space-efficient in practice due to optimized matrix multiplication; scaling by 1/sqrt(d_k) prevents large dot products from pushing softmax into vanishing gradient regions."
+    },
+    {
+      "id": "gold_adam_002_l2",
+      "paper_id": "1412.6980",
+      "paper_title": "Adam: A Method for Stochastic Optimization",
+      "level": "L2",
+      "answerable": true,
+      "question": "Why are initialization bias corrections applied to the first and second moment estimates in Adam?",
+      "required_modalities": ["text"],
+      "gold_sections": ["2 Algorithm", "3 Initialization Bias Correction"],
+      "gold_evidence_quotes": [
+        "These vectors are initialized as vectors of 0's, leading to moment estimates that are biased towards zero, especially during the initial timesteps.",
+        "We derive the term (1 - beta^t) to counteract this bias."
+      ],
+      "reasoning_roles": ["derivation_rationale", "mathematical_proof"],
+      "gold_answer": "Because the moving averages are initialized to zero, they are biased toward zero in early steps; dividing by (1 - beta^t) yields unbiased estimators."
+    },
+    {
+      "id": "gold_gan_002_l2",
+      "paper_id": "1406.2661",
+      "paper_title": "Generative Adversarial Nets",
+      "level": "L2",
+      "answerable": true,
+      "question": "Why does the generator maximize log D(G(z)) rather than minimizing log(1 - D(G(z))) early in training?",
+      "required_modalities": ["text"],
+      "gold_sections": ["3 Adversarial Nets"],
+      "gold_evidence_quotes": [
+        "Early in learning, when G is poor, D can reject samples with high confidence because they are clearly different from the training data. In this case, log(1 - D(G(z))) saturates.",
+        "Rather than training G to minimize log(1 - D(G(z))) we can train G to maximize log D(G(z)). This objective function provides much stronger gradients early in learning."
+      ],
+      "reasoning_roles": ["optimization_rationale", "gradient_dynamics"],
+      "gold_answer": "Early in learning when G is poor, log(1 - D(G(z))) saturates and causes vanishing gradients; maximizing log D(G(z)) provides much stronger gradients."
+    },
+    {
+      "id": "gold_attn_004_l3",
+      "paper_id": "1706.03762",
+      "paper_title": "Attention Is All You Need",
+      "level": "L3",
+      "answerable": true,
+      "question": "How do the training hyperparameters in Section 5 support the convergence and learning rate schedule defined in Section 5.3?",
+      "required_modalities": ["text"],
+      "gold_sections": ["5.2 Hardware and Schedule", "5.3 Optimizer", "5.4 Regularization"],
+      "gold_evidence_quotes": [
+        "We trained on one machine with 8 NVIDIA P100 GPUs.",
+        "We used the Adam optimizer with beta_1 = 0.9, beta_2 = 0.98 and epsilon = 10^-9. We varied the learning rate over the course of training, according to the formula with warmup_steps = 4000."
+      ],
+      "reasoning_roles": ["training_configuration", "schedule_adaptation"],
+      "gold_answer": "The authors trained on 8 P100 GPUs with Adam (beta_1=0.9, beta_2=0.98) and a learning rate schedule that increases linearly for 4,000 warmup steps then decays proportionally to inverse square root of step number."
+    },
+    {
+      "id": "gold_ldm_002_l3",
+      "paper_id": "2112.10752",
+      "paper_title": "High-Resolution Image Synthesis with Latent Diffusion Models",
+      "level": "L3",
+      "answerable": true,
+      "question": "How does the perceptual compression training in Section 3 connect to the generative modeling stage in Section 4?",
+      "required_modalities": ["text"],
+      "gold_sections": ["3 Method: Perceptual Image Compression", "4 Method: Latent Diffusion Models"],
+      "gold_evidence_quotes": [
+        "Our perceptual compression model consists of an autoencoder trained by combination of a perceptual loss and a patch-based adversarial objective.",
+        "By training diffusion models in this lower-dimensional latent space rather than high-dimensional pixel space, we retain perceptual fidelity while dramatically reducing computational complexity."
+      ],
+      "reasoning_roles": ["compression_objective", "latent_space_training"],
+      "gold_answer": "The autoencoder is first trained with perceptual and adversarial loss to establish a perceptually equivalent low-dimensional latent space, enabling diffusion models to focus purely on semantic generation."
+    },
+    {
+      "id": "gold_attn_005_l4",
+      "paper_id": "1706.03762",
+      "paper_title": "Attention Is All You Need",
+      "level": "L4",
+      "answerable": true,
+      "question": "According to Table 2, what was the BLEU score of the Transformer (big) on English-to-German translation and how does it compare to the ConvS2S baseline?",
+      "required_modalities": ["text", "table"],
+      "gold_sections": ["6.2 Machine Translation", "Table 2"],
+      "gold_evidence_quotes": [
+        "Table 2: The Transformer achieves better BLEU scores than previous state-of-the-art models on the English-to-German and English-to-French newstest2014 tests at a fraction of the training cost.",
+        "Transformer (big): 28.4 BLEU (EN-DE). ConvS2S: 25.16 BLEU (EN-DE)."
+      ],
+      "reasoning_roles": ["table_lookup", "quantitative_comparison"],
+      "gold_numeric_plan": {
+        "op": "difference",
+        "val_a": 28.4,
+        "val_b": 25.16,
+        "expected": 3.24,
+        "unit": "BLEU"
+      },
+      "gold_answer": "Transformer (big) achieved 28.4 BLEU on EN-DE, outperforming the ConvS2S baseline (25.16 BLEU) by +3.24 BLEU points."
+    },
+    {
+      "id": "gold_ldm_003_l4",
+      "paper_id": "2112.10752",
+      "paper_title": "High-Resolution Image Synthesis with Latent Diffusion Models",
+      "level": "L4",
+      "answerable": true,
+      "question": "Based on Table 1, which downsampling factor f achieves the lowest FID score on CelebA-HQ 256x256?",
+      "required_modalities": ["table"],
+      "gold_sections": ["4.1 On Perceptual Compression Tradeoffs", "Table 1"],
+      "gold_evidence_quotes": [
+        "Table 1 shows CelebA-HQ 256x256 results across downsampling factors f in {1, 2, 4, 8, 16, 32}.",
+        "LDM-4 achieves FID 5.11 and LDM-8 achieves FID 7.44."
+      ],
+      "reasoning_roles": ["tabular_ranking", "metric_evaluation"],
+      "gold_answer": "LDM-4 achieves the best (lowest) FID score of 5.11 on CelebA-HQ 256x256."
+    },
+    {
+      "id": "gold_attn_006_l5",
+      "paper_id": "1706.03762",
+      "paper_title": "Attention Is All You Need",
+      "level": "L5",
+      "answerable": true,
+      "question": "Why does the Transformer outperform recurrent and convolutional baselines, considering the architectural mechanism in Section 3, the head variations in Table 3, and final BLEU scores in Table 2?",
+      "required_modalities": ["text", "table"],
+      "gold_sections": ["3.2 Multi-Head Attention", "Table 3 Variations on the Transformer", "Table 2"],
+      "gold_evidence_quotes": [
+        "Multi-head attention allows the model to jointly attend to information from different representation subspaces at different positions.",
+        "Table 3 row (A) shows that 8 attention heads achieve 27.3 BLEU, outperforming single head attention (26.3 BLEU by 1.0 point).",
+        "Table 2 shows Transformer (big) reaches 28.4 BLEU, outperforming ConvS2S (25.16 BLEU) and GNMT (24.61 BLEU) while training in 3.5 days on 8 GPUs."
+      ],
+      "reasoning_roles": ["method_definition", "ablation_support", "final_result"],
+      "gold_numeric_plan": {
+        "op": "difference",
+        "val_a": 28.4,
+        "val_b": 25.16,
+        "expected": 3.24
+      },
+      "gold_answer": "The Transformer replaces sequential recurrence with multi-head attention (Section 3.2), enabling parallel position-wise sub-space representations. Table 3 confirms multi-head attention provides a +1.0 BLEU ablation gain over single-head, translating to 28.4 BLEU in Table 2 (+3.24 over ConvS2S) with significantly reduced training FLOPs."
+    },
+    {
+      "id": "gold_gan_003_l5",
+      "paper_id": "1406.2661",
+      "paper_title": "Generative Adversarial Nets",
+      "level": "L5",
+      "answerable": true,
+      "question": "How does the theoretical minimax formulation in Section 3 and Proposition 1 translate to the Parzen window log-likelihood estimates in Table 1?",
+      "required_modalities": ["text", "table"],
+      "gold_sections": ["3 Adversarial Nets", "4 Theoretical Results", "Table 1"],
+      "gold_evidence_quotes": [
+        "Proposition 1: The global minimum of the virtual training criterion C(G) is achieved if and only if p_g = p_data.",
+        "Table 1: Parzen window-based log-likelihood estimates on MNIST (225 +- 2) and TFD (2020 +- 8)."
+      ],
+      "reasoning_roles": ["theoretical_foundation", "empirical_validation"],
+      "gold_answer": "Proposition 1 proves that the minimax game has a unique global optimum where the generative distribution p_g matches p_data exactly (C(G) = -log 4). Table 1 empirically validates this convergence, reporting Gaussian Parzen window log-likelihood of 225 +- 2 on MNIST and 2020 +- 8 on TFD."
+    },
+    {
+      "id": "gold_vllm_001_l4",
+      "paper_id": "2406.08394",
+      "paper_title": "VisionLLM v2: An End-to-End Generalist Multimodal Model",
+      "level": "L4",
+      "answerable": true,
+      "question": "What is the primary role of the query-guided task tokenizer in VisionLLM v2 for visual grounding?",
+      "required_modalities": ["text", "figure"],
+      "gold_sections": ["3 Architecture Overview", "Figure 2"],
+      "gold_evidence_quotes": [
+        "VisionLLM v2 introduces an 'infomediary' called query-guided task tokenizer that bridges multimodal representations and task-specific decoders.",
+        "Figure 2 illustrates how user prompt queries are mapped into task tokens to condition the localization decoder."
+      ],
+      "reasoning_roles": ["architectural_design", "visual_grounding"],
+      "gold_answer": "The query-guided task tokenizer acts as an infomediary mapping multimodal tokens into task-specific representations for downstream decoders."
+    },
+    {
+      "id": "gold_beir_001_l5",
+      "paper_id": "2104.08663",
+      "paper_title": "BEIR: Zero-shot Evaluation of Information Retrieval Models",
+      "level": "L5",
+      "answerable": true,
+      "question": "Why does BM25 maintain competitive zero-shot retrieval performance across heterogeneous datasets in Table 2 compared to in-domain trained dense models?",
+      "required_modalities": ["text", "table"],
+      "gold_sections": ["1 Introduction", "5 Evaluation Results", "Table 2"],
+      "gold_evidence_quotes": [
+        "Dense models trained purely on MS MARCO suffer significant out-of-domain degradation when transferred zero-shot to bio-medical or technical datasets.",
+        "Table 2 shows BM25 outperforms dense retrieval on datasets with specialized terminology (e.g., BioASQ, TREC-COVID) because lexical matching is robust to distribution shifts."
+      ],
+      "reasoning_roles": ["domain_adaptation_analysis", "empirical_benchmark_evidence"],
+      "gold_answer": "Dense models overfit MS MARCO vocabulary and degrade under domain shifts, whereas BM25's exact token matching avoids semantic drift on specialized datasets."
+    },
+    {
+      "id": "gold_pqa_001_l3",
+      "paper_id": "2410.00526",
+      "paper_title": "PaperQA2: Superhuman Scientific Literature Search",
+      "level": "L3",
+      "answerable": true,
+      "question": "How does the evidence extraction agent in PaperQA2 differ from standard flat RAG chunk retrieval?",
+      "required_modalities": ["text"],
+      "gold_sections": ["2 System Design", "3 Agentic Search"],
+      "gold_evidence_quotes": [
+        "Rather than passing raw chunks directly to the generator, PaperQA2 deploys an LLM extraction pass over each candidate chunk to filter irrelevant text and produce clean quotes.",
+        "Section 3 demonstrates that this extraction step increases citation precision and reduces context noise."
+      ],
+      "reasoning_roles": ["retrieval_methodology", "agentic_filtering"],
+      "gold_answer": "PaperQA2 uses an intermediate LLM extraction pass to summarize and extract relevant quotes from each chunk before synthesis, whereas standard RAG passes raw chunks."
+    },
+    {
+      "id": "gold_abstention_001_unans",
+      "paper_id": "1706.03762",
+      "paper_title": "Attention Is All You Need",
+      "level": "L1",
+      "answerable": false,
+      "question": "What is the batch size in tokens used for training the Transformer on the ImageNet dataset?",
+      "required_modalities": ["text"],
+      "gold_sections": [],
+      "gold_evidence_quotes": [],
+      "reasoning_roles": ["abstention_target"],
+      "gold_answer": "The paper does not contain training details or experiments on ImageNet; it evaluates only on WMT 2014 translation and English constituency parsing."
+    },
+    {
+      "id": "gold_abstention_002_unans",
+      "paper_id": "1412.6980",
+      "paper_title": "Adam: A Method for Stochastic Optimization",
+      "level": "L4",
+      "answerable": false,
+      "question": "According to Figure 8, how many training epochs are required for Adam to reach zero loss on ResNet-50?",
+      "required_modalities": ["figure"],
+      "gold_sections": [],
+      "gold_evidence_quotes": [],
+      "reasoning_roles": ["abstention_target"],
+      "gold_answer": "The paper was published in 2014 and contains only Figures 1-4 on logistic regression, multi-layer neural networks, and CNNs on MNIST/CIFAR-10; Figure 8 and ResNet-50 do not exist in this paper."
+    },
+    {
+      "id": "gold_abstention_003_unans",
+      "paper_id": "1406.2661",
+      "paper_title": "Generative Adversarial Nets",
+      "level": "L2",
+      "answerable": false,
+      "question": "What learning rate schedule was used with the Adam optimizer for training GAN generators in Section 4?",
+      "required_modalities": ["text"],
+      "gold_sections": [],
+      "gold_evidence_quotes": [],
+      "reasoning_roles": ["abstention_target"],
+      "gold_answer": "The GAN paper (Goodfellow et al., June 2014) used SGD with momentum and weight decay; the Adam optimizer was not published until December 2014 and is not used in this paper."
+    }
+  ]
+}

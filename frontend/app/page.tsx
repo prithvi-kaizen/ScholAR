@@ -126,6 +126,119 @@ const editorPicks: Paper[] = [
   }
 ];
 
+const testingPapers: Paper[] = [
+  {
+    id: "1406.2661",
+    title: "Generative Adversarial Nets (GAN)",
+    authors: ["Ian J. Goodfellow", "Jean Pouget-Abadie", "Mehdi Mirza", "Yoshua Bengio"],
+    year: "2014",
+    summary:
+      "A new framework for estimating generative models via an adversarial minimax game between generator G and discriminator D.",
+    categories: ["cs.LG", "stat.ML"],
+    pdf_url: "https://arxiv.org/pdf/1406.2661",
+    abs_url: "https://arxiv.org/abs/1406.2661"
+  },
+  {
+    id: "1412.6980",
+    title: "Adam: A Method for Stochastic Optimization",
+    authors: ["Diederik P. Kingma", "Jimmy Ba"],
+    year: "2014",
+    summary:
+      "A method for first-order gradient-based optimization of stochastic objective functions, based on adaptive estimates of lower-order moments.",
+    categories: ["cs.LG"],
+    pdf_url: "https://arxiv.org/pdf/1412.6980",
+    abs_url: "https://arxiv.org/abs/1412.6980"
+  },
+  {
+    id: "2112.10752",
+    title: "High-Resolution Image Synthesis with Latent Diffusion Models (Stable Diffusion)",
+    authors: ["Robin Rombach", "Andreas Blattmann", "Dominik Lorenz", "Patrick Esser", "Björn Ommer"],
+    year: "2021",
+    summary:
+      "By decomposing the image formation process into denoising autoencoders in latent space, diffusion models achieve state-of-the-art synthesis with lower compute.",
+    categories: ["cs.CV", "cs.LG"],
+    pdf_url: "https://arxiv.org/pdf/2112.10752",
+    abs_url: "https://arxiv.org/abs/2112.10752"
+  },
+  {
+    id: "1706.03762",
+    title: "Attention Is All You Need (Transformer)",
+    authors: ["Ashish Vaswani", "Noam Shazeer", "Niki Parmar", "Jakob Uszkoreit", "Llion Jones"],
+    year: "2017",
+    summary:
+      "The dominant sequence transduction models are replaced by the Transformer, relying entirely on self-attention mechanisms to draw global dependencies.",
+    categories: ["cs.CL", "cs.LG"],
+    pdf_url: "https://arxiv.org/pdf/1706.03762",
+    abs_url: "https://arxiv.org/abs/1706.03762"
+  },
+  {
+    id: "2406.08394",
+    title: "VisionLLM v2: An End-to-End Generalist Multimodal Large Language Model",
+    authors: ["Jiannan Wu", "Zheng Ma", "Zhenyu Yang", "Lei Zhang"],
+    year: "2024",
+    summary:
+      "An end-to-end generalist multimodal large language model unifying visual perception, understanding, and generation with interactive visual anchor tokens.",
+    categories: ["cs.CV", "cs.AI"],
+    pdf_url: "https://arxiv.org/pdf/2406.08394",
+    abs_url: "https://arxiv.org/abs/2406.08394"
+  },
+  {
+    id: "2104.08663",
+    title: "BEIR: A Heterogeneous Benchmark for Zero-shot Evaluation of Information Retrieval Models",
+    authors: ["Nandan Thakur", "Nils Reimers", "Andreas Rücklé", "Iryna Gurevych"],
+    year: "2021",
+    summary:
+      "A heterogeneous benchmark containing 18 diverse datasets across 9 retrieval tasks to evaluate zero-shot generalization of search models.",
+    categories: ["cs.IR", "cs.CL"],
+    pdf_url: "https://arxiv.org/pdf/2104.08663",
+    abs_url: "https://arxiv.org/abs/2104.08663"
+  },
+  {
+    id: "2603.14257",
+    title: "Automatic Inter-document Multi-hop Scientific QA Generation",
+    authors: ["Seungmin Lee", "Dongha Kim", "Yuni Jeon", "Min Song"],
+    year: "2026",
+    summary:
+      "An automated framework to generate multi-document, multi-hop scientific QA datasets leveraging LLMs and cross-document citation embedding alignment.",
+    categories: ["cs.CL", "cs.AI"],
+    pdf_url: "https://arxiv.org/pdf/2603.14257",
+    abs_url: "https://arxiv.org/abs/2603.14257"
+  },
+  {
+    id: "2025.emnlp-main.77",
+    title: "MEBench: Benchmarking Large Language Models for Cross-Document Multi-Entity Question Answering",
+    authors: ["Yao Zhang", "Sheng Shen", "Dan Roth", "Heng Ji"],
+    year: "2025",
+    summary:
+      "A benchmark evaluating LLMs on cross-document multi-entity question answering across comparative, statistical, and relational reasoning tasks.",
+    categories: ["cs.CL", "cs.AI"],
+    pdf_url: "https://aclanthology.org/2025.emnlp-main.77.pdf",
+    abs_url: "https://aclanthology.org/2025.emnlp-main.77"
+  },
+  {
+    id: "yale_thesis_1003",
+    title: "Towards Multi-Modal Multi-Document Understanding Capabilities in Foundation Models (M3SciQA)",
+    authors: ["Chuhan Li", "Alexander R. Fabbri", "Arman Cohan"],
+    year: "2024",
+    summary:
+      "Explores multi-modal scientific representation, cross-document reasoning, and the M3SciQA benchmark with SPACECUE visual prompting for foundation models.",
+    categories: ["cs.CV", "cs.CL"],
+    pdf_url: "https://arxiv.org/pdf/2406.03716",
+    abs_url: "https://arxiv.org/abs/2406.03716"
+  },
+  {
+    id: "2410.00526",
+    title: "Conversational QA in Multi-instructional Documents",
+    authors: ["Yixuan Su", "Kexin Wang", "Zuchao Li", "Linfeng Song"],
+    year: "2024",
+    summary:
+      "Formulates and benchmarks conversational question answering across multi-instructional documents with dialogue state tracking.",
+    categories: ["cs.CL", "cs.AI"],
+    pdf_url: "https://arxiv.org/pdf/2410.00526",
+    abs_url: "https://arxiv.org/abs/2410.00526"
+  }
+];
+
 function readPapers(key: string): Paper[] {
   try {
     const stored = window.localStorage.getItem(key);
@@ -168,6 +281,7 @@ export default function HomePage() {
 
   const visiblePapers = useMemo(() => {
     if (searched) return papers;
+    if (activeTab === "Testing") return testingPapers;
     if (activeTab === "Popular") return [...editorPicks].reverse();
     if (activeTab === "New") return [...editorPicks].sort((a, b) => Number(b.year) - Number(a.year));
     return editorPicks;
@@ -286,15 +400,15 @@ export default function HomePage() {
 
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex rounded-lg border border-line bg-panel p-1">
-            {["Editor's Picks", "Popular", "New"].map((tab) => (
+            {["Editor's Picks", "Popular", "New", "Testing"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => {
                   setActiveTab(tab);
-                  if (!searched) setPapers(editorPicks);
+                  setSearched(false);
                 }}
                 className={`rounded-md px-4 py-2 text-sm transition ${
-                  activeTab === tab && !searched ? "bg-white text-black" : "text-zinc-400 hover:text-white"
+                  activeTab === tab && !searched ? "bg-white text-black font-medium" : "text-zinc-400 hover:text-white"
                 }`}
               >
                 {tab}

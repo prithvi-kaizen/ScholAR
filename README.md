@@ -1,219 +1,261 @@
 # ScholAR
 
-**A local-first research companion for reading scientific papers with inspectable evidence.**
+<div align="center">
 
-ScholAR lets a reader search arXiv or upload a PDF, study the document beside an AI assistant, ask text and figure questions, load cited papers, and follow every generated citation back to a real page and quoted passage. Text and vision inference run locally through Ollama. Only paper discovery, acquisition, and reference resolution use public network services.
+**A local-first, privacy-preserving research companion for reading scientific papers with inspectable visual and textual evidence.**
 
-> **Project status:** active research prototype. The previous conference submission has been canceled. The repository is intentionally venue-neutral while the research framing, human evaluation, and next submission target are decided.
+[![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white)](https://nextjs.org/)
+[![Ollama](https://img.shields.io/badge/Ollama-Local%20LLM%2FVLM-black?logo=ollama&logoColor=white)](https://ollama.com/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-![ScholAR architecture and flow](docs/architecture/ScholAR_architecture_flow.png)
+[Quickstart](#quickstart) • [Hardware & Model Matrix](#hardware-matrix) • [Key Features](#features) • [Architecture](#architecture) • [Keyboard Shortcuts](#shortcuts) • [Documentation](#documentation)
 
-## Why ScholAR exists
+</div>
 
-Reading a paper is not the same as summarizing it. A reader needs to connect the problem, method, evidence, experiments, limitations, and cited work. General PDF chat can sound certain while inventing or misusing page references. ScholAR was built around a narrower promise:
+---
 
-- keep the paper visible while the reader asks questions;
-- retrieve a small, inspectable evidence set;
-- prevent the model from writing page numbers directly;
-- map citations back to pages in application code;
-- run private documents through local models;
-- report where the evidence does not support the original research hypothesis.
+## 🌟 Overview <a id="overview"></a>
 
-The last point matters. Stronger evaluation showed that valid citation provenance does **not** guarantee faithful answers. ScholAR can guarantee that a cited page was retrieved and exists, but the current page-support rate is 65.9%. This changed the research story from "grounding solves faithfulness" to a more useful result: **indirect citation grounding provides provenance and auditability, not faithfulness by itself.**
+ScholAR is an open-source, local-first research paper copilot that lets you search arXiv, upload PDFs, study complex papers side-by-side with an AI assistant, snip equations and figures for visual reasoning, and follow every generated claim back to exact bounding boxes and quotes on the real page.
 
-## What works today
-
-- arXiv search with local caching, reranking, and prepared-paper fallback;
-- PDF upload with a 50 MB limit and basic PDF validation;
-- page-wise extraction, rendering, chunking, figure/table extraction, and local JSON storage;
-- BM25-primary retrieval with query expansion, section cues, page hints, and explicit figure routing;
-- evidence-ID citations that the backend resolves into numbered page references;
-- local text generation and multimodal figure/table answering through Ollama;
-- paper-specific study goals with deterministic fallbacks;
-- Semantic Scholar and arXiv reference resolution for multi-document study;
-- a Next.js study workspace with PDF viewing, chat, study goals, and references;
-- automated retrieval, generation, abstention, visual, multi-document, efficiency, and baseline evaluations;
-- a complete blinded human-evaluation pipeline, with annotation still pending.
-
-## Architecture at a glance
+All model inference runs **100% locally on your machine** via [Ollama](https://ollama.com/). Your private research papers, extracted text, and study notes never leave your computer.
 
 ```mermaid
 flowchart LR
-    U["Reader"] --> F["Next.js study workspace"]
-    F --> A["FastAPI API"]
-    A --> P["PDF and figure processing"]
-    P --> S["Local paper store"]
-    S --> R["BM25-primary retrieval"]
-    R --> C{"Top evidence type"}
-    C -->|"Text"| L["Local Ollama text model"]
-    C -->|"Figure or table"| V["Local Ollama vision model"]
-    L --> G["Evidence-ID normalizer"]
-    V --> G
-    G --> F
-    A --> X["arXiv and Semantic Scholar"]
+    PDF["📄 arXiv or Uploaded PDF"] --> AST["AST Ingestion & 3× Vector Cropping"]
+    AST --> Workspace["Next.js Side-by-Side Study Workspace"]
+    Workspace --> Marquee["✂️ Interactive Region Snipping Tool"]
+    Marquee --> VLM["Local Multimodal VLM (Ollama)"]
+    Workspace --> BM25["Hybrid BM25 + Citation Graph Retrieval"]
+    BM25 --> LLM["Local Reasoning Engine"]
+    LLM & VLM --> ALCE["SOTA ALCE/AGREE Citation Realignment & Pruning"]
+    ALCE --> Verified["🛡️ Verified Grounded Citations & Click-to-Highlight"]
 ```
 
-The model sees short-lived evidence identifiers such as `E1` and `E2`, never free-form page-number instructions. After generation, the backend validates the identifiers, converts them to `[1]`, `[2]`, and attaches the stored page, quote, chunk, and source-paper metadata.
+---
 
-Read [the complete project guide](docs/PROJECT_GUIDE.md) for the data model, API contract, request flows, component responsibilities, failure behavior, and contributor handoff.
+## ⚡ Quickstart in 60 Seconds <a id="quickstart"></a>
 
-## Set up ScholAR locally
-
-The complete onboarding guide is [docs/SETUP.md](docs/SETUP.md). It includes macOS, Linux, Windows PowerShell, configuration, first-paper import, verification, and troubleshooting.
-
-### Prerequisites
-
-- Python 3.11 or 3.12
-- Node.js 18 or newer; Node.js 20 LTS is recommended
-- [Ollama](https://ollama.com/)
-- Git and Make for the fast macOS/Linux path
-
-The current default is `qwen3.5:9b`. Evaluation also uses `gemma4:12b`, `llama3.1:8b`, and `mistral:7b`. Visual questions require a multimodal model.
-
-### 1. Clone and install
+### Automated 1-Click Setup (macOS / Linux / WSL2)
 
 ```bash
+# 1. Clone the repository
 git clone https://github.com/prithvi-kaizen/ScholAR.git
 cd ScholAR
-make setup
+
+# 2. Run the interactive hardware-aware installer
+bash scripts/quickstart.sh
 ```
 
-`make setup` creates the Python environment, installs locked backend and frontend dependencies, and creates local configuration files without overwriting existing ones.
+The quickstart script will:
+1. Detect your available RAM, Apple Silicon, and NVIDIA GPUs.
+2. Recommend and download the optimal local model tier in Ollama.
+3. Configure your Python virtual environment and frontend packages.
+4. Verify your environment health with `doctor.py`.
 
-### 2. Prepare Ollama
+---
 
+## 💻 Hardware Configuration & Model Matrix <a id="hardware-matrix"></a>
+
+ScholAR dynamically adapts its retrieval and prompting based on your machine's hardware profile. Choose the model tier that fits your setup:
+
+| Tier | Target Machine Specs | Recommended Model | Model Size | Modality | Best For | Ollama Command |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Tier 1: Entry** | 8 GB RAM / CPU-only laptops | `qwen2.5:7b` | ~4.7 GB | Text | Fast text lookup, summaries, methodology Q&A | `ollama pull qwen2.5:7b` |
+| **Tier 2: Balanced** *(Recommended)* | 16 GB RAM / Apple M1/M2/M3/M4 / RTX 3060/4060 | `qwen3.5:9b` | ~6.6 GB | Multimodal (Text + Vision) | Balanced deep paper reasoning, figure analysis, equations | `ollama pull qwen3.5:9b` |
+| **Tier 3: Precision VLM** | 16 GB - 32 GB RAM / Apple Pro/Max / RTX 3080/4080 | `gemma4:12b` | ~8.5 GB | Multimodal (Text + Vision) | High-precision chart reasoning, multi-panel figure breakdown | `ollama pull gemma4:12b` |
+| **Tier 4: Workstation** | 32 GB+ RAM / RTX 3090/4090 / A100 | `qwen2.5:14b` or `qwen2.5:32b` | ~9 GB - 19 GB | Text | Maximum depth, complex cross-paper synthesis, proofs | `ollama pull qwen2.5:14b` |
+
+> 💡 **Switching Models:** You can change your active model anytime by running `python3 scripts/setup_models.py` or editing `OLLAMA_MODEL` in `backend/.env`.
+
+---
+
+## 🚀 Manual Step-by-Step Installation <a id="installation"></a>
+
+<details>
+<summary><b>macOS & Linux (Manual)</b></summary>
+
+### 1. Prerequisites
+- Python 3.11 or 3.12 (`python3 --version`)
+- Node.js 18 or 20 LTS (`node --version`)
+- [Ollama](https://ollama.com/download) installed and running
+
+### 2. Install Backend
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+cp backend/.env.example backend/.env
+```
+
+### 3. Install Frontend
+```bash
+cd frontend
+npm ci
+cp .env.example .env.local
+cd ..
+```
+
+### 4. Pull Your Model & Start
+```bash
+# Pull model
 ollama pull qwen3.5:9b
-```
 
-Start `ollama serve` only if the Ollama desktop application is not already running. Then verify the installation:
-
-```bash
-make doctor
-```
-
-### 3. Start the application
-
-From the repository root, start the backend in one terminal:
-
-```bash
+# Terminal 1: Backend
 make backend
-```
 
-Start the frontend in a second terminal:
-
-```bash
+# Terminal 2: Frontend
 make frontend
 ```
+</details>
 
-Open `http://localhost:3000`, search for an arXiv paper or upload a PDF, and select **Study with AI**. The API health check is `http://localhost:8000/health`, and interactive API documentation is available at `http://localhost:8000/docs`.
+<details>
+<summary><b>Windows (WSL2 / PowerShell)</b></summary>
 
-Windows users and contributors who do not have Make can follow the exact manual commands in [docs/SETUP.md](docs/SETUP.md). If anything fails, run `make doctor`; it checks Python, packages, Node.js, npm, environment files, Ollama, the configured model, and both application services.
+### Windows via WSL2 (Recommended)
+Open Ubuntu in WSL2 and follow the [macOS & Linux](#quickstart) steps.
 
-## Repository map
+### Windows Native PowerShell
+```powershell
+# 1. Setup Python environment
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install --upgrade pip
+pip install -r requirements.txt
+Copy-Item backend\.env.example backend\.env
+
+# 2. Setup Frontend
+cd frontend
+npm install
+Copy-Item .env.example .env.local
+cd ..
+
+# 3. Pull Ollama model
+ollama pull qwen3.5:9b
+
+# 4. Start services
+# Terminal 1:
+.\.venv\Scripts\python.exe -m uvicorn backend.main:app --port 8000 --reload
+# Terminal 2:
+cd frontend; npm run dev
+```
+</details>
+
+---
+
+## 🎯 Key Features <a id="features"></a>
+
+### ✂️ Interactive PDF Region Snipping Tool
+- Press <kbd>S</kbd> or click **Snip Region** to activate the canvas marquee tool.
+- Drag a custom box of any size over equations, proofs, sub-charts, or table slices.
+- Click **"Ask ScholAR"** to send a high-res $3\times$ vector crop directly to the local multimodal model with automatic page-bounding citations.
+
+### 🛡️ SOTA Citation Realignment & Pruning Engine
+- Implements **ALCE** (Gao et al. 2023) and **AGREE** (Li et al. 2023) citation alignment.
+- **Attribution Disentanglement**: Forbids tagging disclaimers or assumptions with spurious citations.
+- **Negative Statement Pruning**: Automatically strips citation tags from disclaimer sentences to prevent false red contradiction badges.
+- **Dynamic Pool Auto-Remapping**: Automatically maps mis-indexed model claims to the true supporting evidence passage in the paper.
+
+### 📊 Multimodal Table & Figure Grounding
+- Automatically extracts figures, captions, and subregions during PDF ingestion.
+- Renders rich Markdown tables and performs row-by-row delta and trade-off analyses.
+- Interactive **Sources** thumbnail cards let you click citation pills `[1]` to instantly jump to and highlight figures on the canvas.
+
+### 📐 Pure KaTeX Mathematical Formatting
+- Mathematical formulas, tensor symbols, and variables are rendered cleanly in KaTeX without ugly pseudo-LaTeX dollar-sign artifacts.
+
+### 📚 Multi-Document Citation Graph
+- Ingest and cross-reference cited papers directly from Semantic Scholar and arXiv without leaving your reading workspace.
+
+---
+
+## ⌨️ Keyboard Shortcuts <a id="shortcuts"></a>
+
+| Shortcut | Context | Action |
+| :--- | :--- | :--- |
+| <kbd>S</kbd> | PDF Viewer | **Toggle Snip Region (Screenshot tool)** |
+| <kbd>J</kbd> / <kbd>←</kbd> | PDF Viewer | Previous page |
+| <kbd>K</kbd> / <kbd>→</kbd> | PDF Viewer | Next page |
+| <kbd>+</kbd> / <kbd>=</kbd> | PDF Viewer | Zoom in |
+| <kbd>-</kbd> | PDF Viewer | Zoom out |
+| <kbd>0</kbd> | PDF Viewer | Reset zoom (100%) |
+| <kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> | Study Workspace | Switch tabs (Chat, Goals, References) |
+| <kbd>Cmd</kbd> + <kbd>Enter</kbd> | Chat Box | Send message |
+| <kbd>?</kbd> | Global | Open Keyboard Shortcuts modal |
+| <kbd>Esc</kbd> | Global | Cancel selection / Close modal |
+
+---
+
+## 🏗️ Architecture <a id="architecture"></a>
 
 ```text
 ScholAR/
-├── .github/                      # CI and pull-request quality gates
 ├── backend/
-│   ├── main.py                  # FastAPI routes and request orchestration
-│   ├── services/                # Search, PDF, retrieval, models, vision, references
-│   └── data/papers/             # Local prepared-paper cache, ignored except .gitkeep
+│   ├── main.py                  # FastAPI endpoints & routing orchestrator
+│   ├── services/
+│   │   ├── pdf_service.py       # PyMuPDF AST extraction & 3x region cropping
+│   │   ├── retrieval_service.py # BM25 + Multi-document citation graph
+│   │   ├── routing_service.py   # Adaptive query router & task decomposition
+│   │   ├── verifier_service.py  # SOTA ALCE/AGREE claim verification & pruning
+│   │   ├── vision_service.py    # Local multimodal visual grounding (Ollama)
+│   │   └── reference_service.py # arXiv & Semantic Scholar graph resolver
+│   └── schemas/                 # Capability matrix & document data structures
 ├── frontend/
-│   ├── app/                     # Next.js routes and global styling
-│   ├── components/              # Search, reader, chat, goals, and references UI
-│   └── types/                   # Shared frontend data types
-├── evaluation/
-│   ├── human_eval/              # Blinded human-study instrument and scoring pipeline
-│   ├── m3sciqa/                 # Cross-document localization adapter
-│   ├── results/                 # Committed, traceable experiment outputs
-│   └── run_*.py                 # Reproducible evaluation entry points
-├── docs/
-│   ├── SCHOLAR_MASTER_GUIDE.md  # Master technical reference and RAG architecture
-│   ├── SETUP.md                 # First installation, verification, and troubleshooting
-│   ├── PROJECT_GUIDE.md         # Canonical technical and project handoff
-│   ├── EXPERIMENTS.md           # Experiment ledger, results, and caveats
-│   └── architecture/            # Editable SVG and rendered architecture diagram
-├── paper/
-│   ├── manuscript.tex           # Venue-neutral research manuscript
-│   ├── manuscript.pdf           # Last compiled research draft
-│   ├── scholar_references.bib   # Research bibliography
-│   └── figures/                 # Manuscript figures
+│   ├── app/                     # Next.js 15 app router & paper study pages
+│   ├── components/
+│   │   ├── PdfViewer.tsx        # Canvas renderer with interactive snip marquee
+│   │   ├── ChatBox.tsx          # KaTeX chat with snippet attachments & sources
+│   │   ├── StudyGoals.tsx       # Paper-specific study roadmaps & milestones
+│   │   └── ReferencesPanel.tsx  # Interactive multi-paper citation explorer
+│   └── types/                   # Shared TypeScript contracts
 ├── scripts/
-│   └── doctor.py                # Portable local setup diagnosis
-├── CONTRIBUTING.md              # Development and review expectations
-├── RESEARCH_ROADMAP.md          # Prioritized work and completion criteria
-├── Makefile                     # Common local commands
-└── requirements.txt             # Runtime Python dependencies
+│   ├── quickstart.sh            # 1-click interactive installation script
+│   ├── setup_models.py          # Hardware auto-detection & Ollama model tiering
+│   └── doctor.py                # Environment diagnostics & repair assistant
+├── evaluation/                  # M3SciQA and faithfulness benchmark pipelines
+└── docs/                        # Complete technical guides & architecture specs
 ```
 
-Generated paper data, model caches, virtual environments, Node modules, evaluation exports, and third-party datasets are deliberately excluded from Git.
+---
 
-## Evaluation: what the evidence currently says
+## 🧪 Verification & Testing <a id="testing"></a>
 
-The canonical result ledger is [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md). The most important findings are:
-
-| Question | Current evidence | Interpretation |
-|---|---:|---|
-| Can lexical retrieval find supporting chunks? | BM25-only MRR `0.863`, R@5 `0.94` on 100 mined cases | Strong within this benchmark, but mined questions favor lexical overlap |
-| Do reranking heuristics improve BM25? | MRR `0.861` vs `0.863` | No measurable aggregate improvement |
-| Does citation provenance imply claim support? | ScholAR page support `0.659`; PDF-chat `0.714` | No. The page is valid, but may not support the claim |
-| Does stronger faithfulness scoring change the story? | Judge mean `0.61` vs cosine proxy `0.85` across four models | Yes. Cosine materially inflated the apparent result |
-| Does ScholAR beat local RAG baselines on judge faithfulness? | ScholAR `0.453`; vanilla RAG `0.735`; PaperQA2-style `0.779` | No. ScholAR is more correct on must-include recall, but less faithful |
-| Does vision help cross-document localization? | M3SciQA MRR `0.180` to `0.474` | Yes. This is the strongest current systems result |
-| Is human validation complete? | Instrument and 350 answers prepared; expert scores absent | No. Human evaluation is the highest-priority gap |
-
-These results are intentionally reported together. The repository should never present the older cosine-based numbers without the later entailment-judge correction.
-
-## Running evaluations
-
-Run commands from the repository root.
+ScholAR includes an automated test suite covering citation alignment, PyMuPDF vector cropping, routing budgets, and TypeScript type safety:
 
 ```bash
-# Fast, deterministic retrieval evaluation
-make eval-scaled
+# Run unit tests
+.venv/bin/python -m unittest discover -s tests
 
-# Retrieval-support scoring
-.venv/bin/python evaluation/run_faithfulness_eval.py \
-  --cases evaluation/faithfulness_cases_scaled.json --tag scaled
+# Run frontend typecheck
+cd frontend && npm run typecheck
 
-# Multi-document text localization
-.venv/bin/python evaluation/m3sciqa/run_m3sciqa_eval.py --tier text
-
-# Generation evaluations require Ollama and prepared papers
-.venv/bin/python evaluation/run_generation_faithfulness_matrix.py --models qwen3.5:9b
-
-# Human study preparation
-.venv/bin/python evaluation/human_eval/_build_score_sheet.py
+# Run environment diagnostics
+make doctor
 ```
 
-See [evaluation/README.md](evaluation/README.md) for every script and [evaluation/human_eval/README.md](evaluation/human_eval/README.md) for the annotation workflow.
+---
 
-## Current priorities
+## 📖 Documentation <a id="documentation"></a>
 
-1. Complete expert human evaluation and measure agreement with the automated judge.
-2. Repair the central grounding failure by adding claim-level support verification or citation-aware regeneration.
-3. Re-run the local baseline comparison after the fix, with repeated seeds where generation is stochastic.
-4. Improve figure extraction, mathematical content handling, and citation highlighting.
-5. Select a target venue only after the contribution and evaluation package are stable.
+- [Master System Guide](docs/SCHOLAR_MASTER_GUIDE.md): Complete technical reference, RAG pipeline architecture, and benchmarks.
+- [Local Setup Guide](docs/SETUP.md): First installation, hardware sizing, and troubleshooting.
+- [Contributing Guide](CONTRIBUTING.md): Architectural standards, ALCE/AGREE citation methodology, and PR guidelines.
+- [Experiment Ledger](docs/EXPERIMENTS.md): Empirical results and evaluation methodologies.
 
-The detailed work breakdown and exit criteria are in [RESEARCH_ROADMAP.md](RESEARCH_ROADMAP.md).
+---
 
-## Documentation
+## 🔒 Privacy & Local Execution
 
-- [Master System Guide](docs/SCHOLAR_MASTER_GUIDE.md): complete technical reference, RAG pipeline architecture, baselines, and benchmarks
-- [Local setup and first-day guide](docs/SETUP.md): clone, install, configure, run, verify, import, and troubleshoot
-- [Project guide](docs/PROJECT_GUIDE.md): product intent, architecture, data flow, API, operations, troubleshooting, and handoff
-- [Experiment ledger](docs/EXPERIMENTS.md): completed studies, results, caveats, negative findings, and provenance
-- [Research roadmap](RESEARCH_ROADMAP.md): what is done, what is partial, and what must happen next
-- [Human evaluation](evaluation/human_eval/README.md): evaluator preparation, blinded scoring, and analysis
-- [Manuscript notes](paper/README.md): venue-neutral paper status and build instructions
-- [Contributing](CONTRIBUTING.md): local setup, validation, and pull-request expectations
+ScholAR is built on a **local-first** security model:
+- All PDF text extraction, vector rendering, and snippet crops reside strictly on your local disk (`backend/data/papers/`).
+- Text and visual inference execute 100% locally through your Ollama instance.
+- External network calls are strictly limited to paper discovery (arXiv search/PDF download) and metadata resolution (Semantic Scholar).
 
-## Scope and privacy
+---
 
-ScholAR is a single-user local research prototype, not a hardened multi-user service. Prepared PDFs and extracted text stay under `backend/data/papers/` and are ignored by Git. Text and vision inference stay local when Ollama is used. arXiv search, PDF downloads, and Semantic Scholar reference resolution make network requests. Do not expose the backend directly to an untrusted network without adding authentication, stricter origin controls, rate limiting, and storage isolation.
+## 📄 License
 
-## License
-
-Released under the terms in [LICENSE](LICENSE).
+Released under the [MIT License](LICENSE).

@@ -192,7 +192,7 @@ export function ReferencesPanel({
             <div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
               <AlertTriangle size={13} className="mt-0.5 shrink-0" />
               <span>
-                <strong>Uploaded PDF</strong> — references resolved via Semantic Scholar title search.
+                <strong>Uploaded PDF</strong>: references resolved via Semantic Scholar title search.
                 {refs.length > 0
                   ? ` Found ${refs.length} reference${refs.length > 1 ? "s" : ""}.`
                   : " Some references may be missing."}

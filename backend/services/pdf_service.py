@@ -314,6 +314,13 @@ def extract_figures(
                     "y1": round(clip.y1, 1),
                 } if cap_bbox else None
 
+                bbox_norm_dict = {
+                    "x0": round(clip.x0 / max(page_rect.width, 1.0), 4),
+                    "y0": round(clip.y0 / max(page_rect.height, 1.0), 4),
+                    "x1": round(clip.x1 / max(page_rect.width, 1.0), 4),
+                    "y1": round(clip.y1 / max(page_rect.height, 1.0), 4),
+                }
+
                 records.append({
                     "figure_id":   fig_id,
                     "figure_type": figure_type,   # "figure" | "table"
@@ -321,6 +328,7 @@ def extract_figures(
                     "caption":     caption_text,
                     "page":        page_num,
                     "bbox":        bbox_dict,
+                    "bbox_normalized": bbox_norm_dict,
                     "image_file":  rel_filename,
                     "width_px":    pix.width,
                     "height_px":   pix.height,
@@ -482,3 +490,49 @@ def render_page_png(pdf_path: Path, page_number: int, zoom: float = 1.8, highlig
         matrix = fitz.Matrix(safe_zoom, safe_zoom)
         pixmap = page.get_pixmap(matrix=matrix, alpha=False)
         return pixmap.tobytes("png")
+
+
+def crop_page_region(
+    pdf_path: Path,
+    page_number: int,
+    bbox_norm: list[float],
+    zoom: float = 3.0,
+) -> tuple[bytes, str]:
+    """Crop a normalized rectangular region [x0, y0, x1, y1] from a PDF page and return (png_bytes, extracted_text).
+
+    bbox_norm: [x0, y0, x1, y1] in normalized coordinates [0.0, 1.0].
+    """
+    if not pdf_path.exists():
+        raise RuntimeError("Local PDF does not exist")
+    if len(bbox_norm) < 4:
+        raise ValueError("bbox_norm must contain 4 normalized coordinates [x0, y0, x1, y1]")
+
+    safe_zoom = min(max(zoom, 1.0), 4.0)
+    with fitz.open(pdf_path) as document:
+        if page_number < 1 or page_number > document.page_count:
+            raise RuntimeError("Requested PDF page is out of range")
+        page = document.load_page(page_number - 1)
+        rect_page = page.rect
+
+        x0_norm = max(0.0, min(float(bbox_norm[0]), 1.0))
+        y0_norm = max(0.0, min(float(bbox_norm[1]), 1.0))
+        x1_norm = max(0.0, min(float(bbox_norm[2]), 1.0))
+        y1_norm = max(0.0, min(float(bbox_norm[3]), 1.0))
+
+        x0 = min(x0_norm, x1_norm) * rect_page.width
+        y0 = min(y0_norm, y1_norm) * rect_page.height
+        x1 = max(x0_norm, x1_norm) * rect_page.width
+        y1 = max(y0_norm, y1_norm) * rect_page.height
+
+        if x1 - x0 < 10:
+            x1 = min(x0 + 10, rect_page.width)
+        if y1 - y0 < 10:
+            y1 = min(y0 + 10, rect_page.height)
+
+        clip_rect = fitz.Rect(x0, y0, x1, y1)
+        matrix = fitz.Matrix(safe_zoom, safe_zoom)
+        pixmap = page.get_pixmap(matrix=matrix, clip=clip_rect, alpha=False)
+        png_bytes = pixmap.tobytes("png")
+
+        extracted_text = page.get_text("text", clip=clip_rect).strip()
+        return png_bytes, extracted_text

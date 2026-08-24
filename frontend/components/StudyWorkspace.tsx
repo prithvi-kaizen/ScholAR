@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Citation } from "../types/paper";
+import type { Citation, CustomSnippet } from "../types/paper";
 import { PdfViewer } from "./PdfViewer";
 import { StudyPanel } from "./StudyPanel";
+import { ShortcutsModal } from "./ShortcutsModal";
 
 interface StudyWorkspaceProps {
   paperId: string;
@@ -15,6 +16,8 @@ const HANDLE_WIDTH   = 6;
 
 export function StudyWorkspace({ paperId }: StudyWorkspaceProps) {
   const [activeCitation, setActiveCitation] = useState<Citation | null>(null);
+  const [activeSnippet, setActiveSnippet] = useState<CustomSnippet | null>(null);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [pdfWidthPct, setPdfWidthPct] = useState(52); // 52% for PDF by default
   const dragging = useRef(false);
@@ -56,11 +59,28 @@ export function StudyWorkspace({ paperId }: StudyWorkspaceProps) {
     document.body.style.userSelect = "none";
   }
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement)?.tagName)) return;
+      if (e.key === "?" || ((e.metaKey || e.ctrlKey) && e.key === "/")) {
+        e.preventDefault();
+        setShowShortcuts((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
-    <div ref={containerRef} className="flex min-h-0 flex-1 overflow-hidden">
+    <div ref={containerRef} className="relative flex min-h-0 flex-1 overflow-hidden">
       {/* PDF pane */}
       <div style={{ width: `${pdfWidthPct}%` }} className="min-h-0 min-w-0 shrink-0 flex flex-col">
-        <PdfViewer paperId={paperId} activeCitation={activeCitation} />
+        <PdfViewer
+          paperId={paperId}
+          activeCitation={activeCitation}
+          onSnippetToChat={(snip) => setActiveSnippet(snip)}
+          activeSnippet={activeSnippet}
+        />
       </div>
 
       {/* Drag handle */}
@@ -75,8 +95,16 @@ export function StudyWorkspace({ paperId }: StudyWorkspaceProps) {
 
       {/* Study / Chat pane */}
       <div className="min-h-0 min-w-0 flex-1 flex flex-col">
-        <StudyPanel paperId={paperId} onCitationClick={setActiveCitation} />
+        <StudyPanel
+          paperId={paperId}
+          onCitationClick={setActiveCitation}
+          activeSnippet={activeSnippet}
+          onDismissSnippet={() => setActiveSnippet(null)}
+        />
       </div>
+
+      {/* Global Shortcuts Modal */}
+      <ShortcutsModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
     </div>
   );
 }

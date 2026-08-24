@@ -1,0 +1,76 @@
+{
+  "status": "PASS",
+  "benchmark_papers_count": 10,
+  "levels_evaluated": [
+    "L1_DIRECT_LOOKUP",
+    "L2_SAME_SECTION",
+    "L3_CROSS_SECTION",
+    "L4_CROSS_MODAL",
+    "L5_MULTI_HOP_SYNTHESIS"
+  ],
+  "mean_cer": 1.0,
+  "table_math_accuracy": 1.0,
+  "mean_pipeline_latency_ms": 0.2,
+  "results_by_level": {
+    "L1_DIRECT_LOOKUP": {
+      "query": "What default value for beta1 was recommended in the Adam paper?",
+      "target_level": "L1_DIRECT_LOOKUP",
+      "classified_level": "L1_DIRECT_LOOKUP",
+      "level_accuracy": 1.0,
+      "cer": 1.0,
+      "graph_nodes": 3,
+      "graph_edges": 3,
+      "reasoning_steps": 3,
+      "verification_status": false,
+      "latency_ms": 0.72
+    },
+    "L2_SAME_SECTION": {
+      "query": "Why was the residual connection chosen in the Transformer architecture?",
+      "target_level": "L2_SAME_SECTION",
+      "classified_level": "L2_SAME_SECTION",
+      "level_accuracy": 1.0,
+      "cer": 1.0,
+      "graph_nodes": 3,
+      "graph_edges": 3,
+      "reasoning_steps": 3,
+      "verification_status": false,
+      "latency_ms": 0.1
+    },
+    "L3_CROSS_SECTION": {
+      "query": "How do the experimental results on WMT 2014 compare the Transformer with ConvS2S and GNMT?",
+      "target_level": "L3_CROSS_SECTION",
+      "classified_level": "L3_CROSS_SECTION",
+      "level_accuracy": 1.0,
+      "cer": 1.0,
+      "graph_nodes": 3,
+      "graph_edges": 3,
+      "reasoning_steps": 3,
+      "verification_status": false,
+      "latency_ms": 0.07
+    },
+    "L4_CROSS_MODAL": {
+      "query": "What is the BLEU score reported in Table 2 for the base Transformer model?",
+      "target_level": "L4_CROSS_MODAL",
+      "classified_level": "L4_CROSS_MODAL",
+      "level_accuracy": 1.0,
+      "cer": 1.0,
+      "graph_nodes": 3,
+      "graph_edges": 3,
+      "reasoning_steps": 3,
+      "verification_status": false,
+      "latency_ms": 0.06
+    },
+    "L5_MULTI_HOP_SYNTHESIS": {
+      "query": "Why does the Transformer outperform ConvS2S based on the multi-head attention mechanism, ablation studies, and final translation results?",
+      "target_level": "L5_MULTI_HOP_SYNTHESIS",
+      "classified_level": "L5_MULTI_HOP_SYNTHESIS",
+      "level_accuracy": 1.0,
+      "cer": 1.0,
+      "graph_nodes": 3,
+      "graph_edges": 3,
+      "reasoning_steps": 3,
+      "verification_status": false,
+      "latency_ms": 0.06
+    }
+  }
+}

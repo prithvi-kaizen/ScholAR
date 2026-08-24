@@ -1,10 +1,28 @@
+"""Tri-Channel Hybrid Retrieval Service for ScholAR.
+
+Features:
+- Channel 1 (Lexical): BM25 scoring with camelCase tokenization and scientific term expansion
+- Channel 2 (Dense): Semantic embedding similarity via DenseEmbeddingService
+- Channel 3 (Visual & Tabular): Modality-directed boosting for figures, charts, and tables
+- Reciprocal Rank Fusion (RRF with k=60):
+    RRF(d) = sum_m 1 / (60 + rank_m(d))
+- Cross-Encoder Reranking: Qwen3-Reranker / Cross-Encoder sequence scoring
+- Software-owned provenance preservation
+"""
+
 from __future__ import annotations
 
+import hashlib
+import logging
 import math
 import re
-import hashlib
 from collections import Counter
 from typing import Any
+
+from backend.services.dense_embedding_service import DenseEmbeddingService
+from backend.services.reranker_service import RerankerService
+
+logger = logging.getLogger("scholar.retrieval")
 
 # Visual-cue terms: when any of these appear in the query the retriever
 # boosts figure/table chunks so they compete effectively against text chunks.
@@ -13,38 +31,13 @@ _VISUAL_CUE_TERMS = frozenset({
     "shown", "depicted", "illustrat", "visuali", "image", "schematic",
     "architecture diagram", "attention map", "heatmap",
 })
-_VISUAL_BOOST = 2.5   # multiplier applied to figure/table chunk score
-_CAPTION_MATCH_BONUS = 1.8  # extra score when query tokens overlap with caption
-
+_VISUAL_BOOST = 2.5
+_CAPTION_MATCH_BONUS = 1.8
 
 STOP_WORDS = {
-    "a",
-    "an",
-    "and",
-    "are",
-    "as",
-    "at",
-    "be",
-    "by",
-    "for",
-    "from",
-    "how",
-    "in",
-    "is",
-    "it",
-    "main",
-    "of",
-    "on",
-    "or",
-    "paper",
-    "propose",
-    "proposed",
-    "that",
-    "the",
-    "this",
-    "to",
-    "what",
-    "with",
+    "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
+    "how", "in", "is", "it", "main", "of", "on", "or", "paper",
+    "propose", "proposed", "that", "the", "this", "to", "what", "with",
 }
 
 QUERY_EXPANSIONS = {
@@ -62,16 +55,12 @@ QUERY_EXPANSIONS = {
     "limitations": ["limitation", "limits", "failure", "assumption", "future", "caveat"],
 }
 
-
 _CAMEL_BOUNDARY_RE = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
+_EXPLICIT_FIGURE_RE = re.compile(r"\b(figure|fig\.?|table)\s*\.?\s*(\d+(?:\.\d+)?)\b", re.IGNORECASE)
 
 
 def tokenize(text: str) -> list[str]:
-    # Run on the original (mixed-case) text so camelCase boundaries are still
-    # visible, e.g. "FlashAttention" -> also yields "flash" and "attention" as
-    # separate tokens, not just the fused "flashattention". Without this, a
-    # query like "flash attention" has zero token overlap with a paper whose
-    # own text never writes the name with a space.
+    """Tokenize text preserving camelCase boundaries and technical tokens."""
     tokens: list[str] = []
     for raw in re.findall(r"[A-Za-z][A-Za-z0-9_-]+", text):
         lowered = raw.lower()
@@ -85,13 +74,11 @@ def tokenize(text: str) -> list[str]:
 
 
 def expand_query_terms(tokens: list[str]) -> list[str]:
+    """Expand query terms with scientific synonyms."""
     expanded = list(tokens)
     for token in tokens:
         expanded.extend(QUERY_EXPANSIONS.get(token, []))
     return expanded
-
-
-_EXPLICIT_FIGURE_RE = re.compile(r"\b(figure|fig\.?|table)\s*\.?\s*(\d+(?:\.\d+)?)\b", re.IGNORECASE)
 
 
 def _normalize_figure_label(label: str) -> str:
@@ -99,16 +86,7 @@ def _normalize_figure_label(label: str) -> str:
 
 
 def extract_figure_refs(message: str) -> set[str]:
-    """Extract explicit figure/table references (e.g. "Figure 2", "fig. 14",
-    "Table 3") from a query, normalized to match a figure chunk's own
-    ``label`` field exactly (e.g. {"figure 2"}).
-
-    tokenize() only starts tokens on a letter, so a bare number like "2" is
-    never tokenized — "Figure 2" and "Figure 14" collapse to the identical
-    token set {"figure"}. That makes ordinary BM25/overlap scoring unable to
-    tell which figure a query means, so an explicit reference needs its own
-    exact-match path instead.
-    """
+    """Extract explicit figure/table references (e.g. 'Figure 2', 'Table 3') from query."""
     refs: set[str] = set()
     for kind, number in _EXPLICIT_FIGURE_RE.findall(message):
         kind_norm = "table" if kind.lower().startswith("table") else "figure"
@@ -158,6 +136,7 @@ def _cosine(left: list[float], right: list[float]) -> float:
 
 
 def _bm25_scores(query_terms: list[str], chunks: list[dict[str, Any]]) -> dict[int, float]:
+    """Calculate Okapi BM25 scores for chunks."""
     query_counts = Counter(query_terms)
     document_frequency: Counter[str] = Counter()
     chunk_tokens: list[list[str]] = []
@@ -168,9 +147,6 @@ def _bm25_scores(query_terms: list[str], chunks: list[dict[str, Any]]) -> dict[i
 
     total_docs = max(len(chunks), 1)
     average_length = sum(len(tokens) for tokens in chunk_tokens) / max(len(chunk_tokens), 1)
-    # Keyed by list index rather than chunk_id: chunk_id is only unique within
-    # a single paper (numbering restarts at chunk_001 per paper), so merged
-    # multi-document chunk lists can have duplicate chunk_ids across papers.
     scores: dict[int, float] = {}
     k1 = 1.4
     b = 0.72
@@ -192,16 +168,41 @@ def _bm25_scores(query_terms: list[str], chunks: list[dict[str, Any]]) -> dict[i
 
 
 def _is_visual_query(message: str, base_query_terms: list[str]) -> bool:
-    """Return True when the query contains visual-cue language."""
     lowered = message.lower()
-    # Direct term match
     if any(cue in lowered for cue in _VISUAL_CUE_TERMS):
         return True
-    # Token-level match (handles stemming/fragments)
     query_set = set(base_query_terms)
     if query_set.intersection({"figure", "fig", "table", "plot", "chart", "diagram"}):
         return True
     return False
+
+
+def reciprocal_rank_fusion(
+    ranked_lists: list[list[dict[str, Any]]],
+    k: int = 60,
+) -> list[dict[str, Any]]:
+    """Fuse multiple ranked lists using Reciprocal Rank Fusion (RRF).
+
+    Formula: RRF(d) = sum_{m} 1 / (k + rank_m(d))
+    """
+    rrf_scores: dict[str, float] = {}
+    chunk_map: dict[str, dict[str, Any]] = {}
+
+    for ranked_list in ranked_lists:
+        for rank, chunk in enumerate(ranked_list, start=1):
+            cid = str(chunk.get("chunk_id") or chunk.get("evidence_id") or id(chunk))
+            chunk_map[cid] = chunk
+            rrf_scores[cid] = rrf_scores.get(cid, 0.0) + (1.0 / (k + rank))
+
+    # Sort items by accumulated RRF score
+    sorted_items = sorted(rrf_scores.items(), key=lambda item: item[1], reverse=True)
+    fused: list[dict[str, Any]] = []
+    for cid, score in sorted_items:
+        c = dict(chunk_map[cid])
+        c["rrf_score"] = round(score, 6)
+        fused.append(c)
+
+    return fused
 
 
 def retrieve_chunks(
@@ -209,17 +210,17 @@ def retrieve_chunks(
     chunks: list[dict[str, Any]],
     limit: int = 4,
     preferred_pages: list[int] | None = None,
+    paper_id: str = "",
 ) -> list[dict[str, Any]]:
+    """Execute Tri-Channel Hybrid Retrieval (BM25 + Dense + Visual) with RRF & Reranking."""
     base_query_terms = tokenize(message)
     query_terms = expand_query_terms(base_query_terms)
-    if not base_query_terms:
+    if not base_query_terms or not chunks:
         return []
 
     visual_query = _is_visual_query(message, base_query_terms)
 
-    # ── Explicit figure/table reference override ──────────────────────────
-    # "explain figure 2" must retrieve Figure 2, not just any figure — see
-    # extract_figure_refs() for why fuzzy token overlap can't do this.
+    # 1. Pinned Figure Reference Override
     pinned_chunk: dict[str, Any] | None = None
     figure_refs = extract_figure_refs(message)
     if figure_refs:
@@ -230,92 +231,61 @@ def retrieve_chunks(
                 pinned_chunk = chunk
                 break
 
-    # BM25 is the primary signal because the project evaluation showed it was
-    # the most reliable way to keep exact evidence chunks in the top results.
-    # Semantic, section, phrase, and page signals are used as light rerankers.
+    # 2. Channel 1: BM25 Lexical Ranking
     bm25 = _bm25_scores(base_query_terms, chunks)
-    query_vector = _hashed_embedding(query_terms)
-    preferred = set(preferred_pages or [])
-    section_hints = _section_hints(message)
-    bm25_ranked: list[tuple[float, dict[str, Any]]] = []
-
+    bm25_ranked = []
     for index, chunk in enumerate(chunks):
-        text = chunk.get("text", "")
-        tokens = tokenize(text)
-        is_fig = chunk.get("is_figure_chunk", False)
-        if not tokens:
-            # Figure chunks may have very short captions — give them a floor
-            # score when a visual query is active so they enter the candidate set.
-            if is_fig and visual_query:
-                bm25_ranked.append((0.05, chunk))
-            continue
         score = bm25.get(index, 0.0)
-        if score > 0 or is_fig:
-            bm25_ranked.append((max(score, 0.0), chunk))
+        is_fig = chunk.get("is_figure_chunk", False)
+        if score > 0 or (is_fig and visual_query):
+            bm25_ranked.append((max(score, 0.05 if is_fig else 0.0), chunk))
+    bm25_ranked.sort(key=lambda x: x[0], reverse=True)
+    lexical_list = [c for _, c in bm25_ranked]
 
-    bm25_ranked.sort(key=lambda item: item[0], reverse=True)
-    # Expand candidate window to include figure chunks that may have low BM25
-    candidate_limit = max(limit * 8, 20)
-    if visual_query:
-        candidate_limit = max(candidate_limit, limit * 12)
-    candidates = bm25_ranked[:candidate_limit]
+    # 3. Channel 2: Dense Semantic Embedding Ranking
+    p_id = paper_id or chunks[0].get("document_id", "default")
+    dense_results = DenseEmbeddingService.search_dense(p_id, message, chunks, top_k=max(limit * 8, 30))
+    dense_list = [c for c, _ in dense_results]
 
-    reranked: list[tuple[float, dict[str, Any]]] = []
-    for rank, (bm25_score, chunk) in enumerate(candidates):
-        text = chunk.get("text", "")
-        lowered = text.lower()
-        tokens = tokenize(text)
-        semantic = _cosine(query_vector, _hashed_embedding(tokens)) if tokens else 0.0
-        expansion_overlap = len(set(query_terms).intersection(tokens)) / max(len(set(query_terms)), 1)
-        exact_overlap = len(set(base_query_terms).intersection(tokens)) / max(len(set(base_query_terms)), 1)
-
-        rerank_score = bm25_score
-        rerank_score += semantic * 0.03
-        rerank_score += expansion_overlap * 0.05
-        rerank_score += exact_overlap * 0.08
-
-        if chunk.get("page") in preferred:
-            rerank_score += 1.25
-        if chunk.get("chunk_type") in section_hints:
-            rerank_score += 0.08
-        section_title = str(chunk.get("section_title") or "").lower()
-        if any(hint in section_title for hint in section_hints):
-            rerank_score += 0.06
-        if any(phrase in lowered for phrase in ("we propose", "we introduce", "we present")) and section_hints.intersection({"abstract", "introduction"}):
-            rerank_score += 0.08
-        if rank < limit:
-            rerank_score += 0.05
-        if any(term in lowered for term in ("we propose", "we introduce", "we show", "we find")):
-            rerank_score += 0.05
-        if any(term in lowered for term in ("table", "result", "experiment", "evaluation")) and section_hints.intersection({"result", "experiment"}):
-            rerank_score += 0.1
-        if any(term in lowered for term in ("limitation", "future work", "however", "although")) and "limitation" in section_hints:
-            rerank_score += 0.1
-
-        # ── Visual-cue boosting ──────────────────────────────────────────────
-        # When the query contains figure/table language, boost figure chunks
-        # so they compete against much-longer text chunks in BM25 ranking.
+    # 4. Channel 3: Modality & Section Directed Visual Ranking
+    modality_ranked = []
+    sec_hints = _section_hints(message)
+    for chunk in chunks:
+        mod_score = 0.0
         if chunk.get("is_figure_chunk") and visual_query:
-            rerank_score *= _VISUAL_BOOST
-            # Extra bonus if query label tokens match this chunk's label
-            # (e.g. query mentions "Figure 1" and chunk label is "Figure 1")
-            label_tokens = tokenize(chunk.get("label", ""))
-            label_overlap = len(set(base_query_terms).intersection(label_tokens))
-            if label_overlap >= 1:
-                rerank_score += _CAPTION_MATCH_BONUS * label_overlap
+            mod_score += 2.0
+        if chunk.get("is_table_chunk") and ("table" in message.lower() or "result" in sec_hints):
+            mod_score += 1.5
+        if chunk.get("page") in set(preferred_pages or []):
+            mod_score += 1.0
+        if chunk.get("chunk_type") in sec_hints or any(h in str(chunk.get("section", "")).lower() for h in sec_hints):
+            mod_score += 0.8
+        if mod_score > 0:
+            modality_ranked.append((mod_score, chunk))
+    modality_ranked.sort(key=lambda x: x[0], reverse=True)
+    modality_list = [c for _, c in modality_ranked]
 
-        reranked.append((rerank_score, chunk))
+    # 5. Tri-Channel Reciprocal Rank Fusion (k=60)
+    channel_lists = [lexical_list, dense_list]
+    if modality_list:
+        channel_lists.append(modality_list)
 
-    reranked.sort(key=lambda item: item[0], reverse=True)
-    ranked_chunks = [chunk for _, chunk in reranked]
+    fused_candidates = reciprocal_rank_fusion(channel_lists, k=60)
+    top_candidates = fused_candidates[: max(limit * 6, 25)]
 
+    # 6. Cross-Encoder Reranking
+    reranked = RerankerService.rerank(message, top_candidates, top_k=limit)
+
+    # Attach pinned chunk if specified
     if pinned_chunk is not None:
-        rest = [chunk for chunk in ranked_chunks if chunk is not pinned_chunk]
+        rest = [c for c in reranked if c.get("chunk_id") != pinned_chunk.get("chunk_id")]
         return [pinned_chunk] + rest[: max(limit - 1, 0)]
-    return ranked_chunks[:limit]
+
+    return reranked[:limit]
 
 
 def short_quote(chunk: dict[str, Any], query: str, max_length: int = 220) -> str:
+    """Extract a concise supporting sentence from a chunk."""
     terms = set(tokenize(query))
     sentences = re.split(r"(?<=[.!?])\s+", chunk.get("text", ""))
     for sentence in sentences:

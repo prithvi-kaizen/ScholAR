@@ -1,4 +1,6 @@
+.venv
 .venv/
+.venv312
 .venv312/
 __pycache__/
 *.py[cod]
@@ -12,6 +14,7 @@ tmp/
 .env.local
 .DS_Store
 backend/data/papers/*/
+backend/data/traces/
 backend/data/search_cache.json
 !backend/data/papers/.gitkeep
 

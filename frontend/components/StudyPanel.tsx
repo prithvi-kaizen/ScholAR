@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { MessageSquare, BookOpen, ListChecks } from "lucide-react";
-import type { Citation, StudyGoal } from "../types/paper";
+import type { Citation, CustomSnippet, StudyGoal } from "../types/paper";
 import { ChatBox } from "./ChatBox";
 import { StudyGoals } from "./StudyGoals";
 import { ReferencesPanel } from "./ReferencesPanel";
@@ -14,6 +14,8 @@ type Tab = "chat" | "goals" | "references";
 interface StudyPanelProps {
   paperId: string;
   onCitationClick: (citation: Citation) => void;
+  activeSnippet?: CustomSnippet | null;
+  onDismissSnippet?: () => void;
 }
 
 const defaultGoals: StudyGoal[] = [
@@ -27,12 +29,38 @@ const defaultGoals: StudyGoal[] = [
   { id: "goal_8", title: "Convert paper into implementation plan", description: "Turn the paper into a practical build plan with steps, dependencies, and risks.",                  source_pages: [1], status: "not_started" },
 ];
 
-export function StudyPanel({ paperId, onCitationClick }: StudyPanelProps) {
+export function StudyPanel({ paperId, onCitationClick, activeSnippet = null, onDismissSnippet }: StudyPanelProps) {
   const [activeTab,   setActiveTab]   = useState<Tab>("chat");
   const [goals,       setGoals]       = useState<StudyGoal[]>([]);
   const [loadingGoals, setLoadingGoals] = useState(false);
   const [queuedPrompt, setQueuedPrompt] = useState<{ id: number; text: string } | null>(null);
   const [secondaryPaperIds, setSecondaryPaperIds] = useState<Set<string>>(new Set());
+
+  // Auto-switch to chat tab when snippet is captured
+  useEffect(() => {
+    if (activeSnippet) {
+      setActiveTab("chat");
+    }
+  }, [activeSnippet]);
+
+  // Tab switching shortcuts: 1 -> Chat, 2 -> Goals, 3 -> References
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement)?.tagName)) return;
+      if (e.key === "1") {
+        e.preventDefault();
+        setActiveTab("chat");
+      } else if (e.key === "2") {
+        e.preventDefault();
+        setActiveTab("goals");
+      } else if (e.key === "3") {
+        e.preventDefault();
+        setActiveTab("references");
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // ---------- study goals ----------
   useEffect(() => {
@@ -66,6 +94,14 @@ export function StudyPanel({ paperId, onCitationClick }: StudyPanelProps) {
     setQueuedPrompt({
       id: Date.now(),
       text: `Explain this study goal in detail for this paper: ${goal.title}. Goal: ${goal.description}${subqs} Start with pages ${goal.source_pages.join(", ")} if relevant.`,
+    });
+  }
+
+  function explainSubquestion(goal: StudyGoal, subquestion: string) {
+    setActiveTab("chat");
+    setQueuedPrompt({
+      id: Date.now(),
+      text: `Regarding study goal "${goal.title}": ${subquestion} (Refer to pages ${goal.source_pages.join(", ")})`,
     });
   }
 
@@ -130,7 +166,7 @@ export function StudyPanel({ paperId, onCitationClick }: StudyPanelProps) {
 
       {/* ── Tab content ── */}
 
-      {/* CHAT tab — always rendered so chat state is preserved, just hidden */}
+      {/* CHAT tab: always rendered so chat state is preserved, just hidden */}
       <div className={`min-h-0 flex-1 flex flex-col ${activeTab === "chat" ? "" : "hidden"}`}>
         <ChatBox
           paperId={paperId}
@@ -139,13 +175,20 @@ export function StudyPanel({ paperId, onCitationClick }: StudyPanelProps) {
           expanded={true}
           onChatActivity={() => setActiveTab("chat")}
           secondaryPaperIds={[...secondaryPaperIds]}
+          activeSnippet={activeSnippet}
+          onDismissSnippet={onDismissSnippet}
         />
       </div>
 
       {/* GOALS tab */}
       {activeTab === "goals" && (
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-          <StudyGoals goals={goals} loading={loadingGoals} onGoalClick={explainGoal} />
+          <StudyGoals
+            goals={goals}
+            loading={loadingGoals}
+            onGoalClick={explainGoal}
+            onSubquestionClick={explainSubquestion}
+          />
         </div>
       )}
 

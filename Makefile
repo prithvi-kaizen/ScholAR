@@ -2,7 +2,9 @@
 # Run all commands from the project root: /path/to/ScholAR/
 #
 # Usage:
+#   make quickstart    Interactive hardware auto-detection & 1-click installation
 #   make setup         Install backend and frontend dependencies
+#   make models        Configure local model based on machine hardware
 #   make doctor        Check whether the local environment is ready
 #   make backend       Start the backend (hot-reload)
 #   make frontend      Start the Next.js frontend
@@ -12,9 +14,13 @@
 #   make multidoc-eval Run multi-document evaluation (papers must be seeded first)
 #   make seed          Seed the secondary benchmark papers (needs backend running)
 
-.PHONY: setup doctor backend frontend check frontend-build eval eval-scaled multidoc-eval seed help
+.PHONY: quickstart setup models doctor backend frontend check frontend-build eval eval-scaled multidoc-eval seed help
 
 PYTHON ?= .venv/bin/python
+
+# ── One-Click Quickstart ──────────────────────────────────────────────────────
+quickstart:
+	bash scripts/quickstart.sh
 
 # ── First-time setup ─────────────────────────────────────────────────────────
 setup:
@@ -24,8 +30,11 @@ setup:
 	cd frontend && npm ci
 	@if [ ! -f backend/.env ]; then cp backend/.env.example backend/.env; echo "Created backend/.env"; else echo "Keeping existing backend/.env"; fi
 	@if [ ! -f frontend/.env.local ]; then cp frontend/.env.local.example frontend/.env.local; echo "Created frontend/.env.local"; else echo "Keeping existing frontend/.env.local"; fi
-	@echo "Setup complete. Pull the Ollama model with: ollama pull qwen3.5:9b"
+	@echo "Setup complete. Configure your model with: make models"
 	@echo "Then run: make doctor"
+
+models:
+	$(PYTHON) scripts/setup_models.py
 
 doctor:
 	$(PYTHON) scripts/doctor.py

@@ -9,10 +9,11 @@ import { Badge } from "./Badge";
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
 
 const prepareSteps = [
-  "Preparing paper",
-  "Extracting pages",
-  "Personalizing study goals",
-  "Opening workspace",
+  "Downloading PDF from arXiv & verifying integrity",
+  "Extracting text, formulas & building AST index",
+  "Rasterizing 3× high-resolution tables & figures",
+  "Synthesizing 8-goal recursive study roadmap",
+  "Opening personalized workspace",
 ];
 
 interface PaperModalProps {
@@ -40,6 +41,7 @@ export function PaperModal({ paper, onClose, onBookmark, isBookmarked, onViewed 
     const timeoutController = new AbortController();
     const timeoutId = setTimeout(() => timeoutController.abort(), 90_000);
     try {
+      setPrepareStep(1);
       const response = await fetch(`${backendUrl}/api/papers/prepare`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -50,9 +52,9 @@ export function PaperModal({ paper, onClose, onBookmark, isBookmarked, onViewed 
         const payload = await response.json().catch(() => ({}));
         throw new Error(payload.detail ?? "Could not prepare paper");
       }
-      setPrepareStep(1);
-      const payload = (await response.json()) as { paper_id: string };
       setPrepareStep(2);
+      const payload = (await response.json()) as { paper_id: string };
+      setPrepareStep(3);
       // Pre-warm study goals so the workspace opens with real, paper-specific
       // goals already cached instead of generic placeholders.
       await fetch(`${backendUrl}/api/papers/${encodeURIComponent(payload.paper_id)}/study-goals`, {
@@ -60,7 +62,7 @@ export function PaperModal({ paper, onClose, onBookmark, isBookmarked, onViewed 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       }).catch(() => null);
-      setPrepareStep(3);
+      setPrepareStep(4);
       router.push(`/paper/${encodeURIComponent(payload.paper_id)}`);
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === "AbortError") {
