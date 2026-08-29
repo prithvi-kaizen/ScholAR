@@ -101,6 +101,13 @@ class CrossDocumentReasoningService:
                         description=f"Cross-paper bridge: {n1.document_id} ({n1.section}) <-> {n2.document_id} ({n2.section})",
                     ))
 
+        # PaperQA2 Citation-Graph Traversal for mentioned entities
+        from backend.services.reference_service import traverse_citation_graph
+        words = [w.strip("?,.:;\"'") for w in query.split() if len(w) >= 3]
+        traversal_results = traverse_citation_graph(resolved_primary, words, pooled_chunks)
+        if traversal_results:
+            logger.info("Citation traversal linked %d references for query [%s]", len(traversal_results), query[:40])
+
         graph.edges.extend(cross_doc_edges)
 
         logger.info(

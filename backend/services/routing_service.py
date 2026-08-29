@@ -37,14 +37,14 @@ class RouteBudget(BaseModel):
 _ROUTE_BUDGETS: dict[QuestionRouteType, dict[str, Any]] = {
     QuestionRouteType.DIRECT_LOOKUP: {
         "text_top_k": 4,
-        "visual_items": 0,
+        "visual_items": 1,
         "max_rounds": 1,
         "needs_decomposition": False,
         "requires_native_vision": False,
     },
     QuestionRouteType.EXPLANATION: {
         "text_top_k": 5,
-        "visual_items": 1,
+        "visual_items": 2,
         "max_rounds": 1,
         "needs_decomposition": False,
         "requires_native_vision": False,
@@ -114,11 +114,11 @@ class QuestionRouter:
     """Fast, deterministic question classifier and adaptive budget allocator."""
 
     _VISUAL_CUES = re.compile(
-        r"\b(figure|fig\.?|plot|chart|graph|diagram|heatmap|curve|bar chart|scatterplot|depicted|illustrated|shown in figure)\b",
+        r"\b(figure|fig\.?|plot|chart|graph|diagram|heatmap|curve|bar chart|scatterplot|depicted|illustrated|shown in figure|loss curve|attention distribution|attention map|architecture diagram|pipeline structure)\b",
         re.IGNORECASE,
     )
     _TABLE_CUES = re.compile(
-        r"\b(table|tbl\.?|row|column|accuracy on|bleu score|f1 score|percentage|increase by|decrease by|outperform|tabular)\b",
+        r"\b(table|tbl\.?|row|column|accuracy|bleu|rouge|meteor|f1|f1-score|perplexity|error rate|percentage|flops|gflops|tflops|latency|throughput|parameters|param count|speedup|learning rate|warmup|dropout|d_model|d_ff|hidden size|batch size|increase by|decrease by|outperform|tabular|leaderboard|benchmark results|ablation)\b",
         re.IGNORECASE,
     )
     _CODE_ALGO_CUES = re.compile(
@@ -152,6 +152,8 @@ class QuestionRouter:
 
         if has_code:
             return QuestionRouteType.CODE_ALGORITHM
+        if has_lookup:
+            return QuestionRouteType.DIRECT_LOOKUP
         if has_visual and has_calc:
             return QuestionRouteType.CHART_NUMERIC
         if has_visual and (has_comp or "and" in q_lower):
@@ -162,8 +164,6 @@ class QuestionRouter:
             return QuestionRouteType.TABLE_NUMERIC
         if has_comp:
             return QuestionRouteType.COMPARISON
-        if has_lookup:
-            return QuestionRouteType.DIRECT_LOOKUP
         if any(term in q_lower for term in ("how does", "explain", "why", "architecture", "mechanism", "workflow")):
             return QuestionRouteType.EXPLANATION
         if any(term in q_lower for term in ("overall", "throughout the paper", "from start to finish", "across sections")):

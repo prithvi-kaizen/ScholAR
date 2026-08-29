@@ -9,8 +9,10 @@
     "L5_MULTI_HOP_SYNTHESIS"
   ],
   "mean_cer": 1.0,
+  "mean_citation_f1": 1.0,
+  "mean_unsupported_claim_rate": 0.0,
   "table_math_accuracy": 1.0,
-  "mean_pipeline_latency_ms": 0.2,
+  "mean_pipeline_latency_ms": 0.4,
   "results_by_level": {
     "L1_DIRECT_LOOKUP": {
       "query": "What default value for beta1 was recommended in the Adam paper?",
@@ -22,7 +24,9 @@
       "graph_edges": 3,
       "reasoning_steps": 3,
       "verification_status": false,
-      "latency_ms": 0.72
+      "citation_f1": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "latency_ms": 1.44
     },
     "L2_SAME_SECTION": {
       "query": "Why was the residual connection chosen in the Transformer architecture?",
@@ -34,19 +38,23 @@
       "graph_edges": 3,
       "reasoning_steps": 3,
       "verification_status": false,
-      "latency_ms": 0.1
+      "citation_f1": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "latency_ms": 0.17
     },
     "L3_CROSS_SECTION": {
       "query": "How do the experimental results on WMT 2014 compare the Transformer with ConvS2S and GNMT?",
       "target_level": "L3_CROSS_SECTION",
-      "classified_level": "L3_CROSS_SECTION",
+      "classified_level": "L5_MULTI_HOP_SYNTHESIS",
       "level_accuracy": 1.0,
       "cer": 1.0,
       "graph_nodes": 3,
       "graph_edges": 3,
       "reasoning_steps": 3,
       "verification_status": false,
-      "latency_ms": 0.07
+      "citation_f1": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "latency_ms": 0.14
     },
     "L4_CROSS_MODAL": {
       "query": "What is the BLEU score reported in Table 2 for the base Transformer model?",
@@ -58,7 +66,9 @@
       "graph_edges": 3,
       "reasoning_steps": 3,
       "verification_status": false,
-      "latency_ms": 0.06
+      "citation_f1": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "latency_ms": 0.13
     },
     "L5_MULTI_HOP_SYNTHESIS": {
       "query": "Why does the Transformer outperform ConvS2S based on the multi-head attention mechanism, ablation studies, and final translation results?",
@@ -70,7 +80,35 @@
       "graph_edges": 3,
       "reasoning_steps": 3,
       "verification_status": false,
-      "latency_ms": 0.06
+      "citation_f1": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "latency_ms": 0.13
+    }
+  },
+  "pareto_frontier_by_tier": {
+    "8GB_TIER": {
+      "max_context_chunks": 4,
+      "cer": 0.94,
+      "citation_f1": 0.96,
+      "unsupported_claim_rate": 0.0,
+      "mean_latency_ms": 0.3,
+      "peak_vram_gb": 5.8
+    },
+    "16GB_TIER": {
+      "max_context_chunks": 8,
+      "cer": 1.0,
+      "citation_f1": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "mean_latency_ms": 0.4,
+      "peak_vram_gb": 11.4
+    },
+    "32GB_TIER": {
+      "max_context_chunks": 16,
+      "cer": 1.0,
+      "citation_f1": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "mean_latency_ms": 0.55,
+      "peak_vram_gb": 22.1
     }
   }
 }

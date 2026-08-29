@@ -1,0 +1,57 @@
+[
+  {
+    "id": "multihop_01",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": ["1412.6980"],
+    "question": "How does the optimizer used in Transformer training (Vaswani et al.) relate to the Adam optimization algorithm proposed by Kingma and Ba?",
+    "answers": [
+      "The Transformer was trained using the Adam optimizer with beta1=0.9, beta2=0.98, and eps=1e-9, varying the learning rate dynamically according to a warmup formula."
+    ],
+    "evidence": [
+      {"page": 7, "section": "Optimizer", "paper_id": "1706.03762"},
+      {"page": 2, "section": "Algorithm", "paper_id": "1412.6980"}
+    ],
+    "reasoning_level": "L5_MULTI_HOP_SYNTHESIS",
+    "answerable": true
+  },
+  {
+    "id": "multihop_02",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": ["2112.10752"],
+    "question": "How do self-attention mechanisms in Transformer compare in computational complexity per layer with latent diffusion architectures?",
+    "answers": [
+      "Transformer self-attention has O(n^2 * d) complexity per layer, while latent diffusion applies cross-attention and convolutional downsampling in latent space to reduce sequence length."
+    ],
+    "evidence": [
+      {"page": 6, "section": "Self-Attention", "paper_id": "1706.03762"},
+      {"page": 3, "section": "Method", "paper_id": "2112.10752"}
+    ],
+    "reasoning_level": "L5_MULTI_HOP_SYNTHESIS",
+    "answerable": true
+  },
+  {
+    "id": "multihop_03",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": ["1406.2661"],
+    "question": "Does the Transformer paper evaluate adversarial minimax loss against Generative Adversarial Networks (GANs)?",
+    "answers": [],
+    "evidence": [],
+    "reasoning_level": "L5_MULTI_HOP_SYNTHESIS",
+    "answerable": false
+  },
+  {
+    "id": "multihop_04",
+    "paper_id": "1706.03762",
+    "secondary_paper_ids": ["2410.00526"],
+    "question": "How does multi-step citation traversal in PaperQA2 evaluate the claim-level verification of Transformer translation results?",
+    "answers": [
+      "PaperQA2 follows backward and forward citation graphs to verify evidence passages supporting WMT translation metrics."
+    ],
+    "evidence": [
+      {"page": 8, "section": "Results", "paper_id": "1706.03762"},
+      {"page": 4, "section": "Methods", "paper_id": "2410.00526"}
+    ],
+    "reasoning_level": "L5_MULTI_HOP_SYNTHESIS",
+    "answerable": true
+  }
+]

@@ -381,3 +381,70 @@ def mark_reference_ingested(
         refs[ref_index]["ingested"]           = True
         refs[ref_index]["secondary_local_id"] = secondary_local_id
         save_references(local_id, refs)
+
+
+def traverse_citation_graph(
+    paper_id: str,
+    query_entities: list[str],
+    chunks: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Traverse bibliography references to find anchor text and linked cited works (PaperQA2 style).
+
+    Args:
+        paper_id: The anchor document ID.
+        query_entities: Target entity/author/model names mentioned in the multi-hop query.
+        chunks: List of document chunks to scan for in-text citation anchors.
+
+    Returns:
+        List of matched citation records containing target paper metadata and anchor citing passages.
+    """
+    refs = load_references(paper_id)
+    if not refs or not query_entities:
+        return []
+
+    matched_records: list[dict[str, Any]] = []
+    clean_entities = [e.strip().lower() for e in query_entities if len(e.strip()) >= 3]
+
+    for ref_idx, ref in enumerate(refs, start=1):
+        title = (ref.get("title") or "").lower()
+        authors = " ".join(ref.get("authors") or []).lower()
+        arxiv_id = (ref.get("arxiv_id") or "").lower()
+        combined_ref = f"{title} {authors} {arxiv_id}"
+
+        # Match against query entities
+        matched_entity = next((e for e in clean_entities if e in combined_ref), None)
+        if not matched_entity:
+            continue
+
+        # Look for in-text citations in chunks (e.g. "[1]", "[2]", author names, title fragments)
+        citing_chunks: list[dict[str, Any]] = []
+        author_last = (ref.get("authors") or [""])[0].split()[-1].lower() if ref.get("authors") else ""
+        cite_patterns = [
+            rf"\[{ref_idx}\]",
+            rf"\b{re.escape(author_last)}\b" if len(author_last) >= 3 else r"(?!)",
+            rf"\b{re.escape(matched_entity)}\b",
+        ]
+
+        for chunk in chunks:
+            chunk_text = chunk.get("text", "")
+            if any(re.search(pat, chunk_text, re.IGNORECASE) for pat in cite_patterns):
+                citing_chunks.append({
+                    "chunk_id": chunk.get("chunk_id"),
+                    "page": chunk.get("page"),
+                    "section": chunk.get("section_title") or chunk.get("section"),
+                    "quote": chunk_text[:280].strip(),
+                })
+
+        matched_records.append({
+            "ref_index": ref_idx,
+            "matched_entity": matched_entity,
+            "target_title": ref.get("title"),
+            "target_authors": ref.get("authors", []),
+            "target_year": ref.get("year"),
+            "target_arxiv_id": ref.get("arxiv_id"),
+            "is_ingested": ref.get("ingested", False),
+            "secondary_local_id": ref.get("secondary_local_id"),
+            "citing_anchors": citing_chunks[:3],
+        })
+
+    return matched_records

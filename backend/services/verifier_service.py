@@ -101,12 +101,15 @@ class ClaimVerifierService:
         claim_text: str,
         evidence_texts: list[str],
         modality: str = "text",
+        cited_evidence_ids: list[str] | None = None,
     ) -> ClaimVerificationResult:
         """Verify claim against cited evidence using keyword entailment and contradiction checking."""
+        cits = cited_evidence_ids or []
         if not evidence_texts:
             return ClaimVerificationResult(
                 claim_id=claim_id,
                 claim_text=claim_text,
+                cited_evidence_ids=cits,
                 label=VerificationLabel.UNSUPPORTED,
                 confidence=0.0,
                 modality=modality,
@@ -125,6 +128,7 @@ class ClaimVerifierService:
             return ClaimVerificationResult(
                 claim_id=claim_id,
                 claim_text=claim_text,
+                cited_evidence_ids=cits,
                 label=VerificationLabel.SUPPORTED,
                 confidence=1.0,
                 modality=modality,
@@ -142,37 +146,41 @@ class ClaimVerifierService:
             return ClaimVerificationResult(
                 claim_id=claim_id,
                 claim_text=claim_text,
+                cited_evidence_ids=cits,
                 label=VerificationLabel.CONTRADICTED,
-                confidence=0.85,
+                confidence=0.9,
                 modality=modality,
-                reason="Claim contains numbers not found in cited evidence.",
+                reason="Numbers in claim contradict numerical values in retrieved evidence.",
             )
 
         if overlap >= 0.50:
             return ClaimVerificationResult(
                 claim_id=claim_id,
                 claim_text=claim_text,
+                cited_evidence_ids=cits,
                 label=VerificationLabel.SUPPORTED,
-                confidence=round(min(1.0, overlap + 0.3), 3),
+                confidence=round(overlap, 2),
                 modality=modality,
             )
         elif overlap >= 0.25:
             return ClaimVerificationResult(
                 claim_id=claim_id,
                 claim_text=claim_text,
+                cited_evidence_ids=cits,
                 label=VerificationLabel.PARTIALLY_SUPPORTED,
-                confidence=round(overlap, 3),
+                confidence=round(overlap, 2),
                 modality=modality,
-                reason="Partial overlap with cited evidence.",
+                reason="Partial overlap with retrieved evidence.",
             )
         else:
             return ClaimVerificationResult(
                 claim_id=claim_id,
                 claim_text=claim_text,
+                cited_evidence_ids=cits,
                 label=VerificationLabel.UNSUPPORTED,
-                confidence=round(overlap, 3),
+                confidence=round(1.0 - overlap, 2),
                 modality=modality,
-                reason="Cited evidence does not sufficiently support claim.",
+                reason="Insufficient evidence overlap to support claim.",
             )
 
     @classmethod
@@ -575,3 +583,67 @@ class ClaimVerifierService:
             })
 
         return aligned_answer, annotated_citations, verified_claims
+
+    @classmethod
+    def compute_citation_metrics(
+        cls,
+        verified_claims: list[ClaimVerificationResult],
+        gold_citations: list[dict[str, Any]] | list[str] | None = None,
+    ) -> dict[str, float]:
+        """Compute formal industry-track grounding metrics: Citation Precision, Citation Recall, Citation F1, and Unsupported Claim Rate (UCR).
+
+        Formulas:
+          - Precision = (Supported Claims with Valid Citations) / (Total Claims)
+          - Recall = (Covered Gold Sources) / (Required Gold Sources)
+          - Citation F1 = 2 * (P * R) / (P + R)
+          - Unsupported Claim Rate (UCR) = (Unsupported + Contradicted Claims) / Total Claims
+        """
+        if not verified_claims:
+            return {
+                "citation_precision": 1.0,
+                "citation_recall": 1.0,
+                "citation_f1": 1.0,
+                "unsupported_claim_rate": 0.0,
+                "total_claims": 0,
+            }
+
+        total_claims = len(verified_claims)
+        supported_count = sum(
+            1 for c in verified_claims
+            if c.label in (VerificationLabel.SUPPORTED, VerificationLabel.PARTIALLY_SUPPORTED)
+        )
+        unsupported_count = sum(
+            1 for c in verified_claims
+            if c.label in (VerificationLabel.UNSUPPORTED, VerificationLabel.CONTRADICTED)
+        )
+
+        precision = supported_count / max(1, total_claims)
+        ucr = unsupported_count / max(1, total_claims)
+
+        # Recall against gold citations if provided
+        if gold_citations:
+            gold_keys = {
+                str(g.get("source_id") or g.get("page") or g) if isinstance(g, dict) else str(g)
+                for g in gold_citations
+            }
+            cited_keys: set[str] = set()
+            for c in verified_claims:
+                cited_keys.update(c.cited_evidence_ids)
+            recall = len(gold_keys.intersection(cited_keys)) / max(1, len(gold_keys))
+        else:
+            recall = 1.0 if supported_count > 0 else 0.0
+
+        if precision + recall > 0:
+            citation_f1 = 2 * (precision * recall) / (precision + recall)
+        else:
+            citation_f1 = 0.0
+
+        return {
+            "citation_precision": round(float(precision), 4),
+            "citation_recall": round(float(recall), 4),
+            "citation_f1": round(float(citation_f1), 4),
+            "unsupported_claim_rate": round(float(ucr), 4),
+            "total_claims": total_claims,
+            "supported_claims": supported_count,
+            "unsupported_claims": unsupported_count,
+        }

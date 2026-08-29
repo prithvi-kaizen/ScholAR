@@ -116,21 +116,53 @@ def _build_multi_vision_prompt(
             "Supporting text context from the paper:",
             text_context or "(no additional text context available)",
             "",
-            "Based on the images above and supporting context, answer the following question.",
-            "Compare, contrast, or explain specific values, labels, and visual elements from the images.",
-            "Cite Image 1 as [1] in your **Answer** section (e.g. Figure 1 [1] illustrates...). If multiple images are provided, cite Image 2 as [2].",
-            "Format model names and words naturally (e.g. BERT-Base, ResNet-50) rather than LaTeX commands. Use dollar signs ONLY for true mathematical formulas (e.g. $p_\\theta(x_t)$).",
+            "CRITICAL INSTRUCTIONS FOR MULTIMODAL SYNTHESIS:",
+            "1. Synthesize findings from BOTH the visual figures and the supporting text passages from the paper.",
+            "2. If specific quantitative thresholds, numbers, or empirical findings are stated in the text context (such as from Results, Observations, or Discussion sections), state them clearly and combine them with the visual trends in the figures.",
+            "3. Cite the evidence in your **Answer** section (e.g. Figure 1 [1], Section 4 [2]).",
+            "4. Format model names and words naturally (e.g. BERT-Base, ResNet-50) rather than LaTeX commands. Use dollar signs ONLY for true mathematical formulas (e.g. $2^{14}$, $p_\\theta(x_t)$).",
+            "5. If the figures are architectural diagrams and do not contain performance numbers, explain the architecture from the figures and extract the performance comparison / thresholds directly from the supporting text context.",
+            "",
             "Use the format:",
             "**Answer**",
-            "<your comprehensive answer/comparison citing [1]>",
-            "**Visual evidence**",
-            "- <what you can read directly from each image>",
+            "<your comprehensive synthesized answer/comparison citing [1] and text evidence>",
+            "",
+            "**Key Findings & Evidence**",
+            "- **Visual Evidence**: <what is depicted in the figures>",
+            "- **Quantitative Findings / Thresholds**: <empirical metrics or thresholds from the paper>",
+            "",
             "**Limits**",
-            "- <what cannot be determined from these figures alone>",
+            "- <what cannot be determined from these figures/sections alone>",
             "",
             f"Question: {question}",
         ])
     return "\n".join(p for p in parts if p is not None)
+
+
+def is_uninformative_visual_answer(answer: str) -> bool:
+    """Detect if the vision model reported an uninformative refusal due to diagram-only images."""
+    if not answer or len(answer.strip()) < 20:
+        return True
+    lowered = answer.lower()
+    refusal_signals = [
+        "not possible to determine",
+        "not possible to infer",
+        "cannot determine",
+        "cannot be determined from",
+        "do not provide comparative",
+        "does not provide comparative",
+        "no performance data",
+        "no performance metrics",
+        "actual results or charts comparing",
+        "do not contain a chart or table",
+        "does not contain a chart or table",
+        "contains no performance data",
+        "contain no performance data",
+        "not included in the provided images",
+        "not present in the image",
+        "not present in the provided image",
+    ]
+    return any(sig in lowered for sig in refusal_signals)
 
 
 async def answer_with_multimodal_evidence(
@@ -159,7 +191,7 @@ async def answer_with_multimodal_evidence(
         if not c.get("is_figure_chunk") and c.get("text", "").strip()
     ][:_MAX_TEXT_CONTEXT_CHUNKS]
     text_context = "\n\n".join(
-        "[p. " + str(c.get("page")) + "] " + c.get("text", "")[:400]
+        f"[Section: {c.get('section_title') or c.get('section') or 'Text'}, p. {c.get('page')}]\n" + c.get("text", "")[:2500]
         for c in text_chunks
     )
 
@@ -287,6 +319,19 @@ async def answer_with_multimodal_evidence(
                 }
                 for r in resolved_subregions
             ],
+        })
+
+    # Append top supporting text chunks to citations pool
+    start_ref = len(all_citations) + 1
+    for t_idx, tc in enumerate(context_chunks[:4], start=start_ref):
+        all_citations.append({
+            "ref_id": t_idx,
+            "page": tc.get("page", 1),
+            "chunk_id": tc.get("chunk_id", f"text_{t_idx}"),
+            "section_title": tc.get("section_title") or tc.get("section") or "Text Context",
+            "chunk_type": tc.get("chunk_type", "text"),
+            "quote": (tc.get("text") or tc.get("content") or "")[:400],
+            "is_figure": False,
         })
 
     import re

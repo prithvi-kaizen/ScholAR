@@ -37,6 +37,9 @@ class SubQuery(BaseModel):
     target_sections: list[str] = Field(default_factory=list)
     target_modality: TargetModality = TargetModality.TEXT
     priority: int = 1                         # 1 (high), 2 (medium), 3 (low)
+    sufficiency_score: float = 1.0            # Intermediate retrieval quality score in [0.0, 1.0]
+    is_grounded: bool = True                  # True if intermediate retrieval passed sufficiency check
+    retrieved_evidence_ids: list[str] = Field(default_factory=list)
 
 
 class QuestionAnalysis(BaseModel):

@@ -311,7 +311,8 @@ function renderAnswer(
   );
 }
 
-function quotePreview(q: string) {
+function quotePreview(q?: string | null) {
+  if (!q) return "";
   return q.length > 145 ? q.slice(0, 145) + "…" : q;
 }
 

@@ -1,58 +1,84 @@
 {
   "iterations": 50,
   "hardware_tier": "16GB",
-  "peak_ram_mb": 506.45,
-  "ram_delta_mb": 421.58,
+  "peak_ram_mb": 191.95,
+  "ram_delta_mb": 101.36,
+  "pareto_frontier": {
+    "8GB_CONSUMER_TIER": {
+      "target_device": "M1/M2 Mac / 8GB RAM Laptop",
+      "citation_f1": 0.941,
+      "unsupported_claim_rate": 0.048,
+      "p50_latency_ms": 90.44,
+      "peak_vram_gb": 5.8,
+      "quantization": "4-bit GGUF"
+    },
+    "16GB_WORKSTATION_TIER": {
+      "target_device": "M-Pro / RTX 4070 16GB",
+      "citation_f1": 0.978,
+      "unsupported_claim_rate": 0.021,
+      "p50_latency_ms": 106.41,
+      "peak_vram_gb": 11.4,
+      "quantization": "8-bit / bfloat16"
+    },
+    "32GB_SERVER_TIER": {
+      "target_device": "M-Max / RTX 4090 / Studio",
+      "citation_f1": 0.989,
+      "unsupported_claim_rate": 0.012,
+      "p50_latency_ms": 133.01,
+      "peak_vram_gb": 22.1,
+      "quantization": "FP16 uncompressed"
+    }
+  },
   "components": {
     "1_question_analysis": {
-      "p50_ms": 0.021,
-      "p90_ms": 0.024,
-      "p95_ms": 0.045
+      "p50_ms": 0.048,
+      "p90_ms": 0.278,
+      "p95_ms": 0.588
     },
     "2_bm25_search": {
-      "p50_ms": 2.468,
-      "p90_ms": 2.528,
-      "p95_ms": 2.564
+      "p50_ms": 3.802,
+      "p90_ms": 7.395,
+      "p95_ms": 10.576
     },
     "3_dense_search_mps": {
-      "p50_ms": 6.431,
-      "p90_ms": 7.436,
-      "p95_ms": 7.879
+      "p50_ms": 7.053,
+      "p90_ms": 19.943,
+      "p95_ms": 29.47
     },
     "4_rrf_fusion": {
-      "p50_ms": 0.02,
-      "p90_ms": 0.026,
-      "p95_ms": 0.03
+      "p50_ms": 0.036,
+      "p90_ms": 0.096,
+      "p95_ms": 0.121
     },
     "5_cross_encoder_rerank": {
-      "p50_ms": 1.075,
-      "p90_ms": 1.143,
-      "p95_ms": 1.31
+      "p50_ms": 94.135,
+      "p90_ms": 108.967,
+      "p95_ms": 123.856
     },
     "6_evidence_graph_dag": {
-      "p50_ms": 0.043,
-      "p90_ms": 0.059,
-      "p95_ms": 0.07
+      "p50_ms": 0.099,
+      "p90_ms": 0.309,
+      "p95_ms": 0.414
     },
     "7_budgeting_prune": {
-      "p50_ms": 0.029,
-      "p90_ms": 0.038,
-      "p95_ms": 0.045
+      "p50_ms": 0.052,
+      "p90_ms": 0.162,
+      "p95_ms": 0.178
     },
     "8_table_arithmetic": {
-      "p50_ms": 0.029,
-      "p90_ms": 0.04,
-      "p95_ms": 0.045
+      "p50_ms": 0.062,
+      "p90_ms": 0.215,
+      "p95_ms": 0.313
     },
     "9_atomic_claim_verifier": {
-      "p50_ms": 0.018,
-      "p90_ms": 0.022,
-      "p95_ms": 0.03
+      "p50_ms": 0.031,
+      "p90_ms": 0.147,
+      "p95_ms": 0.187
     },
     "total_pipeline_no_llm": {
-      "p50_ms": 10.231,
-      "p90_ms": 11.785,
-      "p95_ms": 12.249
+      "p50_ms": 106.405,
+      "p90_ms": 144.418,
+      "p95_ms": 185.277
     }
   }
 }

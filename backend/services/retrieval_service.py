@@ -113,8 +113,8 @@ def _section_hints(message: str) -> set[str]:
         hints.update({"method", "body"})
     if any(term in lowered for term in ("experiment", "setup", "dataset", "benchmark", "baseline", "metric")):
         hints.add("experiment")
-    if any(term in lowered for term in ("result", "finding", "outperform", "score", "accuracy", "bleu")):
-        hints.add("result")
+    if bool(_COMPARATIVE_SCALING_PATTERNS.search(lowered)) or any(term in lowered for term in ("result", "finding", "outperform", "score", "accuracy", "bleu", "observation", "evaluation")):
+        hints.update({"result", "experiment"})
     if any(term in lowered for term in ("limitation", "weakness", "future", "assumption", "caveat")):
         hints.add("limitation")
     return hints
@@ -167,14 +167,51 @@ def _bm25_scores(query_terms: list[str], chunks: list[dict[str, Any]]) -> dict[i
     return scores
 
 
-def _is_visual_query(message: str, base_query_terms: list[str]) -> bool:
+_IMPLICIT_METRIC_PATTERNS = re.compile(
+    r"\b("
+    r"bleu|rouge|meteor|cider|ter|wer|cer|perplexity|f1|f1-score|exact match|"
+    r"accuracy|top-1|top-5|auc|roc|map|iou|psnr|ssim|fid|is|"
+    r"flops|gflops|tflops|latency|throughput|runtime|inference time|training time|"
+    r"parameters?|param count|params|memory footprint|vram|gpu hours|speedup|"
+    r"learning rate|warmup|warmup steps|weight decay|dropout|attention dropout|"
+    r"d_model|d_ff|d_k|d_v|hidden size|embedding dimension|dimension of|"
+    r"number of heads|head count|layer count|number of layers|batch size|sequence length|"
+    r"outperform|highest score|lowest loss|best performing|ablation|scaling|breakdown|"
+    r"performance on|results on|benchmark results|leaderboard|comparison against|versus|"
+    r"wmt|glue|superglue|squad|imagenet|cifar|coco|mmlu|gsm8k|human-eval|ptb|penn treebank"
+    r")\b",
+    re.IGNORECASE,
+)
+
+_COMPARATIVE_SCALING_PATTERNS = re.compile(
+    r"\b("
+    r"outperform|outperforms|crossover|tradeoff|trade-off|threshold|"
+    r"input context|context length|context window|scaling|how much better|"
+    r"degrade|degradation|longer context|short context|small context|"
+    r"surpass|exceeds|compared to|comparison between|versus baseline"
+    r")\b",
+    re.IGNORECASE,
+)
+
+_IMPLICIT_VISUAL_PATTERNS = re.compile(
+    r"\b("
+    r"architecture|pipeline|workflow|attention distribution|attention weight|attention map|"
+    r"loss curve|convergence|training curve|learning curve|tradeoff|scatter|distribution|"
+    r"encoder-decoder structure|module breakdown|overview of the model"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def _is_implicit_visual_or_tabular_query(message: str, base_query_terms: list[str]) -> tuple[bool, bool]:
+    """Detect explicit and implicit intent for figures or tables."""
     lowered = message.lower()
-    if any(cue in lowered for cue in _VISUAL_CUE_TERMS):
-        return True
-    query_set = set(base_query_terms)
-    if query_set.intersection({"figure", "fig", "table", "plot", "chart", "diagram"}):
-        return True
-    return False
+    has_explicit_vis = any(cue in lowered for cue in _VISUAL_CUE_TERMS) or bool(
+        set(base_query_terms).intersection({"figure", "fig", "table", "plot", "chart", "diagram"})
+    )
+    has_implicit_tab = bool(_IMPLICIT_METRIC_PATTERNS.search(lowered)) or "table" in lowered or "tabular" in lowered
+    has_implicit_vis = has_explicit_vis or bool(_IMPLICIT_VISUAL_PATTERNS.search(lowered))
+    return has_implicit_vis, has_implicit_tab
 
 
 def reciprocal_rank_fusion(
@@ -218,7 +255,7 @@ def retrieve_chunks(
     if not base_query_terms or not chunks:
         return []
 
-    visual_query = _is_visual_query(message, base_query_terms)
+    has_visual_intent, has_tabular_intent = _is_implicit_visual_or_tabular_query(message, base_query_terms)
 
     # 1. Pinned Figure Reference Override
     pinned_chunk: dict[str, Any] | None = None
@@ -237,8 +274,9 @@ def retrieve_chunks(
     for index, chunk in enumerate(chunks):
         score = bm25.get(index, 0.0)
         is_fig = chunk.get("is_figure_chunk", False)
-        if score > 0 or (is_fig and visual_query):
-            bm25_ranked.append((max(score, 0.05 if is_fig else 0.0), chunk))
+        is_tbl = chunk.get("is_table_chunk", False)
+        if score > 0 or (is_fig and (has_visual_intent or (is_tbl and has_tabular_intent))):
+            bm25_ranked.append((max(score, 0.08 if (is_tbl and has_tabular_intent) else (0.05 if is_fig else 0.0)), chunk))
     bm25_ranked.sort(key=lambda x: x[0], reverse=True)
     lexical_list = [c for _, c in bm25_ranked]
 
@@ -247,25 +285,51 @@ def retrieve_chunks(
     dense_results = DenseEmbeddingService.search_dense(p_id, message, chunks, top_k=max(limit * 8, 30))
     dense_list = [c for c, _ in dense_results]
 
-    # 4. Channel 3: Modality & Section Directed Visual Ranking
+    # 4. Cross-Modal Reference Bridging: Detect table/figure citations in top text hits
+    bridged_figure_refs: set[str] = set()
+    for c in lexical_list[:5] + dense_list[:5]:
+        if not c.get("is_figure_chunk"):
+            bridged_figure_refs.update(extract_figure_refs(c.get("text", "")))
+
+    # 5. Channel 3: Modality, Implicit Intent & Section Directed Visual Ranking
     modality_ranked = []
     sec_hints = _section_hints(message)
+    has_comparative_scaling = bool(_COMPARATIVE_SCALING_PATTERNS.search(message.lower()))
     for chunk in chunks:
         mod_score = 0.0
-        if chunk.get("is_figure_chunk") and visual_query:
+        is_fig = chunk.get("is_figure_chunk", False)
+        is_tbl = chunk.get("is_table_chunk", False)
+        norm_label = _normalize_figure_label(chunk.get("label", ""))
+        caption_lower = (chunk.get("caption", "") + " " + chunk.get("label", "")).lower()
+        sec_str = (str(chunk.get("section", "")) + " " + str(chunk.get("section_title", ""))).lower()
+
+        # High priority boost if explicitly cited by top text chunks
+        if norm_label and norm_label in bridged_figure_refs:
+            mod_score += 3.0
+        elif is_tbl and has_tabular_intent:
+            mod_score += 2.5
+        elif is_fig and has_comparative_scaling and any(term in caption_lower for term in ("comparison", "scaling", "degrade", "performance", "score", "versus", "vs", "benchmark")):
+            mod_score += 3.0
+        elif is_fig and has_visual_intent:
             mod_score += 2.0
-        if chunk.get("is_table_chunk") and ("table" in message.lower() or "result" in sec_hints):
-            mod_score += 1.5
+        elif is_tbl and ("table" in message.lower() or "result" in sec_hints):
+            mod_score += 2.0
+
+        if has_comparative_scaling:
+            if chunk.get("chunk_type") in ("result", "experiment") or any(term in sec_str for term in ("result", "observation", "evaluation", "discussion", "scaling")):
+                mod_score += 2.5
+
         if chunk.get("page") in set(preferred_pages or []):
             mod_score += 1.0
-        if chunk.get("chunk_type") in sec_hints or any(h in str(chunk.get("section", "")).lower() for h in sec_hints):
+        if chunk.get("chunk_type") in sec_hints or any(h in sec_str for h in sec_hints):
             mod_score += 0.8
+
         if mod_score > 0:
             modality_ranked.append((mod_score, chunk))
     modality_ranked.sort(key=lambda x: x[0], reverse=True)
     modality_list = [c for _, c in modality_ranked]
 
-    # 5. Tri-Channel Reciprocal Rank Fusion (k=60)
+    # 6. Tri-Channel Reciprocal Rank Fusion (k=60)
     channel_lists = [lexical_list, dense_list]
     if modality_list:
         channel_lists.append(modality_list)
@@ -273,7 +337,13 @@ def retrieve_chunks(
     fused_candidates = reciprocal_rank_fusion(channel_lists, k=60)
     top_candidates = fused_candidates[: max(limit * 6, 25)]
 
-    # 6. Cross-Encoder Reranking
+    # Tag bridged visual chunks so reranker knows they are linked to top text
+    for cand in top_candidates:
+        norm_lbl = _normalize_figure_label(cand.get("label", ""))
+        if norm_lbl and norm_lbl in bridged_figure_refs:
+            cand["is_bridged_visual"] = True
+
+    # 7. Cross-Encoder Reranking
     reranked = RerankerService.rerank(message, top_candidates, top_k=limit)
 
     # Attach pinned chunk if specified

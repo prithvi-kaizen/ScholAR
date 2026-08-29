@@ -32,7 +32,7 @@ async def ollama_available() -> bool:
         async with httpx.AsyncClient(timeout=3.0, trust_env=False) as client:
             response = await client.get(f"{OLLAMA_BASE_URL}/api/tags")
             return response.status_code == 200
-    except httpx.HTTPError:
+    except Exception:
         return False
 
 

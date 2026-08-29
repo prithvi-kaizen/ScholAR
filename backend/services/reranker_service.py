@@ -105,7 +105,10 @@ class RerankerService:
             scored_candidates = []
             for candidate, score in zip(candidates, scores):
                 c_copy = dict(candidate)
-                c_copy["rerank_score"] = round(float(score), 4)
+                effective_score = float(score)
+                if candidate.get("is_bridged_visual"):
+                    effective_score = min(1.0, effective_score + 0.35)
+                c_copy["rerank_score"] = round(effective_score, 4)
                 scored_candidates.append(c_copy)
 
             scored_candidates.sort(key=lambda x: x["rerank_score"], reverse=True)
@@ -122,19 +125,29 @@ class RerankerService:
         """Deterministic lexical & positional heuristic reranker."""
         query_words = set(re.findall(r"\w+", query.lower()))
         scored_candidates = []
+        is_comparative = any(term in query.lower() for term in ("outperform", "crossover", "tradeoff", "trade-off", "threshold", "input context", "context length", "scaling", "better", "degrade", "versus", "vs"))
 
         for candidate in candidates:
-            text = (candidate.get("text", "") + " " + candidate.get("section", "")).lower()
+            text = (candidate.get("text", "") + " " + candidate.get("section", "") + " " + candidate.get("section_title", "")).lower()
             cand_words = set(re.findall(r"\w+", text))
             overlap = len(query_words & cand_words)
             jaccard = overlap / max(len(query_words | cand_words), 1)
 
-            # Prioritize table and figure if query asks for them
+            # Prioritize table and figure if query asks for them or if bridged
             modality_boost = 0.0
-            if "table" in query.lower() and candidate.get("is_table_chunk"):
+            if candidate.get("is_bridged_visual"):
+                modality_boost += 0.35
+            elif "table" in query.lower() and candidate.get("is_table_chunk"):
                 modality_boost += 0.2
-            if ("figure" in query.lower() or "plot" in query.lower()) and candidate.get("is_figure_chunk"):
+            elif ("figure" in query.lower() or "plot" in query.lower()) and candidate.get("is_figure_chunk"):
                 modality_boost += 0.2
+
+            if is_comparative:
+                is_result_sec = candidate.get("chunk_type") in ("result", "experiment") or any(term in text for term in ("result", "observation", "evaluation", "discussion", "scaling"))
+                if is_result_sec:
+                    modality_boost += 0.25
+                if candidate.get("is_figure_chunk") and any(term in (candidate.get("caption", "") + " " + candidate.get("label", "")).lower() for term in ("comparison", "scaling", "degrade", "performance", "score", "versus", "vs")):
+                    modality_boost += 0.25
 
             base_rrf = candidate.get("rrf_score", 0.0)
             score = round(min(1.0, 0.5 * jaccard + 0.3 * base_rrf + modality_boost), 4)

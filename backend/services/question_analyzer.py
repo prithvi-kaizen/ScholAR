@@ -34,16 +34,23 @@ _ARITHMETIC_PATTERNS = [
 
 _VISUAL_PATTERNS = [
     r"\b(figure|fig\.?|plot|chart|curve|loss curve|diagram|attention map|heatmap|visual|schematic|architecture diagram)\b",
-    r"\b(shown in figure|illustrated in|visualize)\b",
+    r"\b(shown in figure|illustrated in|visualize|attention distribution|convergence curve|pipeline structure|tradeoff)\b",
 ]
 
 _TABLE_PATTERNS = [
     r"\b(table|tab\.?|row|column|benchmark results|leaderboard|ablation table|score in table)\b",
+    r"\b(bleu|rouge|meteor|f1|f1-score|perplexity|error rate|accuracy|flops|gflops|tflops|latency|throughput|parameters|param count)\b",
+    r"\b(learning rate|warmup|warmup steps|weight decay|dropout|attention dropout|d_model|d_ff|d_k|d_v|hidden size|batch size)\b",
+    r"\b(wmt|glue|superglue|squad|imagenet|cifar|coco|mmlu|gsm8k|ptb|penn treebank)\b",
 ]
 
 _COMPARATIVE_PATTERNS = [
     r"\b(why\s+(?:does|do|is|are)|how\s+(?:does|do|is|are)|compare|comparing|comparison|contrast|trade-?off|advantages? over|difference between|versus|vs\.?)\b",
     r"\b(outperform|ablation|support the (?:claim|hypothesis|main claim)|connect .+ with|based on)\b",
+]
+
+_DIRECT_LOOKUP_PATTERNS = [
+    r"\b(what learning rate|which optimizer|batch size|how many epochs|what dataset|who are the authors|github url|code available)\b",
 ]
 
 
@@ -60,6 +67,7 @@ class QuestionAnalyzer:
         requires_visual = any(bool(re.search(pat, lowered)) for pat in _VISUAL_PATTERNS)
         requires_table = any(bool(re.search(pat, lowered)) for pat in _TABLE_PATTERNS) or requires_arithmetic
         is_comparative = any(bool(re.search(pat, lowered)) for pat in _COMPARATIVE_PATTERNS)
+        is_direct_lookup = any(bool(re.search(pat, lowered)) for pat in _DIRECT_LOOKUP_PATTERNS)
 
         # 1. Determine Target Modalities
         modalities: list[TargetModality] = []
@@ -76,10 +84,13 @@ class QuestionAnalyzer:
         level: ReasoningLevel
         rationale: str
 
-        if is_comparative and (requires_table or requires_visual or "why" in lowered):
+        if is_direct_lookup:
+            level = ReasoningLevel.L1_DIRECT_LOOKUP
+            rationale = "Question asks for a direct factual lookup, hyperparameter, or named entity."
+        elif is_comparative and (requires_table or requires_visual or "why" in lowered):
             level = ReasoningLevel.L5_MULTI_HOP_SYNTHESIS
             rationale = "Question requires multi-hop synthesis across architecture, ablation, and comparative results."
-        elif (requires_table and not requires_visual) or (requires_visual and not requires_table):
+        elif requires_table or requires_visual:
             level = ReasoningLevel.L4_CROSS_MODAL
             rationale = "Question requires cross-modal verification between textual narrative and tabular/visual data."
         elif any(sec in lowered for sec in ("method", "experiment", "result", "ablation", "limitation", "conclusion")) and is_comparative:
@@ -133,7 +144,7 @@ class QuestionAnalyzer:
                 subquery_id="SQ2",
                 query_text=f"Data and metrics: {q_clean}",
                 target_sections=["Results", "Experiments"],
-                target_modality=TargetModality.TABLE if requires_table else TargetModality.FIGURE,
+                target_modality=TargetModality.MULTIMODAL if (requires_table and requires_visual) else (TargetModality.TABLE if requires_table else TargetModality.FIGURE),
                 priority=2,
             ))
 
@@ -155,11 +166,17 @@ class QuestionAnalyzer:
 
         else:
             # L1 & L2: Single atomic search
+            default_mod = (
+                TargetModality.MULTIMODAL if (requires_table and requires_visual)
+                else (TargetModality.TABLE if requires_table
+                else (TargetModality.FIGURE if requires_visual
+                else TargetModality.TEXT))
+            )
             subqueries.append(SubQuery(
                 subquery_id="SQ1",
                 query_text=q_clean,
                 target_sections=[],
-                target_modality=TargetModality.TEXT,
+                target_modality=default_mod,
                 priority=1,
             ))
 

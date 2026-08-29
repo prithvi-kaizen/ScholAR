@@ -194,31 +194,35 @@ def chunk_figures(
     for fig in figures:
         caption = fig.get("caption", "").strip()
         label = fig.get("label", "")
+        body_text = fig.get("body_text", "").strip()
         fig_type = fig.get("figure_type", "figure")
         sec_title = "Figure" if fig_type == "figure" else "Table"
         sec_path = [sec_title]
         
-        text = f"{label}: {caption}" if caption else label
-        retrieval_text = f"{sec_title} > {text}"
+        base_text = f"{label}: {caption}" if caption else label
+        full_text = f"{base_text}\n{body_text}".strip() if body_text else base_text
+        retrieval_text = f"{sec_title} > {full_text}"
 
         chunk: dict = {
             "chunk_id": f"fig_{fig.get('figure_id')}",
             "page": fig.get("page", 1),
-            "text": text,
-            "original_text": text,
+            "text": full_text,
+            "original_text": full_text,
             "retrieval_text": retrieval_text,
-            "paragraph_text": text[:300],
+            "paragraph_text": full_text[:300],
             "section_title": sec_title,
             "section_path": sec_path,
             "chunk_type": fig_type,  # "figure" | "table"
             "char_start": 0,
-            "char_end": len(text),
+            "char_end": len(full_text),
             "is_figure_chunk": True,
+            "is_table_chunk": fig_type == "table",
             "figure_id": fig.get("figure_id"),
             "label": label,
             "image_file": fig.get("image_file"),
             "bbox": fig.get("bbox"),
             "caption": caption,
+            "body_text": body_text,
         }
         if source_paper_id is not None:
             chunk["source_paper_id"] = source_paper_id

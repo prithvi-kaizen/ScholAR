@@ -51,6 +51,8 @@ class MultiHopRetrievalService:
             return results, analysis
 
         # Multi-Hop path for L3 / L4 / L5
+        from backend.services.retrieval_service import tokenize
+
         collected_chunks: list[dict[str, Any]] = []
         seen_cids: set[str] = set()
         per_subquery_limit = max(2, limit // len(analysis.subqueries) + 1)
@@ -74,6 +76,33 @@ class MultiHopRetrievalService:
                 paper_id=paper_id,
             )
 
+            # PAR-RAG Intermediate Error-Arresting Verification
+            sq_tokens = set(tokenize(sq.query_text))
+            combined_text = " ".join(c.get("text", "") for c in sq_results)
+            evid_tokens = set(tokenize(combined_text))
+
+            if not sq_results:
+                sq.is_grounded = False
+                sq.sufficiency_score = 0.0
+                sq.retrieved_evidence_ids = []
+                logger.warning("PAR-RAG: Subquery [%s] returned 0 chunks; branch pruned.", sq.subquery_id)
+                continue
+
+            overlap = len(sq_tokens.intersection(evid_tokens)) / max(len(sq_tokens), 1) if sq_tokens else 1.0
+            is_grounded = overlap >= 0.10 or len(sq_tokens) < 3
+
+            sq.is_grounded = is_grounded
+            sq.sufficiency_score = round(float(overlap), 3)
+            sq.retrieved_evidence_ids = [
+                str(c.get("evidence_id") or c.get("chunk_id")) for c in sq_results
+            ]
+
+            if not is_grounded:
+                logger.info(
+                    "PAR-RAG: Subquery [%s] failed intermediate sufficiency (overlap=%.2f); ungrounded evidence filtered.",
+                    sq.subquery_id, overlap
+                )
+
             # Assign semantic role based on subquery
             role = "method_definition" if sq.subquery_id == "SQ1" else ("ablation_support" if sq.subquery_id == "SQ2" else "final_result")
             for chunk in sq_results:
@@ -83,6 +112,7 @@ class MultiHopRetrievalService:
                     c_copy = dict(chunk)
                     c_copy["subquery_id"] = sq.subquery_id
                     c_copy["reasoning_role"] = role
+                    c_copy["intermediate_grounded"] = is_grounded
                     collected_chunks.append(c_copy)
 
         logger.info(

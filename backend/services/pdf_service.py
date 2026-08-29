@@ -321,11 +321,15 @@ def extract_figures(
                     "y1": round(clip.y1 / max(page_rect.height, 1.0), 4),
                 }
 
+                clip_text = page.get_text("text", clip=clip).strip()
+                cleaned_body_text = re.sub(r"\s+", " ", clip_text).strip()
+
                 records.append({
                     "figure_id":   fig_id,
                     "figure_type": figure_type,   # "figure" | "table"
                     "label":       label_norm,     # "Figure 1", "Table 2", …
                     "caption":     caption_text,
+                    "body_text":   cleaned_body_text,
                     "page":        page_num,
                     "bbox":        bbox_dict,
                     "bbox_normalized": bbox_norm_dict,

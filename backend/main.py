@@ -48,7 +48,7 @@ from backend.services.retrieval_service import extract_page_hints, retrieve_chun
 from backend.services.routing_service import QuestionRouter, QuestionRouteType, RouteBudget, QueryDecomposer
 from backend.services.storage_service import StorageService
 from backend.services.verifier_service import ClaimVerifierService, VerificationLabel
-from backend.services.vision_service import answer_with_custom_snippet, answer_with_figure, answer_with_multimodal_evidence
+from backend.services.vision_service import answer_with_custom_snippet, answer_with_figure, answer_with_multimodal_evidence, is_uninformative_visual_answer
 
 
 logger = logging.getLogger("scholar")
@@ -74,6 +74,7 @@ class PaperInput(BaseModel):
     authors: list[str] = Field(default_factory=list)
     year: str = ""
     summary: str = ""
+    abstract: str = ""
     categories: list[str] = Field(default_factory=list)
     pdf_url: str
     abs_url: str
@@ -468,7 +469,7 @@ async def prepare_paper(paper: PaperInput) -> dict[str, Any]:
                 paper.title,
                 paper.authors,
                 paper.year,
-                paper.abstract,
+                paper.abstract or paper.summary,
             )
 
         # Sync to relational multi-view database
@@ -1185,8 +1186,12 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
     max_vis = max(1, route_budget.visual_items or 2)
     selected_figures = retrieved_figures[:max_vis]
 
+    # Trigger multimodal vision if explicitly required by route OR if top evidence is a visual/table chunk
+    top_has_visual_evidence = bool(selected and any(c.get("is_figure_chunk") for c in selected[:2]))
+
     if selected_figures and capabilities.can_process_images() and (
         route_budget.requires_native_vision
+        or top_has_visual_evidence
         or route_budget.route_type in (
             QuestionRouteType.FIGURE_VISUAL,
             QuestionRouteType.CHART_NUMERIC,
@@ -1208,27 +1213,30 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
         raw_vis_answer = vision_result["answer"]
         raw_vis_citations = vision_result.get("citations", [])
 
-        # Apply ALCE/AGREE remapping and disclaimer pruning to vision responses
-        aligned_vis_answer, verified_vis_citations, _ = ClaimVerifierService.verify_and_repair_answer(
-            answer=raw_vis_answer,
-            citations=raw_vis_citations,
-            candidate_pool=selected,
-            apply_repair=True,
-        )
+        if not is_uninformative_visual_answer(raw_vis_answer):
+            # Apply ALCE/AGREE remapping and disclaimer pruning to vision responses
+            aligned_vis_answer, verified_vis_citations, _ = ClaimVerifierService.verify_and_repair_answer(
+                answer=raw_vis_answer,
+                citations=raw_vis_citations,
+                candidate_pool=selected,
+                apply_repair=True,
+            )
 
-        return {
-            "answer":            aligned_vis_answer,
-            "citations":         verified_vis_citations,
-            "model":             vision_result.get("model_used", OLLAMA_MODEL),
-            "vision":            True,
-            "vision_fallback":   vision_result.get("fallback", False),
-            "figure_id":         vision_result.get("figure_id"),
-            "figure_label":      fig_label,
-            "figure_image_url":  f"/api/papers/{paper_id}/figures/{vision_result.get('figure_id')}.png"
-                                  if vision_result.get("figure_id") else None,
-            "route_type":        route_budget.route_type.value,
-            "capability_mode":   capabilities.capability_mode.value,
-        }
+            return {
+                "answer":            aligned_vis_answer,
+                "citations":         verified_vis_citations,
+                "model":             vision_result.get("model_used", OLLAMA_MODEL),
+                "vision":            True,
+                "vision_fallback":   vision_result.get("fallback", False),
+                "figure_id":         vision_result.get("figure_id"),
+                "figure_label":      fig_label,
+                "figure_image_url":  f"/api/papers/{paper_id}/figures/{vision_result.get('figure_id')}.png"
+                                      if vision_result.get("figure_id") else None,
+                "route_type":        route_budget.route_type.value,
+                "capability_mode":   capabilities.capability_mode.value,
+            }
+        else:
+            logger.info("Visual response was uninformative on diagram-only figure. Falling back to full-text RAG.")
 
     ollama_up = await ollama_available()
     context_chunks: list[dict[str, Any]] = []
@@ -1291,7 +1299,7 @@ Response requirements:
 - Do not use Markdown heading markers like #, ##, or ###.
 - Put each section label on its own line, for example **Answer**.
 - Use bullet points for multi-part explanations.
-- Wrap every piece of mathematical notation in single dollar signs, e.g. $x_t$ or $p_\theta(x_{{t-1}}\mid x_t)$, so it renders instead of showing raw symbols.
+- Wrap every piece of mathematical notation in single dollar signs, e.g. $x_t$ or $p_\\theta(x_{{t-1}}\\mid x_t)$, so it renders instead of showing raw symbols.
 - Cite paper claims inline only with evidence IDs from the Paper evidence list, such as [E1] or [E2].
 - Only cite [Ek] if the sentence directly states a specific mechanism, metric, or finding supported in [Ek].
 - NEVER attach citation markers to disclaimers, negative statements about what is NOT in the paper, assumptions, or conversational transitions.
