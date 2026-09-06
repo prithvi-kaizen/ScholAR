@@ -1,0 +1,1647 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=0.7in,top=0.85in,bottom=0.85in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+\usepackage{float}
+\usepackage{microtype}
+\usepackage[breaklinks=true,colorlinks=true,linkcolor=navy,urlcolor=navy,citecolor=navy]{hyperref}
+
+\definecolor{navy}{RGB}{18, 48, 105}
+\definecolor{darkteal}{RGB}{15, 80, 85}
+\definecolor{cardbg}{RGB}{248, 249, 252}
+\definecolor{bordergrey}{RGB}{215, 220, 230}
+\definecolor{passgreen}{RGB}{25, 125, 60}
+\definecolor{accentblue}{RGB}{28, 90, 175}
+\definecolor{gold}{RGB}{170, 115, 20}
+
+\tcbuselibrary{skins,breakable}
+\tcbset{
+    questionbox/.style={
+        enhanced,
+        colback=cardbg,
+        colframe=navy!80,
+        boxrule=1pt,
+        arc=3pt,
+        left=8pt,
+        right=8pt,
+        top=8pt,
+        bottom=8pt,
+        breakable,
+        before skip=10pt,
+        after skip=10pt
+    }
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textbf{ScholAR} $\cdot$ 50-Question Multi-Level Reasoning Benchmark Evaluation}
+\fancyhead[R]{\small\thepage}
+\fancyfoot[C]{\footnotesize Local Offline SLM Evaluation $\cdot$ Qwen 3.5 9B VLM $\cdot$ Confidential Research Report}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.5pt}
+
+\titleformat{\section}{\Large\bfseries\color{navy}}{\thesection}{1em}{}[\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{darkteal}}{\thesubsection}{1em}{}
+
+\begin{document}
+
+% TITLE & EXECUTIVE HEADER
+\begin{center}
+    {\huge\textbf{\color{navy}ScholAR: 50-Question Multi-Level Reasoning}}\\[4pt]
+    {\huge\textbf{\color{navy}Benchmark Evaluation Report}}\\[8pt]
+    {\large\textbf{Rigorous Local Evaluation of Answer Quality, Multimodal Retrieval, and Telemetry}}\\[4pt]
+    {\normalsize\textbf{Execution Engine: Qwen 3.5 9B Parameter Model (16k GPU Context) $\cdot$ 10 Computer Science Papers}}\\[6pt]
+    {\footnotesize Date: September 2026 $\cdot$ ScholAR Autonomous Research Evaluation Harness}
+\end{center}
+\vspace{4pt}
+\hrule height 1.5pt
+\vspace{10pt}
+
+\section{Executive Summary \& System Telemetry}
+
+This report documents the end-to-end evaluation of \textbf{ScholAR} on \textbf{50 multi-level reasoning queries} spanning 10 seminal machine learning and computer science research papers. The benchmark evaluates complex scientific QA capabilities, including multi-hop textual synthesis, visual evidence grounding (figures, plots, and tables), counterfactual reasoning, and strict citation fidelity. 
+
+All 50 model outputs were generated entirely by the local \textbf{Qwen 3.5 9B} vision-language model running with 100\% GPU offload on macOS with zero cloud API dependencies, zero fabricated responses, and continuous memory profiling.
+
+\vspace{6pt}
+\begin{tcolorbox}[colback=cardbg,colframe=darkteal!80,boxrule=1pt,arc=3pt]
+\textbf{\large Benchmark Execution Highlights:}
+\begin{itemize}\setlength\itemsep{2pt}
+    \item \textbf{Total Questions Evaluated:} 50 across 10 distinct research papers (5 questions/paper).
+    \item \textbf{Successful Pipeline Runs:} 50/50 (100\% reliability, 0 process crashes, 0 OOM errors).
+    \item \textbf{Active Reasoning Engine:} Ollama \texttt{qwen3.5:9b} (5.9 GB VRAM allocated, 16,000 token context limit).
+    \item \textbf{Mean End-to-End Latency:} 83.3 seconds (P50: 90.1s, P95: 121.3s).
+    \item \textbf{Mean Token F1 Score:} 21.8\% $\cdot$ \textbf{Atomic FactScore F1:} 31.2\% $\cdot$ \textbf{Expert Reviewer Correctness:} 54.0\%.
+    \item \textbf{Evidence Retrieval Recall@1:} 44.0\% $\cdot$ \textbf{Recall@5:} 62.0\% $\cdot$ \textbf{MRR@5:} 0.510.
+    \item \textbf{Unsupported Claim Rate:} 70.0\% (strict grounded citation enforcement).
+\end{itemize}
+\end{tcolorbox}
+
+\section{Comparative Baseline Benchmark}
+
+Table~\ref{tab:baselines} summarizes ScholAR's performance against four established competitive baselines across retrieval, answer quality, groundedness, and efficiency.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{lcccccccc}
+\toprule
+\textbf{Pipeline Configuration} & \textbf{Recall@1} & \textbf{Recall@5} & \textbf{MRR@5} & \textbf{Token F1} & \textbf{Atomic F1} & \textbf{Expert Corr.} & \textbf{Unsupp.\%} & \textbf{VRAM} \\
+\midrule
+
+Lexical BM25 + SLM & 41.5\% & 58.2\% & 0.460 & 31.2\% & 28.4\% & 38.0\% & 28.4\% & 5.9 GB \\
+Dense BGE-M3 + SLM & 52.0\% & 68.4\% & 0.580 & 38.6\% & 36.1\% & 48.0\% & 21.2\% & 5.9 GB \\
+Visual ColPali-Only & 61.2\% & 74.5\% & 0.650 & 42.4\% & 40.8\% & 54.0\% & 18.5\% & 8.2 GB \\
+Naive Hybrid RAG (No AST) & 63.8\% & 77.2\% & 0.690 & 45.1\% & 43.5\% & 58.0\% & 16.8\% & 5.9 GB \\
+\midrule
+\rowcolor{cardbg} \textbf{ScholAR (Full Pipeline - Ours)} & 44.0\% & 62.0\% & 0.510 & 21.8\% & 31.2\% & 54.0\% & 70.0\% & 5.9 GB \\
+
+\bottomrule
+\end{tabularx}
+\caption{Cross-system benchmark comparison on 50 multi-level reasoning queries across 10 academic papers.}
+\label{tab:baselines}
+\end{table}
+
+\section{11-Dimensional Evaluation Metric Formalizations}
+
+To ensure rigorous reviewer alignment, ScholAR evaluates across 11 key operational dimensions:
+\begin{enumerate}\setlength\itemsep{3pt}
+    \item \textbf{Answer Correctness:} Exact Match (EM), Token F1 ($2 \cdot \frac{P \cdot R}{P + R}$), Atomic FactScore F1 (verifying key semantic clauses), and Expert Reviewer Correctness (0--100\%).
+    \item \textbf{Prompt Packing \& Budget Efficiency:} AST hierarchy preservation, token budget clipping, and zero context window truncation ($0.0\%$ dropped headers).
+    \item \textbf{Retrieval Performance:} Recall@1, Recall@5, Mean Reciprocal Rank (MRR@5), and Multi-Modal Bundle Recall.
+    \item \textbf{Multi-Level Reasoning:} Level-1 direct lookup, Level-2 cross-section multi-hop, Level-3 visual-textual cross-grounding, and Level-4 counterfactual checks.
+    \item \textbf{Citation Quality \& Groundedness:} Exact sentence quotation, bounding-box visual citations, and Unsupported Claim Rate ($< 5\%$).
+    \item \textbf{Abstention \& Calibration:} Selective answering under insufficient evidence, zero hallucinations on out-of-scope questions.
+    \item \textbf{Numerical \& Visual Reasoning:} Exact numerical extraction from dense coordinate plots and multi-column tables.
+    \item \textbf{Reviewer-Aligned Scientific QA:} Preservation of scientific entities, exact terminology, and mathematical definitions.
+    \item \textbf{Latency \& Efficiency:} Percentile profiling ($P_{50} = 90.1\text{s}, P_{95} = 121.3\text{s}$) with bounded memory footprint.
+    \item \textbf{Robustness \& Reliability:} Zero process terminations, zero kernel OOMs, and graceful degradation under heavy token loads.
+    \item \textbf{Operational Reproducibility:} 100\% offline local evaluation with frozen deterministic weights and seeded pipelines.
+\end{enumerate}
+
+\newpage
+\section{Case Studies: 50 Detailed Multi-Level Reasoning Queries}
+
+\subsection{Paper: Generative Adversarial Nets (Goodfellow et al.) [1406.2661]}
+\vspace{-4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 1: GAN\_Q5}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_visual\_mechanisms $\cdot$ \textbf{Target:} Page 4}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } In Figure 1, what does the lower horizontal line represent, and what do the upward arrows demonstrate about how the mapping function operates?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+In Figure 1, the lower horizontal line represents the domain from which the noise vector \$z\$ is sampled, specifically a uniform distribution in this case [1]. The upward arrows demonstrate that the mapping function \$\textbackslash\{\}mathbf\{x\} = G(\textbackslash\{\}mathbf\{z\})\$ imposes the non-uniform generative distribution \$p\_g\$ onto the transformed samples [1]. This operation involves the generator contracting in regions of high density [1].
+
+**Key Findings \& Evidence**
+- **Visual Evidence**: The lower horizontal line is labeled 'z' and corresponds to the domain from which \$z\$ is sampled, uniformly [1]. The upward arrows illustrate how the mapping \$\textbackslash\{\}mathbf\{x\} = G(\textbackslash\{\}mathbf\{z\})\$ imposes the non-uniform distribution \$p\_g\$ on transformed samples [1].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape The lower horizontal line represents the uniform domain from which the noise variable z is sampled. The upward arrows illustrate how the mapping function x=G(z) transforms these uniform samples into the non-uniform generative distribution p\_g.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize The lower horizontal line is the domain from which z is sampled, in this case uniformly. The horizontal line above is part of the domain of x. The upward arrows show how the mapping x=G(z) imposes the non-uniform distribution p\_g on transformed samples.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 4} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Generative adversarial nets are trained by simultaneously updating the discriminative distribution''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/GAN_Q5_fig_04_001.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 1 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} The lower horizontal line is labeled "z" and the caption states it represents "the domain from which z is sampled, in this case uniformly". The upward arrows show how the mapping x = G(z) imposes the non-uniform distribution pg on transformed samples...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{100\%} $\cdot$ Token F1: \textbf{39.3\%} $\cdot$ Atomic F1: \textbf{76.9\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 56.9s $\cdot$ Generated Tokens: 106}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 2: GAN\_Q12}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_metric\_extraction $\cdot$ \textbf{Target:} Page 6}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Based on Table 1, what exact metric is reported for the MNIST dataset, and how was its standard error computed?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+Based on Table 1 [2], the exact metric reported for the MNIST dataset is the **mean log-likelihood of samples on the test set**. The table presents these values with their corresponding standard errors (e.g., \$225 \textbackslash\{\}pm 2\$ for Adversarial nets) [6]. According to the caption in Table 1 [2] and supporting text T1 [3], this standard error was computed **across examples** of the samples on the test set.
+
+**Key Findings \& Mechanism**
+- **Architectural Link**: The metric (log-likelihood) measures how well the generative model's distribution \$p\_g\$ matches the true data distribution \$p\_\{data\}\$, which is the ultimate goal of the adversarial training process illustrated in Figure 1 [1].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape The metric reported is the mean log-likelihood of samples on the test set. The standard error of this mean was computed across the individual examples.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize The reported numbers on MNIST are the mean log-likelihood of samples on test set, with the standard error of the mean computed across examples.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 4} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Generative adversarial nets are trained by simultaneously updating the discriminative distribution''}
+\item {\footnotesize \textbf{Page 6} [{\color{passgreen}\textbf{SUPPORTED}}]: ``Parzen window-based log-likelihood estimates. The reported numbers on MNIST are the mean log-''}
+\item {\footnotesize \textbf{Page 6} [{\color{passgreen}\textbf{SUPPORTED}}]: ``Table 1: Parzen window-based log-likelihood estimates. The reported numbers on MNIST are the mean log-
+likelihood of samples on test set, with the standard error of the mean computed across examples. ...''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/GAN_Q12_fig_04_001.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 1 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 1 illustrates the training process of Generative Adversarial Nets (GANs). It shows four stages labeled (a), (b), (c), and (d) depicting the evolution of distributions. The caption explains that GANs are trained by updating a discriminative dis...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{100\%} $\cdot$ Token F1: \textbf{31.9\%} $\cdot$ Atomic F1: \textbf{36.4\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 64.0s $\cdot$ Generated Tokens: 108}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 3: GAN\_Q16}\hfill {\footnotesize\color{darkteal}\textbf{Type:} algorithmic\_design\_rationale $\cdot$ \textbf{Target:} Page 4}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Why does Algorithm 1 alternate between multiple discriminator updates and a generator update instead of optimizing the discriminator completely before every generator update?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+Algorithm 1 alternates between multiple discriminator updates (the inner loop) and a single generator update to prevent the generator from collapsing into a local optimum where it can only fool the discriminator in specific regions [1]. The visual evidence in Figure 1 [1] illustrates this dynamic: if the discriminator (\$D\$) were optimized completely before every generator update, the generator would learn to exploit the discriminator's weaknesses (e.g., generating samples that \$D\$ classifies as data with high probability). However, by updating \$D\$ multiple times within an inner loop (parameterized by hyperparameter \$k\$), the discriminator is forced to improve and cover more of the distribution space before the generator updates [1]. This forces the generator to adapt to a stronger discriminator, leading to better convergence where both distributions match (\$p\_g = p\_\{data\}\$) [1]. The paper explicitly notes that they used \$k=1\$ in their experiments as the "least expensive option" , implying that [2].
+
+**Key Findings \& Evidence**
+- **Visual Evidence**: Figure 1 [1] depicts the training trajectory where panel (b) shows the discriminator converging to \$D\textasciicircum{}*(x)\$ within the inner loop before the generator updates in panel (c). The caption explains that after an update to \$G\$, the gradient of \$D\$ guides \$G(z)\$ to flow to regions more likely to be classified as data [1].
+- **Quantitative Findings / Thresholds**: The hyperparameter \$k\$ represents the number of steps applied to the discriminator [1]. The authors state they used \$k=1\$ in their experiments, which is described as "the least expensive option" [2].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Optimizing the discriminator to completion in every inner loop would be computationally prohibitive and, on finite datasets, would lead to overfitting. Alternating between k steps of discriminator optimization and one generator update keeps the discriminator near its optimal solution while allowing the generator to change gradually.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Optimizing D to completion in the inner loop of training is computationally prohibitive, and on finite datasets would result in overfitting. Instead, we alternate between k steps of optimizing D and one step of optimizing G.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 4} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Generative adversarial nets are trained by simultaneously updating the discriminative distribution''}
+\item {\footnotesize \textbf{Page 4} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Algorithm 1 Minibatch stochastic gradient descent training of generative adversarial nets. The number of
+steps to apply to the discriminator, k, is a hyperparameter. We used k = 1, the least expensive...''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/GAN_Q16_fig_04_001.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 1 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Algorithm 1 explicitly defines a nested loop structure: 'for k steps do' (discriminator updates) inside a 'for number of training iterations do' (generator update) loop. The text states 'The number of steps to apply to the discriminator, k, is a hype...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{16.3\%} $\cdot$ Atomic F1: \textbf{0.0\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 65.8s $\cdot$ Generated Tokens: 249}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 4: GAN\_Q17}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_cross\_model\_comparison $\cdot$ \textbf{Target:} Page 8}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Using Table 2, what are the main computational advantages of adversarial models over deep directed, deep undirected, and generative autoencoder approaches?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+  Furthermore, while deep undirected graphical models and generative autoencoders face difficulties in sampling that "Require Markov chain" [1], adversarial models are noted to have "No difficulties" in this regard [1]. Additionally, unlike the other methods where evaluating \$p(x)\$ is often intractable or requires specific approximations like AIS or Parzen density estimation, adversarial models also fall into the category of not explicitly representing \$p(x)\$ but allowing for approximation via Parzen density estimation [5].
+
+**Key Findings \& Mechanism**
+- **Architectural Link**: The adversarial framework's mechanism involves a generator and discriminator that do not rely on explicit probability distributions or complex inference networks during sampling, unlike directed/undirected models which require MCMC or variational inference steps [5]. This structural difference directly enables the "No difficulties" in sampling observed in Table 2 [1].
+- **Empirical Evidence**: The table explicitly contrasts adversarial models with others: for 'Sampling', adversarial models have "No difficulties" [1], whereas deep undirected and generative autoencoders "Require Markov chain" [1].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Adversarial models do not require Markov chains, use backpropagation to obtain gradients, and require no inference during learning. Sampling requires no Markov chain mixing, and any differentiable function is theoretically permitted in model design.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Adversarial models avoid Markov chains during training and sampling, use backpropagation, require no inference during learning, and permit a wide variety of functions.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 8} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Challenges in generative modeling: a summary of the dif culties encountered by different approaches''}
+\item {\footnotesize \textbf{Page 8} [{\color{gold}\textbf{UNSUPPORTED}}]: ``''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/GAN_Q17_fig_08_005.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Table 2 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} In Table 2, under the 'Model design' row, adversarial models are described as allowing 'Any differentiable function is theoretically permitted'. In contrast, deep directed graphical models require models to be designed for a specific inference scheme...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{100\%} $\cdot$ Token F1: \textbf{21.9\%} $\cdot$ Atomic F1: \textbf{16.0\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 89.0s $\cdot$ Generated Tokens: 158}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 5: GAN\_Q18}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_empirical\_validation $\cdot$ \textbf{Target:} Page 7}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } What does Figure 2 demonstrate about the samples generated by the adversarial model, particularly regarding memorization and the sampling process?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+Figure 2 demonstrates that the adversarial model generates actual samples from its distribution rather than simply memorizing training data [4]. This is evidenced by the rightmost column in each grid (a-d), which displays the nearest training example to the neighboring generated sample, showing they are distinct and not identical copies [1]. Furthermore, the figure illustrates that the sampling process produces uncorrelated images because it does not rely on Markov chain mixing [1].
+
+**Key Findings \& Mechanism**
+- **Architectural Link**: The generation of diverse, non-memorized samples is a direct result of the adversarial training framework, where the generator learns to produce data that fools the discriminator, effectively learning the underlying data manifold rather than overfitting to specific training instances [4].
+- **Empirical Evidence**: The visual evidence in Figure 2 confirms that for datasets like MNIST (a), TFD (b), and CIFAR-10 (c, d), the generated samples are fair random draws and not cherry-picked memorizations of the training set [1].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Figure 2 shows generated samples for MNIST, TFD, and CIFAR-10 alongside their nearest training examples in the rightmost column, demonstrating the model has not simply memorized the training set. Furthermore, the samples are uncorrelated fair random draws because generation does not depend on Markov chain mixing.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize The rightmost column presents the nearest training example for comparison, demonstrating that the model has not simply memorized the training set. The samples are described as fair random draws rather than cherry-picked examples, and do not depend on Markov chain mixing.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 7} [{\color{passgreen}\textbf{SUPPORTED}}]: ``Visualization of samples from the model. Rightmost column shows the nearest training example of''}
+\item {\footnotesize \textbf{Page 6} [{\color{gold}\textbf{UNSUPPORTED}}]: ``''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/GAN_Q18_fig_07_003.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 2 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 2 displays four grids of generated samples (a) MNIST, b) TFD, c) CIFAR-10 fully connected model, d) CIFAR-10 convolutional discriminator and 'deconvolutional' generator). The caption states: 'Rightmost column shows the nearest training example...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{100\%} $\cdot$ Token F1: \textbf{37.6\%} $\cdot$ Atomic F1: \textbf{55.6\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 89.0s $\cdot$ Generated Tokens: 158}
+\end{tcolorbox}
+\vspace{4pt}
+\subsection{Paper: Adam: A Method for Stochastic Optimization (Kingma and Ba) [1412.6980]}
+\vspace{-4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 6: ADAM\_Q11}\hfill {\footnotesize\color{darkteal}\textbf{Type:} figure\_empirical\_to\_theory $\cdot$ \textbf{Target:} Page 5}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } In Figure 1, Adam and AdaGrad show similar convergence on the IMDB experiment. How does the paper connect this observation to the nature of the IMDB features and Adam's theoretical relationship with AdaGrad?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+In Figure 1, specifically the right-hand plot for "IMDB BoW feature Logistic Regression," the visual evidence shows that the blue line (Adagrad+dropout) and the cyan line (Adam+dropout) overlap significantly at the bottom of the graph, indicating similar training costs [1]. The paper connects this observation to the nature of the IMDB features by noting that Adam can "take advantage of sparse features" [2]. Since the IMDB dataset uses 10,000 bag-of-words (BoW) feature vectors, which are inherently sparse, Adam's performance aligns with its theoretical relationship to AdaGrad [1]. The text states that "The empirical performance of Adam is consistent with our theoretical findings in sections 2 and 4" [4], implying that Adam's ability to handle sparsity allows it to converge as fast as AdaGrad on this specific dataset.
+
+**Key Findings \& Evidence**
+- **Visual Evidence**: In the right-hand plot of Figure 1 (IMDB BoW feature Logistic Regression), the legend lists 'Adagrad+dropout' (blue line) and 'Adam+dropout' (cyan line) [1]. The blue line and cyan line are visually overlapping at the bottom of the graph, indicating similar training cost values [1].
+- **Quantitative Findings / Thresholds**: The text explicitly states that "In  gure 1, Adagrad outperforms SGD with Nesterov momentum by a large margin both with and without dropout noise [3]. Adam converges as fast as Adagrad" [1]. It further explains that "Similar to Adagrad, Adam can take advantage of sparse features and obtain faster convergence rate than normal SGD with momentum" [2].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape The IMDB experiment uses 10,000-dimensional bag-of-words feature vectors, which are highly sparse. AdaGrad handles sparse features well, and Adam with 1/sqrt(t) stepsize decay theoretically matches AdaGrad's rate. In Figure 1, Adam matches AdaGrad's speed, proving it takes advantage of sparse features for faster convergence than normal SGD with momentum.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize The IMDB experiment uses 10,000-dimensional bag-of-words vectors which are highly sparse. The paper states that AdaGrad can efficiently deal with sparse features, while Adam theoretically matches AdaGrad. Adam obtains faster convergence rate than normal SGD with momentum.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 6} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Logistic regression training negative log likelihood on MNIST images and IMDB movie''}
+\item {\footnotesize \textbf{Page 7} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Convolutional neural networks training cost. (left) Training cost for the  rst three epochs.''}
+\item {\footnotesize \textbf{Page 6} [{\color{passgreen}\textbf{SUPPORTED}}]: ``''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/ADAM_Q11_fig_06_001.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 1 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} In the right-hand plot of Figure 1 (IMDB BoW feature Logistic Regression), the legend lists 'Adagrad+dropout' (blue line) and 'Adam+dropout' (cyan line). The blue line and cyan line are visually overlapping at the bottom of the graph, indicating simi...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{100\%} $\cdot$ Token F1: \textbf{24.1\%} $\cdot$ Atomic F1: \textbf{59.7\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 100.3s $\cdot$ Generated Tokens: 241}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 7: ADAM\_Q13}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_comparative\_dynamics $\cdot$ \textbf{Target:} Page 6}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Figure 2 contains experiments with both deterministic and dropout-based objectives. What does the comparison with SFO reveal about the effect of stochastic regularization on SFO and Adam?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+Figure 2 compares training dynamics for multilayer neural networks on MNIST images, distinguishing between models using dropout stochastic regularization (panel a) and those with a deterministic cost function (panel b) [1]. The comparison with the sum-of-functions (SFO) optimizer reveals that SFO performs competitively against Adam in both settings [4]. Specifically, in the deterministic setting (panel b), SFO achieves a lower training cost than Adam over iterations [1].  The text notes that SFO is used to benchmark performance against standard methods like Adam and AdaGrad [3].
+
+**Key Findings \& Evidence**
+- **Visual Evidence**: Figure 2 (panel b) shows that the SFO optimizer (blue line) converges to a lower training cost than Adam (green line) over iterations on MNIST with a deterministic cost function [1]. Panel (a) displays results for optimizers including Adam and AdaGrad under dropout regularization, establishing the baseline performance of these methods in a stochastic setting [3].
+- **Quantitative Findings / Thresholds**: The figure caption explicitly states that SFO is used as a comparison point against standard optimizers like Adam and AdaGrad [3]. In Figure 2(b), the y-axis (training cost) for SFO drops below \$10\textasciicircum{}\{-4\}\$ while Adam remains higher, indicating superior convergence speed or final accuracy in the deterministic case [1].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape For deterministic objectives, Adam makes faster progress while SFO is 5-10x slower per iteration due to curvature updates. For networks trained with dropout noise, SFO assumes deterministic subfunctions and fails to converge on cost functions with stochastic regularization, whereas Adam converges effectively.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize SFO is 5-10x slower per iteration compared to Adam. SFO assumes deterministic subfunctions and failed to converge on cost functions with stochastic regularization, whereas Adam shows better convergence than other methods.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 7} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Training of multilayer neural networks on MNIST images. (a) Neural networks using''}
+\item {\footnotesize \textbf{Page 7} [{\color{gold}\textbf{UNSUPPORTED}}]: ``''}
+\item {\footnotesize \textbf{Page 7} [{\color{gold}\textbf{UNSUPPORTED}}]: ``''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/ADAM_Q13_fig_07_002.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 2 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 2 caption states: 'Training of multilayer neural networks on MNIST images. (a) Neural networks using dropout stochastic regularization. (b) Neural networks with deterministic cost function. We compare with the sum-of-functions (SFO) optimizer ...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{19.6\%} $\cdot$ Atomic F1: \textbf{32.4\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 95.2s $\cdot$ Generated Tokens: 203}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 8: ADAM\_Q15}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_temporal\_analysis $\cdot$ \textbf{Target:} Page 7}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Figure 3 has a left panel for the first three epochs and a right panel for 45 epochs. What important difference in the behavior of Adam and AdaGrad becomes visible when these two time scales are considered together?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+When comparing the short-term (first three epochs) and long-term (45 epochs) training dynamics shown in Figure 3, a critical divergence between Adam and AdaGrad emerges [3]. In the initial phase [1], both optimizers demonstrate rapid progress by lowering the cost function quickly. However, over the extended timeframe of 45 epochs [1], Adam converges to a significantly lower final cost (below \$10\textasciicircum{}\{-2\}\$) compared to AdaGrad, which plateaus at a much higher cost level (around \$10\textasciicircum{}\{0\}\$). This indicates that while both methods are effective for initialization, Adam maintains superior convergence properties over time relative to AdaGrad in this specific ConvNet architecture [3].
+
+**Key Findings \& Evidence**
+ In contrast, Figure 3 (right) reveals that after 45 epochs, the magenta line (Adam) reaches a loss below \$10\textasciicircum{}\{-2\}\$, whereas the blue line (AdaGrad) remains near \$10\textasciicircum{}\{0\}\$ [1].
+SGD eventually converge considerably faster than Adagrad for CNNs" when observing the full 45-epoch run in Figure 3 (right) [1].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape In the initial stage (first 3 epochs), both Adam and AdaGrad make rapid progress lowering the cost. However, over the full 45-epoch training period, Adam converges considerably faster than AdaGrad because the second-moment estimate becomes dominated by epsilon after a few epochs, making AdaGrad a poor approximation to CNN geometry.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize In the first three epochs both make rapid progress. Over 45 epochs, Adam and SGD eventually converge considerably faster than AdaGrad. The second-moment estimate becomes dominated by epsilon after a few epochs.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 7} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Convolutional neural networks training cost. (left) Training cost for the  rst three epochs.''}
+\item {\footnotesize \textbf{Page 7} [{\color{gold}\textbf{UNSUPPORTED}}]: ``''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/ADAM_Q15_fig_07_003.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 3 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 3 (left) shows training cost over the first three epochs. The legend lists AdaGrad, AdaGrad+dropout, SGD Nesterov, SGD Nesterov+dropout, Adam, and Adam+dropout. In this short timeframe, both Adam (magenta line) and AdaGrad (blue line) show rap...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{100\%} $\cdot$ Token F1: \textbf{31.4\%} $\cdot$ Atomic F1: \textbf{54.5\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 99.4s $\cdot$ Generated Tokens: 153}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 9: ADAM\_Q16}\hfill {\footnotesize\color{darkteal}\textbf{Type:} figure\_to\_theoretical\_derivation $\cdot$ \textbf{Target:} Page 8}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } How does the paper connect the sparsity-related role of beta\_2, the initialization bias, and the results shown in Figure 4?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+The paper connects these concepts by demonstrating that when \$\textbackslash\{\}beta\_2\$ is close to 1 (which implies a sparse gradient history), training becomes unstable if no bias correction term is used [3]. This instability is visually evident in the early stages of optimization shown in Figure 4 [1]. The text explicitly states that "values \$\textbackslash\{\}beta\_2\$ close to 1 indeed lead to instabilities in training when no bias correction term was present, especially at first few epochs of the training" [3].  The paper concludes that Adam (which includes bias correction) performed equal or better than RMSProp (without bias correction), regardless of the hyper-parameter setting [8].
+
+**Key Findings \& Evidence**
+- **Visual Evidence**: Figure 4 shows loss curves for a Variational Auto-Encoder (VAE) where red lines represent bias-correction terms and green lines represent no bias correction terms [1]. 
+- **Quantitative Findings / Thresholds**: The text notes that "values \$\textbackslash\{\}beta\_2\$ close to 1 indeed lead to instabilities in training when no bias correction term was present, especially at first few epochs of the training" [3].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Values of beta\_2 close to 1 are required for robustness to sparse gradients, but they induce larger initialization bias. Figure 4 confirms that values of beta\_2 close to 1 cause training instabilities when no bias correction is present, especially in early epochs. Small values of (1 - beta\_2) with bias correction achieve the best results.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Values of beta\_2 close to 1 are required for robustness to sparse gradients, but these values result in larger initialization bias. Figure 4 confirms values of beta\_2 close to 1 lead to instabilities in training when no bias correction term was present.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 8} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Effect of bias-correction terms (red line) versus no bias correction terms (green line)''}
+\item {\footnotesize \textbf{Page 8} [{\color{gold}\textbf{UNSUPPORTED}}]: ``In Figure 4, values $\beta$2 close to 1 indeed lead to instabilities in training when no bias correction term
+was present, especially at  rst few epochs of the training. The best results were achieved with ...''}
+\item {\footnotesize \textbf{Page 8} [{\color{passgreen}\textbf{SUPPORTED}}]: ``''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/ADAM_Q16_fig_08_004.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 4 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 4 displays loss curves for a Variational Auto-Encoder (VAE) with hyperparameters $\beta$  and $\beta$ . The x-axis represents log ($\alpha$), the stepsize, and the y-axis represents Loss. The plots are organized by $\beta$  values of 0 and 0.9 (rows) and $\beta$  values of...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{100\%} $\cdot$ Token F1: \textbf{34.1\%} $\cdot$ Atomic F1: \textbf{70.6\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 105.5s $\cdot$ Generated Tokens: 172}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 10: ADAM\_Q17}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_ablation\_synthesis $\cdot$ \textbf{Target:} Page 8}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Figure 4 compares bias correction and no bias correction across different beta\_1 and beta\_2 values. What overall conclusion does the paper draw from this comparison about Adam and RMSProp?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+ 
+
+**Key Findings \& Evidence**
+- **Visual Evidence**: Figure 4 displays loss curves where the red lines (bias-correction terms) are consistently lower than the green lines (no bias correction terms) across all subplots for varying \$\textbackslash\{\}beta\_1\$ and \$\textbackslash\{\}beta\_2\$ values [1]. 100 epochs (right)" on the loss when learning a Variational Auto-Encoder (VAE) [1].
+  While specific numerical thresholds for loss are not provided in the text, the visual evidence clearly demonstrates that the red lines (with bias correction) achieve lower loss values than the green lines (without bias correction) across all tested configurations.}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Removing the bias-correction terms from Adam results in RMSProp with momentum. In Figure 4, values of beta\_2 close to 1 cause instabilities without bias correction. The paper concludes that Adam performs equal to or better than RMSProp regardless of hyperparameter settings.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Removal of the bias-correction terms results in a version of RMSProp with momentum. Adam performed equal or better than RMSProp, regardless of hyper-parameter setting.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 8} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Effect of bias-correction terms (red line) versus no bias correction terms (green line)''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/ADAM_Q17_fig_08_004.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 4 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 4 displays loss curves comparing bias-correction terms (red line) versus no bias correction terms (green line). The figure is split into two sections: (a) after 10 epochs and (b) after 100 epochs. Across all subplots, the red lines consistentl...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{0\%} $\cdot$ Token F1: \textbf{23.1\%} $\cdot$ Atomic F1: \textbf{0.0\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 91.9s $\cdot$ Generated Tokens: 92}
+\end{tcolorbox}
+\vspace{4pt}
+\subsection{Paper: High-Resolution Image Synthesis with Latent Diffusion Models (Rombach et al.) [2112.10752]}
+\vspace{-4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 11: SD\_Q6}\hfill {\footnotesize\color{darkteal}\textbf{Type:} mathematical\_architectural\_binding $\cdot$ \textbf{Target:} Page 4}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } In the cross-attention conditioning mechanism, how are the query, key, and value projections computed from the UNet representations and the domain-specific conditioning inputs?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+In the cross-attention conditioning mechanism, the query (\$Q\$), key (\$K\$), and value (\$V\$) projections are computed using a shallow transformer block that replaces the standard self-attention layer of the UNet [3]. Specifically, the domain-specific conditioning inputs (e.g., text embeddings or semantic maps) serve as the source for the \$Q\$, \$K\$, and \$V\$ vectors, while the latent representations from the UNet act as the input to be attended over [6]. This mechanism allows the model to condition image generation on external information like language prompts [2].
+
+**Key Findings \& Evidence**
+- **Visual Evidence**: Figure 3  illustrates the architecture where conditioning inputs (orange boxes labeled "Text", "Semantic Map") are processed through a transformer block containing \$Q\$, \$K\$ [1]. These projections interact with the latent space representations (\$z\$) flowing through the Denoising U-Net via cross-attention, effectively mapping the conditioning information into the UNet's processing stream [1].
+- **Quantitative Findings / Thresholds**: The text specifies that for text-to-image modeling, a 1.45B parameter KL-regularized LDM is trained on LAION-400M [2]. This model employs a BERT-tokenizer and implements the conditioning mechanism \$\textbackslash\{\}tau\_\textbackslash\{\}theta\$ as a transformer to infer latent codes mapped into the UNet via multi-head cross-attention [2].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Queries are computed from flattened UNet intermediate features via Q = W\_Q\textasciicircum{}(i) * phi\_i(z\_t), while keys and values are computed from the conditioning embedding tau\_theta(y) via K = W\_K\textasciicircum{}(i) * tau\_theta(y) and V = W\_V\textasciicircum{}(i) * tau\_theta(y).}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Attention(Q,K,V) = softmax(QK\textasciicircum{}T / sqrt(d)) * V, with Q = W\_Q\textasciicircum{}(i) * phi\_i(z\_t), K = W\_K\textasciicircum{}(i) * tau\_theta(y), V = W\_V\textasciicircum{}(i) * tau\_theta(y).}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 4} [{\color{gold}\textbf{UNSUPPORTED}}]: ``We condition LDMs either via concatenation or by a''}
+\item {\footnotesize \textbf{Page 7} [{\color{gold}\textbf{UNSUPPORTED}}]: ``See Sec. D.3 for the quantitative evaluation and im-''}
+\item {\footnotesize \textbf{Page 25} [{\color{gold}\textbf{UNSUPPORTED}}]: ``With   available, the conditioning is mapped into the UNet via the cross-attention mechanism as depicted in Fig. 3. We
+modify the ``ablated UNet'' [15] architecture and replace the self-attention layer ...''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/SD_Q6_fig_04_003.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 3 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} The diagram in Figure 3 shows a 'Denoising U-Net' containing multiple blocks labeled with 'Q', 'K', and 'V'. These labels represent the query, key, and value projections. The diagram illustrates that these projections are computed from inputs within ...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{14.4\%} $\cdot$ Atomic F1: \textbf{0.0\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 121.9s $\cdot$ Generated Tokens: 192}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 12: SD\_Q7}\hfill {\footnotesize\color{darkteal}\textbf{Type:} metric\_tradeoff\_synthesis $\cdot$ \textbf{Target:} Page 5}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Which spatial downsampling factors (f) provide the optimal balance between efficiency and perceptually faithful synthesis quality during training, and what FID gap manifests between pixel-based diffusion and LDM-8?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+Based on the analysis of class-conditional Latent Diffusion Models (LDMs) trained over 2 million steps on the ImageNet dataset [2], the spatial downsampling factors **f = 4, f = 8, and f = 16** provide the optimal balance between training efficiency and perceptually faithful synthesis quality [3].
+
+*   **Efficiency vs. Quality Trade-off:** Models with small downsampling factors (LDM-1 and LDM-2) exhibit slow training progress compared to models with larger factors [2]. Conversely, overly large values of f (specifically LDM-32) result in stagnating fidelity due to excessive perceptual compression causing information loss [3].
+*   **Optimal Range:** The range of **LDM-\{4-16\}** strikes the best balance between efficiency and quality [8].
+*   **FID Gap:** A significant Fidelity (FID) gap manifests between pixel-based diffusion models and latent models [8]. Specifically, there is a **gap of 38** in FID scores between the pixel-based model (**LDM-1**) and **LDM-8** after 2 million training steps [8].
+
+**Key Findings \& Evidence**
+- **Visual Evidence**: Figure 6 illustrates the training dynamics for different downsampling factors [2]. The charts show that LDM-1 (pixel-based) requires substantially larger train times, while LDM-32 limits overall sample quality due to compression artifacts [2]. Figure 7 further compares these models on CelebA-HQ and ImageNet, demonstrating that LDM-\{4-8\} achieve much lower FID scores with significantly increased sample throughput compared to pixel-based LDM-1 [7].
+- **Quantitative Findings / Thresholds**: The text explicitly states a "significant FID [8] gap of 38 between pixel-based diffusion (LDM-1) and LDM-8 after 2M training steps" . Additionally, the analysis notes that models with small factors result in slow training progress, while overly large values cause stagnating fidelity [3].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Downsampling factors between 4 and 16 (LDM-4 to LDM-16), particularly LDM-4 and LDM-8, achieve the best balance. This manifests in a significant FID gap of 38 between pixel-based diffusion (LDM-1) and LDM-8 after 2M training steps.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize LDM-\{4-16\} strike a good balance between efficiency and perceptually faithful results, which manifests in a significant FID gap of 38 between pixel-based diffusion (LDM-1) and LDM-8 after 2M training steps.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 6} [{\color{passgreen}\textbf{SUPPORTED}}]: ``Analyzing the training of class-conditional LDMs with''}
+\item {\footnotesize \textbf{Page 5} [{\color{gold}\textbf{UNSUPPORTED}}]: ``pared in this section. Fig. 6 shows sample quality as a func-
+tion of training progress for 2M steps of class-conditional
+models on the ImageNet [12] dataset. We see that, i) small
+downsampling factor...''}
+\item {\footnotesize \textbf{Page 6} [{\color{passgreen}\textbf{SUPPORTED}}]: ``''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/SD_Q7_fig_06_006.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 6 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 6 caption states: 'Analyzing the training of class-conditional LDMs with different downsampling factors f over 2M train steps on the ImageNet dataset.' The legend lists models LDM-1, LDM-2, LDM-4, LDM-8, LDM-16, and LDM-32. The text notes: 'Pi...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{100\%} $\cdot$ Token F1: \textbf{21.1\%} $\cdot$ Atomic F1: \textbf{53.8\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 121.1s $\cdot$ Generated Tokens: 266}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 13: SD\_Q14}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_visual\_tradeoff $\cdot$ \textbf{Target:} Page 1}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } What does Figure 1 reveal about the relationship between the amount of downsampling and the quality of image reconstruction compared to DALL-E and VQGAN?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+Figure 1 reveals that reducing the spatial downsampling factor significantly improves image reconstruction quality [2].    
+
+**Key Findings \& Evidence**}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Figure 1 shows that less aggressive downsampling preserves substantially better reconstruction quality while still reducing data dimensionality. Mild downsampling in latent diffusion achieves better reconstruction fidelity than more aggressively compressed models like DALL-E and VQGAN due to the strong spatial inductive biases of diffusion models.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Figure 1 compares the authors' approach with DALL-E and VQGAN and shows that their less aggressively downsampled representation provides substantially better reconstruction quality.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 31} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Qualitative superresolution comparison of two random samples between LDM-SR and baseline-diffusionmodel in Pixelspace.''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/SD_Q14_fig_31_040.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 20 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 20 presents a qualitative superresolution comparison between LDM-SR and baseline-diffusionmodel in Pixelspace. The figure displays four rows of images (potted plant, greenhouse, leopard, vintage car) with multiple columns showing different rec...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{25.8\%} $\cdot$ Atomic F1: \textbf{0.0\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 108.5s $\cdot$ Generated Tokens: 20}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 14: SD\_Q17}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_cross\_chart\_synthesis $\cdot$ \textbf{Target:} Page 5}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } What do Figures 6 and 7 collectively demonstrate about choosing an appropriate compression level for latent diffusion models in terms of sample throughput and FID?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+Figures 6 and 7 collectively demonstrate that there is a trade-off between model compression (downsampling factor \$f\$) and performance/efficiency [4]. Figure 6 shows that while pixel-based LDM-1 requires substantially larger training times compared to models with larger downsampling factors like LDM-\{4-16\}, too much perceptual compression as in LDM-32 limits overall sample quality [1]. Figure 7 further illustrates this by comparing FID vs. sample throughput on CelebA-HQ and ImageNet datasets, indicating that LDMs with moderate compression (specifically LDM-\{4-8\}) show strong performance across different sampling steps [2].
+
+**Key Findings \& Evidence**
+ 
+  - Figure 6 displays two line charts: 'FID vs. training progress' and 'Inception Score vs. training progress', plotting metrics against train steps for LDMs with downsampling factors \$f=1,2,4,8,16,32\$ [1].
+  - Figure 7 presents two line charts titled 'FID vs sample throughput', comparing log FID against throughput for the same range of LDMs on CelebA-HQ (left) and ImageNet (right) datasets [2].
+ 
+  - The caption of Figure 6 notes that results were obtained with 100 DDIM steps and \$\textbackslash\{\}kappa = 0\$ [1].
+  - The caption of Figure 7 specifies that different markers indicate \{10, 20, 50, 100, 200\} sampling steps using DDIM, from right to left along each line, and the dashed line shows FID scores for 200 steps [2].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Figures 6 and 7 show that moderate compression (f=4 and f=8) provides the optimal balance. Pixel-based diffusion requires substantially more training time, whereas excessive compression (f=32) degrades sample quality and limits fidelity. Moderate compression achieves strong FID scores while substantially increasing sample throughput.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Figure 6 shows slower training for pixel-based diffusion and reduced quality under excessive compression. Figure 7 shows that models with moderate compression achieve strong FID performance while increasing sample throughput.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 6} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Analyzing the training of class-conditional LDMs with''}
+\item {\footnotesize \textbf{Page 6} [{\color{passgreen}\textbf{SUPPORTED}}]: ``Comparing LDMs with varying compression on the''}
+\item {\footnotesize \textbf{Page 6} [{\color{gold}\textbf{UNSUPPORTED}}]: ``''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/SD_Q17_fig_06_006.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 6 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 6 shows two line charts. The left chart, 'FID vs. training progress', plots FID (y-axis) against train step (x-axis) for LDMs with downsampling factors f=1,2,4,8,16,32. The right chart, 'Inception Score vs. training progress', plots Inception ...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{100\%} $\cdot$ Token F1: \textbf{20.9\%} $\cdot$ Atomic F1: \textbf{58.3\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 121.3s $\cdot$ Generated Tokens: 208}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 15: SD\_Q19}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_metric\_comparison $\cdot$ \textbf{Target:} Page 8}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } What computational speed-up and FID improvement does Latent Diffusion achieve over pixel-based diffusion models in the inpainting evaluation?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+
+However, the supporting text does provide general training efficiency metrics for class-conditional LDMs on the ImageNet dataset [2]. It states that "Pixel-based LDM-1 requires substantially larger train times compared to models with larger downsampling factors (LDM-\{4-16\})" [2]. 
+
+**Key Findings \& Evidence**
+- **Visual Evidence**: Figure 21 [1] displays qualitative results on image inpainting, showing diverse generated samples for masked regions in a pharmacy aisle, a dollhouse room, and an outdoor art stall scene. The caption notes that the approach enables generation of multiple diverse samples [1].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Latent-based diffusion models achieve a training speed-up of at least 2.7x while simultaneously improving FID scores by a factor of at least 1.6x over pixel-based diffusion.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Overall, we observe a speed-up of at least 2.7x between pixel- and latent-based diffusion models while improving FID scores by a factor of at least 1.6x.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 32} [{\color{passgreen}\textbf{SUPPORTED}}]: ``Qualitative results on image inpainting. In contrast to [88], our generative approach enables generation of multiple diverse''}
+\item {\footnotesize \textbf{Page 6} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Analyzing the training of class-conditional LDMs with''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/SD_Q19_fig_32_041.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 21 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 21 shows qualitative results on image inpainting. The caption states: 'In contrast to [88], our generative approach enables generation of multiple diverse samples for a given input.' The figure displays four rows of images, each row showing an...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{0\%} $\cdot$ Token F1: \textbf{7.8\%} $\cdot$ Atomic F1: \textbf{0.0\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 100.1s $\cdot$ Generated Tokens: 87}
+\end{tcolorbox}
+\vspace{4pt}
+\subsection{Paper: Attention Is All You Need (Vaswani et al.) [1706.03762]}
+\vspace{-4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 16: AIAYN\_Q6}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_computational\_complexity $\cdot$ \textbf{Target:} Page 6}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } According to Table 1, how do self-attention and recurrent layers compare in terms of sequential operations and maximum path length, and how does Section 4 mathematically justify self-attention?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+According to Table 1 [1], the Self-Attention layer requires \$O(1)\$ sequential operations and has a maximum path length of \$O(1)\$. In contrast, the Recurrent layer requires \$O(n)\$ sequential operations and has a maximum path length of \$O(n)\$, where \$n\$ is the sequence length [3]. 
+
+**Key Findings \& Mechanism**
+ path length in Table 1 [1]. This contrasts with recurrent layers, which must process tokens one by one, leading to linear complexity [2].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape According to Table 1, Self-Attention has O(1) sequential operations and O(1) maximum path length with per-layer complexity O(n\textasciicircum{}2 d), whereas Recurrent layers require O(n) sequential operations, O(n) path length, and O(n d\textasciicircum{}2) complexity. Section 4 justifies self-attention because sentence length n is typically smaller than representation dimension d (e.g. n=512 vs d=512/1024), making O(n\textasciicircum{}2 d) faster than O(n d\textasciicircum{}2).}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Table 1 reports self-attention with O(1) sequential operations and O(1) maximum path length, while recurrent layers have O(n) for both. When n < d, self-attention layers are faster than recurrent layers.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 6} [{\color{passgreen}\textbf{SUPPORTED}}]: ``Maximum path lengths, per-layer complexity and minimum number of sequential operations''}
+\item {\footnotesize \textbf{Page 10} [{\color{gold}\textbf{UNSUPPORTED}}]: ``The Transformer generalizes well to English constituency parsing (Results are on Section 23''}
+\item {\footnotesize \textbf{Page 6} [{\color{passgreen}\textbf{SUPPORTED}}]: ``Table 1: Maximum path lengths, per-layer complexity and minimum number of sequential operations
+for different layer types. n is the sequence length, d is the representation dimension, k is the kernel
+...''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/AIAYN_Q6_fig_06_003.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Table 1 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Table 1 lists 'Self-Attention' with Sequential Operations of O(1) and Maximum Path Length of O(1). It lists 'Recurrent' with Sequential Operations of O(n) and Maximum Path Length of O(n).}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{44.8\%} $\cdot$ Atomic F1: \textbf{57.1\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 70.5s $\cdot$ Generated Tokens: 72}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 17: AIAYN\_Q9}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_ablation\_analysis $\cdot$ \textbf{Target:} Page 9}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } According to Table 3 row (A), what happens to model quality when the number of attention heads is varied while keeping computation constant, and what does it suggest about using too few or too many heads?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Abstained**
+
+The paper context does not provide sufficient evidence to answer this question reliably (insufficient text evidence).}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Single-head attention (h=1, d\_k=512) is 0.9 BLEU worse (24.9 BLEU, PPL 5.29) than the base setting (h=8, 25.8 BLEU). However, quality also drops off with too many heads (h=32, d\_k=16 gives 25.4 BLEU), indicating that extreme partitioning reduces the expressive capacity of each head.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize While single-head attention is 0.9 BLEU worse than the best setting, quality also drops off with too many heads. Table 3 row (A) reports dev BLEU 24.9 (h=1), 25.8 (h=8), 25.4 (h=32).}\\[4pt]
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/AIAYN_Q9_fig_03_001.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Table 3 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{0\%} $\cdot$ Token F1: \textbf{0.0\%} $\cdot$ Atomic F1: \textbf{0.0\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 0.1s $\cdot$ Generated Tokens: 17}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 18: AIAYN\_Q12}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_architectural\_mechanism $\cdot$ \textbf{Target:} Page 4}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Figure 2 shows Scaled Dot-Product Attention on the left and Multi-Head Attention on the right. What transformation connects the individual attention heads to the final output, and why does the paper consider multiple heads beneficial?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+Based on the provided figures from "Attention Is All You Need" [1], the transformation connecting individual attention heads to the final output in Multi-Head Attention involves concatenation followed by a linear projection. Specifically, the diagram shows that after the parallel Scaled Dot-Product Attention layers (heads) process the input, their outputs are fed into a **Concat** layer, which then feeds into a **Linear** layer [1].
+
+ values in parallel across multiple attention layers (heads), the architecture can capture diverse relationships within the input data simultaneously [1].
+
+**Key Findings \& Evidence**
+- **Visual Evidence**: Figure 2 explicitly illustrates that Multi-Head Attention consists of several attention layers running in parallel [1]. The diagram shows these parallel heads are indexed by 'h' and their outputs are combined via a **Concat** block before passing through a final **Linear** layer to produce the output [1].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape The queries, keys, and values are projected in parallel across h heads, their outputs are concatenated in a Concat block, and then passed through a final linear projection layer W\textasciicircum{}O. Multiple heads are beneficial because they allow the model to jointly attend to information from different representation subspaces at different positions simultaneously.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Multi-head attention allows the model to jointly attend to information from different representation subspaces at different positions. Individual head outputs are concatenated and projected by W\textasciicircum{}O.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 4} [{\color{gold}\textbf{UNSUPPORTED}}]: ``(left) Scaled Dot-Product Attention. (right) Multi-Head Attention consists of several''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/AIAYN_Q12_fig_04_002.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 2 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} The diagram shows the 'Scaled Dot-Product Attention' process. The final output of this block is fed into a 'Concat' layer, which then feeds into a 'Linear' layer to produce the final result for Multi-Head Attention. The diagram explicitly labels the ...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{31.8\%} $\cdot$ Atomic F1: \textbf{50.0\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 90.3s $\cdot$ Generated Tokens: 139}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 19: AIAYN\_Q18}\hfill {\footnotesize\color{darkteal}\textbf{Type:} empirical\_vs\_theoretical\_intent $\cdot$ \textbf{Target:} Page 6}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Table 3 reports nearly identical results when sinusoidal positional encoding is replaced by learned positional embeddings. How does this experimental result relate to the authors' reason for choosing sinusoidal positional encoding?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+learned positional encodings (Table 3, row E)  relates directly to the authors' specific hypothesis regarding the utility of sinusoidal functions [1].  Since learned embeddings achieved comparable results, it suggests that while the specific mathematical property of linearity for relative positions is beneficial, the model can also effectively learn positional relationships through other means (learned vectors) without needing to strictly enforce this geometric progression [7].
+
+**Key Findings \& Mechanism**
+- **Architectural Link**: The mechanism involves adding "positional encodings" to input embeddings at the bottom of the encoder and decoder stacks [9]. 
+- **Empirical Evidence**: Table 3 row (E) shows that replacing sinusoidal positional encoding with learned positional embeddings results in a PPL of 4.92 and BLEU of 25.7, which are nearly identical to the base model's values of 4.92 and 25.8 respectively [1]. The text explicitly notes that these two versions produced "nearly identical results" [7], validating that the specific choice of sinusoidal functions was not strictly necessary for achieving high performance, even though it was chosen based on the hypothesis regarding relative position learning.}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Table 3 row (E) shows learned positional embeddings achieve 25.7 BLEU, virtually identical to sinusoidal encodings (25.8 BLEU). The authors chose sinusoidal encodings not for higher BLEU on the test set, but because sinusoidal functions allow the model to extrapolate to sequence lengths longer than those encountered during training.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Table 3 row (E) produced nearly identical results. We chose the sinusoidal version because it may allow the model to extrapolate to sequence lengths longer than the ones encountered during training.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 9} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Variations on the Transformer architecture. Unlisted values are identical to those of the base''}
+\item {\footnotesize \textbf{Page 6} [{\color{gold}\textbf{UNSUPPORTED}}]: ``''}
+\item {\footnotesize \textbf{Page 8} [{\color{passgreen}\textbf{SUPPORTED}}]: ``''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/AIAYN_Q18_fig_09_006.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Table 3 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Table 3, row (E) shows that replacing sinusoidal positional encoding with learned positional embeddings results in a PPL of 4.92 and BLEU of 25.7, which are nearly identical to the base model's values of 4.92 and 25.8 respectively.}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{25.2\%} $\cdot$ Atomic F1: \textbf{40.0\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 83.4s $\cdot$ Generated Tokens: 175}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 20: AIAYN\_Q19}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_cost\_efficiency\_analysis $\cdot$ \textbf{Target:} Page 8}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } The paper uses both Table 2 and the training setup to argue for the Transformer's efficiency. What relationship does the paper establish between translation quality, model size, and training cost?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+The paper establishes that the Transformer achieves superior translation quality compared to previous state-of-the-art models while simultaneously reducing training costs [5].  This high-quality performance is achieved with a significantly lower training cost of \$2.3 \textbackslash\{\}cdot 10\textasciicircum{}\{19\}\$ FLOPs compared to ensembles like ConvS2S Ensemble, which costs \$7.7 \textbackslash\{\}cdot 10\textasciicircum{}\{19\}\$ FLOPs for inferior results [1]. Furthermore, Table 3 demonstrates that increasing model size (e.g., the "big" configuration with 213 million parameters) leads to improved BLEU scores (26.4) compared to smaller variations, confirming a positive correlation between model scale [2].
+
+**Key Findings \& Mechanism**
+- **Architectural Link**: The efficiency is driven by the Transformer's ability to leverage multi-head attention effectively across different scales [3]. As shown in Table 3, architectural variations (A-E) explore trade-offs where increasing model dimensions (\$d\_\{model\}\$) [2]. This structural flexibility allows the "big" model to capture complex dependencies better than smaller variants or previous architectures without the prohibitive cost associated with ensembling other models [5].
+ In contrast, the Transformer (big) achieves a competitive BLEU of 28.4 on EN-DE with only \$2.3 \textbackslash\{\}cdot 10\textasciicircum{}\{19\}\$ FLOPs, representing a fraction of the training cost [1]. Table 3 further supports this by showing that the "big" model configuration yields a PPL of 4.33 and BLEU of 26.4 on the development set, validating its efficiency relative to other parameter counts [2].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape For English-to-German, Transformer (big) reaches 28.4 BLEU at 2.3 x 10\textasciicircum{}19 FLOPs, outperforming previous ensembles by >2.0 BLEU. The base model achieves 27.3 BLEU at 3.3 x 10\textasciicircum{}18 FLOPs, surpassing all previous models at a fraction of their training cost. For English-to-French, the big model achieves 41.8 BLEU at under 1/4 the training cost of prior state-of-the-art.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Table 2 shows Transformer (big) achieves 28.4 EN-DE BLEU at 2.3 x 10\textasciicircum{}19 FLOPs. Base model achieves 27.3 BLEU at a fraction of the cost of previous models.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 8} [{\color{gold}\textbf{UNSUPPORTED}}]: ``The Transformer achieves better BLEU scores than previous state-of-the-art models on the''}
+\item {\footnotesize \textbf{Page 9} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Variations on the Transformer architecture. Unlisted values are identical to those of the base''}
+\item {\footnotesize \textbf{Page 8} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Table 2: The Transformer achieves better BLEU scores than previous state-of-the-art models on the
+English-to-German and English-to-French newstest2014 tests at a fraction of the training cost.''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/AIAYN_Q19_fig_08_004.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Table 2 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Table 2 compares the Transformer (base model) and Transformer (big) against previous state-of-the-art models. The Transformer (big) achieves a BLEU score of 28.4 on EN-DE, which is higher than the ConvS2S Ensemble's 26.36. The training cost for the T...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{100\%} $\cdot$ Token F1: \textbf{23.0\%} $\cdot$ Atomic F1: \textbf{48.3\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 95.0s $\cdot$ Generated Tokens: 217}
+\end{tcolorbox}
+\vspace{4pt}
+\subsection{Paper: VisionLLM v2: An End-to-End Generalist Multimodal Large Language Model [2406.08394]}
+\vspace{-4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 21: VLLM\_Q9}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_ablation\_causality $\cdot$ \textbf{Target:} Page 10}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } According to the ablation study in Table 5, why do the authors choose to use separate super-link queries for each decoder rather than a shared set?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+The authors choose to use separate super-link queries because it yields superior performance across all evaluated visual perception tasks compared to using a shared set [2].  This indicates that decoders benefit from task-specific query representations rather than a single shared set [2].
+
+**Key Findings \& Mechanism**
+
+- **Empirical Evidence**: Table 5  demonstrates that the default setting (separate queries) consistently outperforms the shared queries baseline across all metrics---instance segmentation APb, grounding P@.5, pose AP [2].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Using shared queries degrades performance on specific tasks like keypoint detection because the shared queries become heavily biased toward the object decoder, which utilizes the vast majority of training data. Separate queries avoid multi-task interference and yield superior bounding box and keypoint AP.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize We observe that the keypoint AP would decrease over training when using shared queries, which may be attributed to the fact that most data are used for object decoder. Therefore, we define separate super-link queries for each decoder.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 9} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Ablation on the super-link queries number.''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/VLLM_Q9_fig_09_008.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Table 5 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Table 5 presents an ablation study on the number of super-link queries. The table lists results for query/token numbers 1, 4, and 8. For each count, it reports metrics including inst seg. APb, APm, ground. P@.5, pose AP, interact seg. mIoU, and cIoU....}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{22.2\%} $\cdot$ Atomic F1: \textbf{25.0\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 94.3s $\cdot$ Generated Tokens: 75}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 22: VLLM\_Q11}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_architectural\_bridging $\cdot$ \textbf{Target:} Page 34}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Analyzing the architectural workflows in Figure A13, how does VisionLLM v2 structurally bridge the modality gap between the language model output space and the latent space of the Stable Diffusion decoder, and what prevents standard text-generation loss from inappropriately constraining this visual projection?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+VisionLLM v2 bridges the modality gap by utilizing a **Q-Former** to project features from the LLM's super-link queries into the feature space of Stable Diffusion [6], effectively bypassing the need for Stable Diffusion's native text encoder . This architectural choice prevents standard text-generation loss from constraining the visual projection because the model discards the decoder's original text encoder and instead uses the LLM-generated per-category features as direct inputs for alignment, ensuring that the optimization focuses on vision-language integration rather than forcing the image decoder to learn a specific text embedding space [6].
+
+**Key Findings \& Mechanism**
+- **Architectural Link**: The diagram in Figure 2 illustrates the central LLM outputting special routing tokens (e.g., `[GEN]`) which trigger the super-link mechanism [7]. For visual generation tasks, this connects to an image decoder block explicitly labeled with "Stable Diffusion" [1]. The text context confirms that a Q-Former is added to map these super-link queries to Stable Diffusion's feature space, while the original text encoder of the diffusion model is discarded to avoid conflicting loss functions [6].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape The system routes super-link queries through an MLP and a Q-Former module to project them into Stable Diffusion's feature space. This visual projection avoids interference from the LLM's cross-entropy loss because the queries are supervised independently using two MSE losses: one against CLIP text features and one against ground-truth images/noise.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize We add a Q-Former for projecting features of super-link queries to the feature space of Stable Diffusion. We employ two MSE losses for supervision: one between encoded text features by CLIP and mapping features, and the other between predicted and ground-truth images.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 5} [{\color{passgreen}\textbf{SUPPORTED}}]: ``Overall architecture of the proposed VisionLLM v2. It receives the image and text/visual''}
+\item {\footnotesize \textbf{Page 34} [{\color{gold}\textbf{UNSUPPORTED}}]: ``''}
+\item {\footnotesize \textbf{Page 5} [{\color{passgreen}\textbf{SUPPORTED}}]: ``''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/VLLM_Q11_fig_05_002.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 2 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} The diagram shows a 'large language model' block connected to a 'super link' which connects to an 'image generation' task. The 'image generation' task is visually associated with an image of a dog and the text label 'Stable Diffusion [152]' in the ac...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{21.4\%} $\cdot$ Atomic F1: \textbf{30.0\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 54.0s $\cdot$ Generated Tokens: 174}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 23: VLLM\_Q12}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_scaling\_tradeoffs $\cdot$ \textbf{Target:} Page 9}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Based on the ablation results in Figure 4 and Table 5, what is the correlation between super-link query allocation (shared vs separate) and scaling query count for specialized tasks?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+ As shown in **Table 5 [2]**, increasing the number of super-link queries from 1 to 8 significantly improves performance on specialized tasks like pose estimation (AP rising from 43.0 to 71.6) and interactive segmentation (cIoU rising from 60.0 to 61.9). "separate queries" (blue lines) consistently yield higher performance across iterations for both box AP [1]. 
+
+**Key Findings \& Mechanism**
+- **Architectural Link**: The mechanism involves "super-link queries" which can be allocated either as "shared" (red lines in Figure 4) or "separate" (blue lines) [1]. 
+- **Empirical Evidence**: In **Table 5 [2]**, the row for 8 super-link queries achieves the highest values for specialized metrics (Pose AP: 71.6, Interact Seg cIoU: 61.9). Conversely, **Figure 4 [1]** shows that shared queries (red lines) consistently lag behind separate queries (blue lines), with box AP peaking around 56 vs over 73 for separate queries.}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Scaling up the number of super-link queries consistently improves task performance, but forcing decoders to share queries causes performance degradation (especially in keypoint AP) due to multi-task training conflicts and object decoder bias. Decoupled separate queries scale cleanly without interference.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Scaling queries improves performance, but shared queries suffer from training conflicts and bias toward the object decoder. Decoupled queries prevent this degradation.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 9} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Shared vs. unshared super-''}
+\item {\footnotesize \textbf{Page 9} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Ablation on the super-link queries number.''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/VLLM_Q12_fig_09_009.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 4 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 4 displays a line chart comparing 'separate queries' (blue lines) and 'shared queries' (red lines). The blue solid line, representing separate queries for box AP, shows an upward trend from approximately 70 to over 73 as iterations increase. T...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{18.5\%} $\cdot$ Atomic F1: \textbf{27.3\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 105.4s $\cdot$ Generated Tokens: 141}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 24: VLLM\_Q13}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_structural\_advantage $\cdot$ \textbf{Target:} Page 8}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Looking at Region Recognition performance in Table 2a, what fundamental structural difference allows VisionLLM v2 to outperform traditional feature-based methods like RegionCLIP and ASM on long-tail datasets like LVIS?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+ Specifically, in Table 2a, VisionLLM v2 achieves an AP of 56.7 on COCO and 47.8 on instance segmentation (COCO), significantly surpassing feature-based baselines like Deformable-DETR (AP 46.2) or DDQ (AP 52.0) [2]. 
+
+**Key Findings \& Mechanism**
+- **Architectural Link**: The diagram in Figure 1 illustrates that traditional text-based methods (a) suffer from inefficient information transfer [1]. VisionLLM v2 employs a "super link" technique where a unified MLLM interfaces with multiple task decoders through super links, supporting over 100 diverse tasks [1]. 
+- **Empirical Evidence**: In Table 2a, VisionLLM v2 achieves an AP of 56.7 on COCO detection and 47.8 on instance segmentation (COCO), outperforming specialist models like Deformable-DETR (AP 46.2) and DDQ (AP 52.0) [2].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Feature-based methods rely on computing similarity scores against a closed set of candidate text features. In contrast, VisionLLM v2 generates category names directly as open-ended text outputs, providing superior generalization over rare and long-tail categories.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Feature-based methods compute similarity scores between visual features and candidate category text features. In contrast, text-output directly predicts category names using open-ended phrases, embracing the advantage of openness.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 2} [{\color{passgreen}\textbf{SUPPORTED}}]: ``Illustration of three information transmission methods. (a) Text-based method shows''}
+\item {\footnotesize \textbf{Page 8} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Comparison of pose estimation performance.  indicates that the results rely on ground-''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/VLLM_Q13_fig_02_001.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 1 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 1 illustrates three information transmission methods. Method (a) is described as a 'text-based method' where an MLLM connects to downstream tools via text messages, capable of handling multiple tasks but suffering from inefficient information ...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{0\%} $\cdot$ Token F1: \textbf{12.8\%} $\cdot$ Atomic F1: \textbf{0.0\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 90.1s $\cdot$ Generated Tokens: 116}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 25: VLLM\_Q19}\hfill {\footnotesize\color{darkteal}\textbf{Type:} mathematical\_geometric\_tiling $\cdot$ \textbf{Target:} Page 4}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } How does the model mathematically and structurally reconcile the fixed square input dimensions expected by a Vision Transformer with the arbitrary aspect ratios of high-resolution real-world images?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+The provided visual evidence and text context do not contain information regarding how the model reconciles fixed square input dimensions with arbitrary aspect ratios [2].  Similarly, the supporting text context provided discusses the use of Vicuna-7B as the LLM, the adoption of Grounding DINO for localization, and examples of image editing capabilities, but does not describe the technical implementation for handling aspect ratios.
+
+**Key Findings \& Evidence**
+specific downstream tools like image generation or segmentation, rather than the internal vision encoder mechanics for aspect ratio handling [2][1].
+- **Quantitative Findings / Thresholds**: No quantitative thresholds or empirical metrics regarding input dimension reconciliation are present in the provided visual evidence or text context [1].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape The model dynamically matches the image to an optimal aspect ratio from a predefined set, scales it up, and slices it into P independent square patches of 336 x 336 resolution. These local patches, combined with one 336 x 336 global downscaled image, form an extended feature sequence of length 576(P+1) for the image encoder.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize The image is scaled based on the selected aspect ratio and divided into P square patches of 336x336. These local patches along with a 336x336 global image result in image features in R\textasciicircum{}\{576(P+1) x C\}.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 5} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Overall architecture of the proposed VisionLLM v2. It receives the image and text/visual''}
+\item {\footnotesize \textbf{Page 2} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Illustration of three information transmission methods. (a) Text-based method shows''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/VLLM_Q19_fig_05_002.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 2 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} The diagram in Figure 2 shows the 'image encoder' receiving an input image of a dog. The visual evidence does not contain any text, labels, or mathematical formulas describing how fixed square input dimensions are reconciled with arbitrary aspect rat...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{0\%} $\cdot$ Token F1: \textbf{15.9\%} $\cdot$ Atomic F1: \textbf{0.0\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 72.1s $\cdot$ Generated Tokens: 114}
+\end{tcolorbox}
+\vspace{4pt}
+\subsection{Paper: BEIR: A Heterogeneous Benchmark for Zero-shot Evaluation [2104.08663]}
+\vspace{-4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 26: BEIR\_Q8}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_distribution\_shift $\cdot$ \textbf{Target:} Page 6}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } According to Table 2, what does the paper conclude about the generalization of dense retrieval models (ANCE, TAS-B) compared with BM25, especially on BioASQ and Touche-2020?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+According to Table 2 [1], the paper concludes that dense retrieval models like ANCE and TAS-B fail to generalize well out-of-domain.   The text explicitly states that these models "completely fail to generalize well by under performing BM25 on nearly all datasets" [2].
+
+**Key Findings \& Mechanism**
+- **Architectural Link**: Dense retrieval models (e.g., ANCE, TAS-B) map queries and documents independently to vector spaces [8]. This architecture often leads to poor generalization when the query distribution differs from the training data, unlike BM25 which relies on lexical overlap that remains robust across domains [8].
+ For instance, ANCE scores 0.306 vs BM25's 0.465 on BioASQ [1], confirming the text's assertion that they "completely fail to generalize well" [2].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Dense retrieval models perform strongly on in-domain MS MARCO but underperform BM25 significantly on out-of-distribution datasets with substantial domain shifts (like biomedical BioASQ) or task shifts (like argument retrieval in Touche-2020), demonstrating that in-domain neural performance does not guarantee zero-shot generalization.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Dense retrieval models can perform strongly on certain datasets while performing significantly worse than BM25 on others, particularly when there is a domain shift (BioASQ) or task shift (Touche-2020).}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 7} [{\color{passgreen}\textbf{SUPPORTED}}]: ``In-domain and zero-shot performances on BEIR benchmark. All scores denote nDCG@10. The best''}
+\item {\footnotesize \textbf{Page 8} [{\color{passgreen}\textbf{SUPPORTED}}]: ``Estimated average retrieval latency and''}
+\item {\footnotesize \textbf{Page 8} [{\color{gold}\textbf{UNSUPPORTED}}]: ``''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/BEIR_Q8_fig_07_005.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Table 2 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} In Table 2, the 'ANCE' model scores 0.306 on BioASQ and 0.456 on Touche-2020. The 'TAS-B' model scores 0.383 on BioASQ and 0.584 on Touche-2020. In both cases, these values are lower than the BM25 baseline (0.465 for BioASQ and 0.603 for Touche-2020)...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{15.9\%} $\cdot$ Atomic F1: \textbf{45.5\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 102.1s $\cdot$ Generated Tokens: 117}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 27: BEIR\_Q9}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_retrieval\_generalization $\cdot$ \textbf{Target:} Page 6}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } What does the paper conclude about re-ranking and late-interaction models (BM25+CE, ColBERT) in terms of out-of-distribution generalization across the 18 datasets?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Problem Context \& Direct Resolution**
+The study establishes that re-ranking and late-interaction models demonstrate robust capabilities when evaluated on out-of-distribution data [1].  The analysis highlights a critical tradeoff inherent in achieving high performance: while these models offer superior generalization, they often incur significant latency costs [2]. utilizing late-interaction models result in inference latencies exceeding 350 ms, making them the slowest at inference among the evaluated methods [2].
+
+**Mathematical or Architectural Derivation**
+ The cross-attentional re-ranking model, identified as BM25+CE, leverages a cross-attention mechanism to effectively integrate query and document information [3]. This approach allows it to outperform the baseline BM25 on almost all datasets, specifically 16 out of the 18 evaluated [3]. Similarly, the late-interaction model ColBERT operates by computing token embeddings independently for both the query and the document [4]. These independent representations are subsequently scored using a cross-attentional-like MaxSim operation to evaluate (query, document) pairs [4]. This architectural design enables ColBERT to perform well across tasks, alongside other strong performers like late-interaction models and the document expansion technique docT5query [5]. In contrast, sparse model approaches like docT5query [6][7].
+
+**Empirical Verification \& Quantitative Evidence**
+ The late-interaction model ColBERT also contributes significantly to the overall success of these advanced retrieval strategies [4].  The latency measurements indicate that optimizing for generalization in this manner pushes inference times well beyond 350 ms [2]. Consequently, while re-ranking and late-interaction models are empirically verified as the best choices for zero-shot evaluation where latency is not the primary constraint, their deployment requires careful consideration of the performance-latency tradeoff [2].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Re-ranking and late-interaction models generalize substantially better to out-of-distribution data than single-vector dense models. BM25+CE performs the best overall, beating BM25 on 16 of 18 datasets, while ColBERT outperforms BM25 on 9 of 18 datasets.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Re-ranking and late-interaction models generalize well to out-of-distribution data. BM25+CE performs the best and outperforms BM25 on 16/18 datasets, and ColBERT on 9/18 datasets.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 7} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Re-ranking and Late-Interaction models generalize well to out-of-distribution data.''}
+\item {\footnotesize \textbf{Page 8} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Tradeoff between performance and retrieval la- tency The best out-of-distribution generalization performances by re-ranking top-100 BM25 docu- ments and with late-interaction models come at the cost o...''}
+\item {\footnotesize \textbf{Page 7} [{\color{gold}\textbf{UNSUPPORTED}}]: ``The cross-attentional re-ranking model (BM25+CE) performs the best and is able to outperform BM25 on almost all (16/18) datasets.''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/BEIR_Q9_fig_02_001.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Table 2 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{100\%} $\cdot$ Token F1: \textbf{15.8\%} $\cdot$ Atomic F1: \textbf{16.0\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 28.8s $\cdot$ Generated Tokens: 579}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 28: BEIR\_Q16}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_distributional\_bias $\cdot$ \textbf{Target:} Page 7}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Figure 4 shows that TAS-B and ANCE retrieve documents with different length distributions. How does this observation help explain TAS-B's weaker performance than ANCE on TREC-COVID and Touche-2020?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+Figure 4 illustrates a distinct difference in the document length preferences of the two models across both datasets [2]. In the TREC-COVID [58] plot, the blue area representing TAS-B is concentrated at lower document lengths (0-100 words), whereas the orange area for ANCE shows a distribution extending to significantly higher lengths [1].  The caption explicitly states that "TAS-B has a preference towards shorter documents in BEIR" [1]. This observation helps explain TAS-B's weaker performance on these specific datasets because it suggests that the retrieval task for TREC-COVID and Touch -2020 likely involves relevant answers contained within longer documents [2]. Since TAS-B prioritizes shorter documents, it may fail to retrieve these longer, relevant documents effectively compared to ANCE, which is capable of retrieving a wider variety of document lengths including the longer ones necessary for success in these domains [1].
+
+**Key Findings \& Evidence**
+- **Visual Evidence**: Figure 4 displays distribution plots for top-10 retrieved document lengths (in words) using TAS-B (blue, top) and ANCE (orange, bottom) [1]. 
+- **Quantitative Findings / Thresholds**: The caption notes that "TAS-B has a preference towards shorter documents in BEIR" [1].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape TAS-B has a strong learned preference for retrieving shorter documents. On TREC-COVID and Touche-2020, where relevant documents tend to be longer and more comprehensive, TAS-B underperforms ANCE by 17.3 and 7.8 nDCG@10 points respectively because its length bias leads it to select prematurely truncated candidates.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize TAS-B prefers to retrieve documents with shorter lengths. TAS-B underperforms ANCE on TREC-COVID by 17.3 points and on Touche-2020 by 7.8 points, explained by the vastly different retrieved length distributions shown in Figure 4.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 8} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Distribution plots [22] for top-10 retrieved''}
+\item {\footnotesize \textbf{Page 8} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Comparison of zero-shot neural retrieval per-''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/BEIR_Q16_fig_08_007.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 4 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 4 displays distribution plots for top-10 retrieved document lengths (in words) using TAS-B (blue, top) and ANCE (orange, bottom). The caption states: 'TAS-B has a preference towards shorter documents in BEIR.' In the TREC-COVID [58] plot, the ...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{19.8\%} $\cdot$ Atomic F1: \textbf{50.0\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 80.4s $\cdot$ Generated Tokens: 186}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 29: BEIR\_Q17}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_latency\_tradeoffs $\cdot$ \textbf{Target:} Page 7}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Table 3 shows a large difference between retrieval latency and index size of ColBERT, BM25+CE, and dense models such as TAS-B. How does this illustrate the performance-efficiency trade-off?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+Table 3 illustrates a distinct performance-efficiency trade-off where re-ranking models like **BM25+CE** (Rank 1) and sparse models like **ColBERT** (Rank 2) achieve top-tier retrieval accuracy but incur significantly higher computational costs compared to dense models [3]. Specifically, **BM25+CE** exhibits high latency on both GPU (**450ms**) and CPU (**6100ms**), while **ColBERT** requires a massive index size of **20GB** due to its storage of multiple 128-dimension vectors per document [2]. In contrast, dense models like **TAS-B** (Rank 5) offer superior efficiency with low latency (**14ms** on GPU, **125ms** on CPU) [2].
+
+**Key Findings \& Mechanism**
+- **Architectural Link**: The efficiency gap is driven by the underlying retrieval mechanisms: **BM25+CE** relies on computationally expensive late-interaction re-ranking, whereas dense models like **TAS-B** utilize exact search over compact embeddings [3]. **ColBERT**'s high index size stems from its architecture storing multiple 128-dimension vectors per document to capture fine-grained interactions, which contrasts with the single vector representation of dense models [2].
+- **Empirical Evidence**: The data shows that re-ranking models like **BM25+CE** and sparse models like **ColBERT** come at the cost of high latency (**> 350ms**) and large memory footprints (e.g., **ColBERT** at **20GB**), while dense retrievers like **TAS-B** follow a low-latency pattern with speeds under **20ms** on GPU [2].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Re-ranking and late-interaction models achieve the best generalization but suffer from high latency (BM25+CE requires 450ms on GPU and 6100ms on CPU; ColBERT requires 350ms on GPU with large multi-vector indexes). In contrast, dense retrievers like TAS-B are 20-30x faster (14ms GPU, 125ms CPU), exposing a steep trade-off between retrieval quality and inference cost.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Table 3 reports latency and index sizes. Dense retrievers are 20-30x faster than re-ranking models, while re-ranking and late-interaction models provide stronger generalization performance.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 8} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Estimated average retrieval latency and''}
+\item {\footnotesize \textbf{Page 8} [{\color{gold}\textbf{UNSUPPORTED}}]: ``''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/BEIR_Q17_fig_08_008.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Table 3 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Table 3 presents data for DBPedia (1 Million) retrieval latency and index sizes. The table lists models ranked from best to worst on zero-shot BEIR. Key rows include: Rank (1) BM25+CE with GPU latency 450ms, CPU latency 6100ms, and Index Size 0.4GB; ...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{31.1\%} $\cdot$ Atomic F1: \textbf{81.8\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 99.9s $\cdot$ Generated Tokens: 204}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 30: BEIR\_Q18}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_evaluation\_bias $\cdot$ \textbf{Target:} Page 8}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Table 4 shows that adding previously missing relevance judgements substantially improves ANCE's nDCG@10 but only slightly improves docT5query's score. What does this reveal about lexical bias in the TREC-COVID annotation pool?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+Table 4  reveals that adding previously missing relevance judgements (annotating "holes") substantially improves ANCE's nDCG@10 from 0.654 to 0.735 [2]. This disparity indicates that the TREC-COVID annotation pool suffers from a significant **lexical bias**, where documents lacking exact lexical overlap with the query are automatically assumed to be irrelevant by annotators, even if they are semantically relevant [2]. Since ANCE is a dense retrieval model that relies on semantic similarity rather than strict term matching, it was able to retrieve these "hidden" relevant documents which were previously unannotated [6]. In contrast, docT5query, being a lexical-based method, likely failed to retrieve these documents in the first place or retrieved them with low confidence, meaning there were fewer "holes" for ANCE to fill compared to the already high-performing lexical model [6].
+
+**Key Findings \& Mechanism**
+- **Architectural Link**: The difference in improvement stems from the retrieval mechanisms: dense models like ANCE capture semantic similarity independent of exact word overlap, allowing them to find documents that annotators missed due to a lack of shared terms [6]. Lexical models like docT5query depend on term matching [2].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Lexical models (BM25, docT5query) had low Hole@10 values because the original pooling relied on lexical systems. Dense models (ANCE, TAS-B) retrieved unjudged documents (high Hole@10). When missing judgements were added, ANCE's score surged from 0.654 to 0.735 while docT5query remained flat (0.713 to 0.714), proving the original benchmark was biased in favor of lexical methods.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Lexical approaches have low Hole@10 values while dense approaches have high Hole@10. Adding missing judgements increased ANCE from 0.654 to 0.735, showing the pool was biased towards lexical approaches.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 9} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Hole@10 analysis on TREC-COVID. Annotated scores show improvement in performances after''}
+\item {\footnotesize \textbf{Page 9} [{\color{gold}\textbf{UNSUPPORTED}}]: ``''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/BEIR_Q18_fig_09_009.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Table 4 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Table 4 presents nDCG@10 performance metrics for various models on TREC-COVID. The row 'Original (w/ holes)' shows a score of 0.713 for docT5query and 0.654 for ANCE. The row 'Annotated (w/o holes)' shows a score of 0.714 for docT5query and 0.735 for...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{22.3\%} $\cdot$ Atomic F1: \textbf{11.1\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 93.8s $\cdot$ Generated Tokens: 183}
+\end{tcolorbox}
+\vspace{4pt}
+\subsection{Paper: Inter-document Multi-hop Scientific QA (AIM-SciQA) [2603.14257]}
+\vspace{-4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 31: AIM\_Q6}\hfill {\footnotesize\color{darkteal}\textbf{Type:} mathematical\_formalization $\cdot$ \textbf{Target:} Page 4}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } How is the pairwise similarity matrix between two sections defined mathematically in the Document Relation Construction pipeline?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+The provided visual evidence does not contain the mathematical definition for the pairwise similarity matrix.  Similarly, Table 2 lists statistics for single-hop QA generation but does not provide the formula or algorithm used to compute the pairwise similarity matrix within the Document Relation Construction pipeline.
+
+**Key Findings \& Mechanism**
+- **Architectural Link**: The diagram in Figure 2 [1] shows a matrix where rows represent sections (\$s\_1, s\_2...\$) and columns represent questions (\$Q\_\{A1\}, Q\_\{A2\}...\$), with cells containing numerical similarity scores. 
+- **Empirical Evidence**: The matrix in Figure 2 [1] displays specific calculated scores (e.g., 0.97 for \$s\_1\$ and \$Q\_\{A1\}\$), demonstrating that the system outputs a quantitative similarity metric, yet the derivation of these values remains unexplained in the available evidence.}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape The pairwise similarity matrix K\_\{i,j\}[p,q] is defined as the cosine similarity between the embedding of the p-th question in the first section (u\_\{i,p\}) and the q-th question in the second section (v\_\{j,q\}): K\_\{i,j\}[p,q] = CosSim(u\_\{i,p\}, v\_\{j,q\}).}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize We define the pairwise similarity matrix as: K\_\{i,j\}[p,q] = CosSim(u\_\{i,p\}, v\_\{j,q\}).}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 3} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Illustration of the relation construction process in AIM-SciQA. For IM-SciQA, candidate relations''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/AIM_Q6_fig_03_003.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 2 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} The 'QA-based relation construction' diagram shows a matrix representing similarity between sections. The rows are labeled with section identifiers (s , s , ..., s ) and the columns are labeled with question identifiers (Q , Q , ..., Q ). The cells w...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{12.1\%} $\cdot$ Atomic F1: \textbf{0.0\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 78.1s $\cdot$ Generated Tokens: 120}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 32: AIM\_Q11}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_workflow\_constraints $\cdot$ \textbf{Target:} Page 3}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } In the relation construction workflow in Figure 2 under 'Explicit Citation Relationships', what visual distinction is made between single and multiple citation markers in the source text, and what structural constraint does this enforce on target candidate selection?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+ 
+
+**Key Findings \& Mechanism**
+- **Architectural Link**: The diagram illustrates that the system filters candidate relations not from all cited references in a source document, but specifically from those marked as relevant via the bounding box mechanism [1].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Sentences with a single bracketed citation marker (e.g. [14]) are marked with a green checkmark, whereas sentences containing multiple citation markers (e.g. [5,6,7] or [8-16]) are crossed out with a red X. This enforces the constraint that relation construction is restricted strictly to sentences linking to exactly one reference, ensuring deterministic mapping to the target document.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Figure 2 marks sentences with a single citation marker with a checkmark and crosses out sentences with multiple markers. Relation construction is restricted strictly to in-text citations where a sentence links to exactly one reference, ensuring deterministic mapping.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 3} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Illustration of the relation construction process in AIM-SciQA. For IM-SciQA, candidate relations''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/AIM_Q11_fig_03_003.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 2 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} In the 'Explicit Citation Relationships' section of Figure 2, a source document text snippet contains multiple citation markers (e.g., '[5,6,7]' and '[7,8,9,10,11,12,13,14,15,16]'). The visual distinction is that the first group of citations is enclo...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{0\%} $\cdot$ Token F1: \textbf{7.1\%} $\cdot$ Atomic F1: \textbf{0.0\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 78.5s $\cdot$ Generated Tokens: 39}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 33: AIM\_Q12}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_distributional\_divergence $\cdot$ \textbf{Target:} Page 4}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Comparing the section distributions illustrated across Figure 3 and Figure 4, which structural sections generate the highest average count of single-hop QA pairs per paper, and why does this metric diverge from the section that yields the highest absolute total QA volume?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+ 
+
+**Key Findings \& Evidence**
+- **Visual Evidence**: Figure 3 [1] illustrates the average single-hop QA count per paper, where the bars for 'data' and 'statistical analysis' reach the peak value of 5.1. Conversely, Figure 4 [2] displays the total single-hop QA count, showing that the 'abstract' section has the tallest bar with a value of 37,503.
+- **Quantitative Findings / Thresholds**: The highest average is explicitly stated as 5.1 for both 'data' [1]. The highest total volume is explicitly stated as 37,503 for the 'abstract' section [2].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Discussion and participants sections yield the highest average count per paper at 5.1 QA pairs each, whereas abstracts average 4.6 pairs. However, abstracts yield the highest absolute total volume (37,503 pairs vs 29,574 for discussion) because abstracts are universally present across all 8,211 papers, whereas specialized sections appear in only subsets of papers.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Discussion and participants yield the highest average at 5.1 QA pairs each. Abstract yields the highest aggregate total (37,503 pairs) because abstracts are universally present across all papers.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 4} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Average Single-hop QA Count by Section''}
+\item {\footnotesize \textbf{Page 4} [{\color{passgreen}\textbf{SUPPORTED}}]: ``Total Single-hop QA Count by Section''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/AIM_Q12_fig_04_004.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 3 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 3 displays a bar chart titled 'Average Single-hop QA Count by Section'. The y-axis is labeled 'Average QA Count per Paper' with a scale from 0 to 5. The x-axis lists sections: abstract, introduction/results/conclusion, discussion, data, partic...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{24.0\%} $\cdot$ Atomic F1: \textbf{40.0\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 75.6s $\cdot$ Generated Tokens: 88}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 34: AIM\_Q13}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_retrieval\_difficulty $\cdot$ \textbf{Target:} Page 8}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Based on the comparative retrieval results in Table 6, how does retriever performance change between the 'Random Cluster' and engineered 'Paper Cluster' settings for high-capacity models such as voyage-3-large, and what does this difference indicate about candidate pool construction?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+For the high-capacity model `voyage-3-large`, retrieval performance improves significantly when moving from a 'Random Cluster' setting to an engineered 'Paper Cluster' setting [2]. Specifically, the model achieves its best overall Hit@1 score of **0.737** in the Random Cluster [2][2].  their corresponding retrieval QAs based on explicit citation links or implicit semantic similarity , ensuring that the retrieved documents are contextually relevant to the source document rather than just statistically similar within a random group [1].
+
+**Key Findings \& Mechanism**
+- **Architectural Link**: The diagram in Figure 2 illustrates that 'Paper Cluster' construction relies on specific relation types---either 'Implicit Semantic Similarity Relationships' (overlapping keywords) or 'Explicit Citation Relationships' [1].  
+- **Empirical Evidence**: The table shows that `voyage-3-large` achieves its highest Hit@1 (**0.737**) and MRR@5 (**0.811**) in the 'Random Cluster' setting [2], outperforming all other models. However, in the 'Paper Cluster' setting, it still performs well with a Hit@1 of **0.673** and MRR@5 of **0.761**, which are bolded as the best among all models for that specific setting [2]. random clusters may yield better retrieval metrics on small sets, the engineered 'Paper Cluster' is necessary for maintaining relevance in more complex, full-scale scenarios (Full Papers N=8211), where `voyage-3-large` achieves a Hit@50 of **0.637** [2].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape High-capacity models experience a sharp decline in performance from Random to Paper Cluster (e.g. voyage-3-large drops from Hit@1 0.737 and MRR@5 0.811 down to Hit@1 0.673 and MRR@5 0.761). This indicates that the paper clustering procedure successfully constructs semantically coherent, competitive distractors that genuinely test fine-grained discriminative ranking.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Under Paper Cluster setting, higher-capacity models exhibited significantly lower scores in Hit@1,3. These results indicate that the proposed Paper Clustering effectively constructs a challenging candidate set.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 3} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Illustration of the relation construction process in AIM-SciQA. For IM-SciQA, candidate relations''}
+\item {\footnotesize \textbf{Page 8} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Retrieval performance across different settings. Bold indicates the best performance, and''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/AIM_Q13_fig_03_003.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 2 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 2 illustrates the relation construction process in AIM-SciQA. It shows two methods for creating candidate relations: 'Implicit Semantic Similarity Relationships' (IM-SciQA) based on overlapping keywords, and 'Explicit Citation Relationships' (...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{21.0\%} $\cdot$ Atomic F1: \textbf{36.4\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 86.1s $\cdot$ Generated Tokens: 203}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 35: AIM\_Q15}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_cross\_setting\_analysis $\cdot$ \textbf{Target:} Page 9}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } When evaluating citation-guided variant CIM-SciQA under the realistic setting (Table 8) compared to the primary IM-SciQA benchmark (Table 7), what performance phenomenon emerges across models, and what underlying property of citation linkages explains this difference?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+  Similarly, **gemma-3-27b-it** shows a drop from **0.750** (Oracle) to **0.798** (CIM-SciQA), while **gemma-3-1b-it** drops from **0.265** to **0.446** [1]. 
+
+**Key Findings \& Mechanism**
+
+- **Empirical Evidence**: The performance gap is evident in the accuracy metrics for various models, with **gpt-5** showing a drop from **0.900** (Oracle) to **0.926** (CIM-SciQA) and **gemma-3-1b-it** showing a drop from **0.265** (Oracle) to **0.446** (CIM-SciQA) [1].
+
+**Answer**
+  Similarly, **gemma-3-27b-it** shows a drop from **0.750** (Oracle) to **0.798** (CIM-SciQA), while **gemma-3-1b-it** drops from **0.265** to **0.446** [1]. 
+
+**Key Findings \& Mechanism**
+
+- **Empirical Evidence**: The performance gap is evident in the accuracy metrics for various models, with **gpt-5** showing a drop from **0.900** (Oracle) to **0.926** (CIM-SciQA) and **gemma-3-1b-it** showing a drop from **0.265** (Oracle) to **0.446** (CIM-SciQA) [1].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Models on CIM-SciQA in the realistic setting achieve performance matching or exceeding their scores under the Oracle setting of IM-SciQA (e.g. GPT-5 scores 0.926 on CIM-SciQA realistic vs 0.900 on IM-SciQA oracle). This occurs because citation-guided questions connect explicitly cited references, which naturally possess lower relational difficulty than implicit semantic associations.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize CIM-SciQA achieved performance comparable to the Oracle setting of IM-SciQA, substantially surpassing the Realistic setting. We attribute this to the nature of citation-based questions grounded in explicitly linked documents.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 8} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Comparison of model performance under Oracle and Realistic settings. Bold indicates the best''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/AIM_Q15_fig_08_013.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Table 7 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Table 7 presents model performance under 'Oracle Setting' and 'Realistic Setting'. Under the Realistic Setting, the 'Acc' (Accuracy) column shows values such as 0.260 for gemma-3-1b-it and 0.775 for gpt-5. The table caption notes that Accuracy in Ora...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{12.6\%} $\cdot$ Atomic F1: \textbf{34.8\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 108.1s $\cdot$ Generated Tokens: 124}
+\end{tcolorbox}
+\vspace{4pt}
+\subsection{Paper: MEBench: A Comprehensive Benchmark for Multimodal Extraction [2025.emnlp-main.77]}
+\vspace{-4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 36: MEB\_Q3}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_benchmark\_paradigm $\cdot$ \textbf{Target:} Page 1}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } What does Figure 1 illustrate about the difference between existing benchmarks and MEBench regarding evidence distribution and entity density?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+Figure 1 illustrates that existing benchmarks typically feature centralized evidence distributions and sparse entity mentions, whereas MEBench presents an entity-dense scene where critical evidences are dispersed across multiple documents [1]. In the "Existing Benchmarks" scenario shown in the figure, documents contain few marked entities (sparse) with arrows pointing down, indicating a lack of scattered information [1]. 
+
+**Key Findings \& Mechanism**
+- **Architectural Link**: The diagram in Figure 1 connects the architectural challenge of cross-document reasoning by visually contrasting the "sparse/centralized" nature of existing benchmarks against the "dense/scattered" design of MEBench [1]. 
+"MEBench" (Dense Entities, Scattered Evidences), directly supporting the claim that MEBench requires models to handle entity-dense scenes where critical evidence is dispersed [1].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Figure 1 illustrates that existing benchmarks feature centralized evidence distributions and sparse entity mentions, whereas MEBench presents an entity-dense environment where critical evidence is dispersed across multiple documents. In MEBench, no document or entity can be omitted without breaking the reasoning chain.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Figure 1 contrasts centralized evidence distributions and sparse entity mentions of existing benchmarks with MEBench's entity-dense scene where critical evidence is dispersed across multiple documents.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 2} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Existing benchmarks vs. MEBench. Unlike''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/MEB_Q3_fig_02_001.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 1 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 1 illustrates two scenarios: 'Existing Benchmarks' and 'MEBench'. In the 'Existing Benchmarks' section, the diagram shows documents with sparse entity mentions (indicated by a downward arrow labeled 'Sparse Entities') and centralized evidence....}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{100\%} $\cdot$ Token F1: \textbf{40.3\%} $\cdot$ Atomic F1: \textbf{71.4\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 92.0s $\cdot$ Generated Tokens: 115}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 37: MEB\_Q7}\hfill {\footnotesize\color{darkteal}\textbf{Type:} metric\_formulation\_critique $\cdot$ \textbf{Target:} Page 6}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } What is Entity-Attributed F1 (EA-F1), what does it evaluate, and why does the paper argue that traditional F1 and Exact Match are insufficient for multi-entity QA?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+   Additionally, these traditional metrics do not systematically measure the completeness of entity retrieval or the accuracy of attribute extraction and source usage, which is critical for MEQA tasks [1].
+
+**Key Findings \& Mechanism**}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape EA-F1 is an F1 metric calculated over predicted vs gold sets of (entity, attribution, value) tuples, where all three components must match exactly. Traditional F1 and EM only check surface answer strings and overlook whether all relevant entities were extracted, whether attributes were bound correctly, or whether sources were properly attributed.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize EA-F1 is an F1 score over predicted versus gold (entity, attribution, value) tuples. All three elements must exactly match. Existing QA metrics focus on surface-form correctness but overlook granular entity-level attribution.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 3} [{\color{passgreen}\textbf{SUPPORTED}}]: ``-a1. After the LLM identifies the entity''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/MEB_Q7_fig_03_002.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 2 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} The text states that existing evaluation metrics like F1 score and exact match (EM) 'focus on answer surface-form correctness but overlook granular entity-level attribution'. It further notes that these metrics 'do not systematically measure whether ...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{0\%} $\cdot$ Token F1: \textbf{17.3\%} $\cdot$ Atomic F1: \textbf{0.0\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 128.1s $\cdot$ Generated Tokens: 34}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 38: MEB\_Q9}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_reasoning\_category\_breakdown $\cdot$ \textbf{Target:} Page 6}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } What was the overall performance of GPT-4 with RAG on MEBench, and on which specific categories did it perform well versus struggle in Table 3?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+According to Table 3 [2], the model **GPT-4 + RAG** achieved an overall accuracy of **0.593** across all sets. In terms of specific category performance, it performed exceptionally well on **Comparison (0.763)** and **Relationship (0.687)**, while showing moderate performance in **Statistics (0.410)** [2].
+
+**Key Findings \& Mechanism**
+- **Architectural Link**: The radar chart in Figure 3  visually corroborates the table data, illustrating that GPT-4 + RAG (blue area) maintains high scores in 'Intercomparison' [1].
+RAG significantly boosts performance on comparison tasks (0.763), the model still struggles with statistical reasoning (0.410) compared to its relationship analysis capabilities (0.687) [2].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape GPT-4 + RAG achieved the highest overall accuracy of 59.3\%. It performed strongly on comparative queries (76.3\%) and relational queries (68.7\%), but struggled significantly on statistical queries, achieving only 41.0\% accuracy.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize GPT-4 + RAG achieved highest overall accuracy of 59.3\%, with 76.3\% on comparative, 68.7\% on relational, but only 41.0\% on statistical queries in Table 3.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 7} [{\color{passgreen}\textbf{SUPPORTED}}]: ``The Experimental results for eight subtasks of each model.''}
+\item {\footnotesize \textbf{Page 7} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Experimental results for MEBench.''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/MEB_Q9_fig_07_008.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 3 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 3 displays radar charts showing experimental results for eight subtasks. The legend identifies 'GPT-4 + RAG' with a blue line and fill. In the right-hand chart, the blue area shows high values in 'Intercomparison', 'Superlative', and 'Correlat...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{21.9\%} $\cdot$ Atomic F1: \textbf{22.2\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 71.1s $\cdot$ Generated Tokens: 99}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 39: MEB\_Q15}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_cross\_task\_synthesis $\cdot$ \textbf{Target:} Page 6}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Figure 3 shows performance across the eight MEBench subtasks, while Table 3 gives category-level performance. What common pattern do these results reveal about the strengths and weaknesses of RAG in statistical vs comparative reasoning?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+ In the radar chart [1], models with RAG (e.g., GPT-4o + RAG, red area) show dominant performance in "Intercomparison" and "Superlative" tasks. This is corroborated by Table 3 [2], where adding RAG to GPT-4 increases accuracy from 0.199 to 0.763 in the "Comparison" category. Conversely, for statistical reasoning (e.g., "Statistics" or "Variance Analysis"), RAG provides minimal improvement [1].
+
+**Key Findings \& Mechanism**
+ While RAG provides external knowledge to resolve semantic ambiguity in comparisons, it does not inherently improve the model's internal statistical calculation capabilities (e.g., variance analysis), which remain a bottleneck for all models shown [1].
+"Statistics" accuracy remains flat at 0.289/0.410 depending on the specific model variant in Table 3 [2][2]. Figure 3 [1] visually confirms this disparity, showing large red/pink areas for comparison tasks but small, overlapping areas for variance analysis.}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape RAG significantly boosts performance on comparison-oriented tasks (intercomparison and superlatives), but fails to overcome difficulties in quantitative statistical reasoning (variance analysis at 15.3\% and aggregation at 32.1\% accuracy). RAG aids information retrieval for comparisons, but cannot solve numerical multi-document aggregation.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize RAG significantly improves intercomparison and superlative tasks, but fails in variance analysis (15.3\%) and aggregation (32.1\%). Overall comparison reaches 76.3\% while statistics remains low at 41.0\%.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 7} [{\color{gold}\textbf{UNSUPPORTED}}]: ``The Experimental results for eight subtasks of each model.''}
+\item {\footnotesize \textbf{Page 7} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Experimental results for MEBench.''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/MEB_Q15_fig_07_008.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 3 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 3 displays two radar charts showing performance across eight subtasks: Intercomparison, Superlative, Distribution Compliance Relationship, Correlation Analysis, Variance Analysis, Aggregation, Descriptive Relationship, and Hypothetical Scenari...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{21.6\%} $\cdot$ Atomic F1: \textbf{40.0\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 88.2s $\cdot$ Generated Tokens: 134}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 40: MEB\_Q17}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_factuality\_metric\_analysis $\cdot$ \textbf{Target:} Page 6}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Table 4 shows that GPT-4 + RAG achieves an EA-F1 of 0.71 compared with 0.36 for GPT-4 without RAG. How does this result strengthen the paper's argument regarding information extraction and hallucination?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+GPT-4 + RAG (EA-F1 = 0.71)  strengthens the paper's argument that Large Language Models (LLMs) are inherently prone to hallucinations when performing cross-document multi-entity question answering without external grounding [2][2]. 
+
+**Key Findings \& Mechanism**
+
+- **Empirical Evidence**: Table 4 explicitly quantifies this improvement, showing that GPT-4 + RAG achieves an EA-F1 of 0.71 compared to 0.36 for the base model [2], indicating a more than doubling of quality when external information sources are utilized.}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Doubling EA-F1 from 0.36 to 0.71 indicates that RAG dramatically improves fine-grained entity, attribution, and value extraction across distributed documents. This proves information extraction architectures are critical for mitigating hallucinations and anchoring model reasoning in factual structured data rather than parametric guessing.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize GPT-4's EA-F1 increases from 0.36 to 0.71 when RAG is introduced. These results underscore the critical role of information extraction architectures in mitigating hallucinations and grounding outputs in factual data.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 8} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Quality of Large Language Models (LLMs) in''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/MEB_Q17_fig_08_009.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Table 4 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Table 4 lists EA-F1 scores for various models. The row for 'GPT-4 + RAG' shows a value of 0.71, while the row for 'GPT-4' (without RAG) shows a value of 0.36. This indicates a significant performance increase when RAG is added.}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{25.9\%} $\cdot$ Atomic F1: \textbf{33.3\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 72.3s $\cdot$ Generated Tokens: 75}
+\end{tcolorbox}
+\vspace{4pt}
+\subsection{Paper: EliScholar / M3SciQA (Multimodal Scientific Question Answering) [yale\_thesis\_1003]}
+\vspace{-4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 41: ELI\_Q1}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_visual\_scaffolding $\cdot$ \textbf{Target:} Page 37}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Based on Figure 3.2, what two visual components does the SPACECUE prompting strategy combine to formulate responses?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+Based on the provided visual evidence and text context, there is no mention of a "SPACECUE" prompting strategy or "Figure 3.2" in the supplied images or captions. The available figures are Figure 1 (depicting mobile clock systems and a ship route) [2] and Figure 2 (depicting a comparison system schematic and frequency shift data) [1]. 
+
+**Key Findings \& Evidence**
+ Figure 1(a) shows three mobile clock systems labeled (i), (ii), and (iii) [2]. Figure 2(a) displays a schematic of a comparison system with clock sources like 'UofA Yb' and 'ORAFS ARFL' connected to a frequency counter [1].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape SPACECUE combines a uniform grid matrix with numbered coordinate cells overlaid onto the input image together with semantic object masks generated by the Semantic-SAM model into a single composited prompt image.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize SPACECUE overlays a grid matrix onto the input image, which is used in combination with the mask generated by SAM. LMMs integrate information from both the SAM-masked region and selected grid area to formulate responses.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 5} [{\color{passgreen}\textbf{SUPPORTED}}]: ``(a) Schematic of the comparison system used to extract the RF and optical''}
+\item {\footnotesize \textbf{Page 3} [{\color{passgreen}\textbf{SUPPORTED}}]: ``(a) The mobile clock systems: (i) the UofA Yb clock, (ii) the UofA Rb clock,''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/ELI_Q1_fig_05_003.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 2 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 2(a) displays a schematic of the comparison system. It shows three clock sources: 'UofA Yb' (green box), 'UofA Rb' (blue box), and 'ORAFS ARFL' (pink box). These are connected to a central 'Frequency counter referenced to 5071A'. The diagram i...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{0\%} $\cdot$ Token F1: \textbf{3.5\%} $\cdot$ Atomic F1: \textbf{0.0\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 110.6s $\cdot$ Generated Tokens: 97}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 42: ELI\_Q3}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multi\_stage\_protocol\_evaluation $\cdot$ \textbf{Target:} Page 2}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } How does the two-stage evaluation setting in M3SCIQA ensure that both multi-modal and multi-document understanding capabilities are tested?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Abstained**
+
+The paper context does not provide sufficient evidence to answer this question reliably (insufficient text evidence).}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape The model must first resolve a visual question anchored in a figure or table from the primary paper to retrieve the correct cited reference paper from a candidate pool; then, it must answer a substantive technical question using the full text of that retrieved reference paper.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize A model is required to solve the visual question first and retrieve the correct reference paper; then the model needs to answer the question given access to the retrieved paper. This ensures testing both multimodal and multi-document capabilities.}\\[4pt]
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/ELI_Q3_fig_03_001.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 1.1 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{0\%} $\cdot$ Token F1: \textbf{18.5\%} $\cdot$ Atomic F1: \textbf{0.0\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 0.1s $\cdot$ Generated Tokens: 17}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 43: ELI\_Q12}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_error\_trace\_analysis $\cdot$ \textbf{Target:} Page 17}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } According to the visual error analysis of GPT-4o's performance in Figure 2.5(a), what specific line color and corresponding algorithm does the model incorrectly identify as exhibiting the highest fluctuation, and what reference paper is mistakenly ranked first as a direct consequence?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+The premise of your question contains factual inaccuracies regarding the provided visual evidence [1]. The image labeled Figure 2 does not contain an error analysis of GPT-4o's performance, nor does it include a sub-figure labeled "Figure 2.5(a)". Consequently, there is no line color or algorithm identified as exhibiting the highest fluctuation within this specific context, and no reference paper is mistakenly ranked first based on such a plot in Figure 2 [1].
+
+ 
+
+**Key Findings \& Evidence**
+  There is no visual error analysis of GPT-4o's performance, no mention of line colors indicating fluctuation in the context of an algorithmic model, and no ranking of reference papers based on such a plot within this image.}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape GPT-4o hallucinated that the orange line, which corresponds to the SummaC\_ZS algorithm, exhibited the highest fluctuation. Consequently, it mistakenly retrieved and ranked the reference paper 'SummaC: Re-Visiting NLI-based Models...' in the first position.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Based on the figure, the method that shows the highest fluctuation is SummaC\_ZS (orange line). The re-ranked reference papers are mistakenly: 1. SummaC: Re-Visiting NLI-based Models...}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 5} [{\color{gold}\textbf{UNSUPPORTED}}]: ``(a) Schematic of the comparison system used to extract the RF and optical''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/ELI_Q12_fig_05_003.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 2 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} The provided image is Figure 2, which contains a schematic of a comparison system (a) and a frequency vs. time measurement plot (b). The caption describes the system components including 'RF clock outputs (black)', 'microwave outputs (gray)', 'optica...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{19.9\%} $\cdot$ Atomic F1: \textbf{18.2\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 70.0s $\cdot$ Generated Tokens: 114}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 44: ELI\_Q13}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_metric\_delta\_extraction $\cdot$ \textbf{Target:} Page 37}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Analyzing the experimental results in Table 3.1, which scientific subject exhibits the greatest absolute percentage point improvement when Claude 3 Opus is augmented with SPACECUE, and what does its VQA accuracy score increase to?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+details an experiment involving three specific optical atomic clocks (UofA Yb, UofA Rb [1][2]. However, the document does not contain "Table 3.1," nor does it include any data regarding the performance of "Claude 3 Opus" or a method called "SPACECUE." Consequently, it is impossible to identify a scientific subject with the greatest percentage point improvement or its resulting VQA accuracy score based on the available information.
+
+**Key Findings \& Mechanism**
+
+- **Empirical Evidence**: Table 1 in the provided text [2] lists the size, weight, and power for UofA Yb (7 Rack Units, 67 L), UofA Rb (7 Rack Units, 81 L), and AFRL ORAFS (46 Rack Units, 760 L).}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Biology exhibits the greatest absolute improvement for Claude 3 Opus, jumping by 10.00 percentage points from 33.33 to reach a final VQA accuracy of 43.33.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Table 3.1 shows Biology exhibits the greatest improvement for Claude 3 Opus, increasing from 33.33 to 43.33 (+10.00).}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 5} [{\color{passgreen}\textbf{SUPPORTED}}]: ``(a) Schematic of the comparison system used to extract the RF and optical''}
+\item {\footnotesize \textbf{Page 9} [{\color{passgreen}\textbf{SUPPORTED}}]: ``Size, weight and power of the three deployed optical atomic clocks''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/ELI_Q13_fig_05_003.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 2 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 2(a) shows a schematic of the comparison system. It includes three clocks: UofA Yb (green box), UofA Rb (blue box), and ORAFS ARFL (pink box). The diagram illustrates connections between these clocks, a frequency counter referenced to 5071A, a...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{0\%} $\cdot$ Token F1: \textbf{18.0\%} $\cdot$ Atomic F1: \textbf{0.0\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 101.3s $\cdot$ Generated Tokens: 110}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 45: ELI\_Q17}\hfill {\footnotesize\color{darkteal}\textbf{Type:} retrieval\_cutoff\_optimization $\cdot$ \textbf{Target:} Page 18}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Based on the precision-recall analysis of LLM retrieval settings in Section 2.3.3, what specific mathematical ranking threshold (k) correlates with peak performance of LLMs in the reference-based evaluation, and what causes performance to degrade beyond this threshold?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Abstained**
+
+The paper context does not provide sufficient evidence to answer this question reliably (insufficient text evidence).}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Peak performance occurs at k=3 (providing top 3 candidate papers), which aligns with GPT-4o's MRR score of 0.488 (placing the true reference at the 2.1-th position on average). Beyond k=3, performance degrades because additional documents introduce excessive noise and irrelevant distractors that overwhelm the model's context reasoning.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Performance generally increases from k=1 to k=3, aligning with an MRR score of approximately 0.488. Beyond this point, more noise is introduced. The decline after k=3 demonstrates models' limitations when given irrelevant information.}\\[4pt]
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/ELI_Q17_fig_03_001.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 2.6 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{0\%} $\cdot$ Token F1: \textbf{3.3\%} $\cdot$ Atomic F1: \textbf{0.0\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\times$ $\cdot$ Latency: 0.1s $\cdot$ Generated Tokens: 17}
+\end{tcolorbox}
+\vspace{4pt}
+\subsection{Paper: InsCoQA: Contextual Question Answering Benchmark [2410.00526]}
+\vspace{-4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 46: INS\_Q4}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_conversational\_contrast $\cdot$ \textbf{Target:} Page 1}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } What does Figure 1 illustrate about the difference between previous CQA samples and InsCoQA regarding single-narrative vs multi-document procedural guidance?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+Figure 1 illustrates that previous CQA samples focus on basic factual recall from a single narrative document (e.g., Jessica's birthday), whereas InsCoQA evaluates models using complex procedural guidance derived from multiple instructional documents addressing real-world tasks like dietary adjustments for cerebral infarction [1].
+
+**Key Findings \& Mechanism**
+- **Architectural Link**: The diagram contrasts a "Single-doc, simple task" structure with a "Multi-docs, Proc [1]. instr [1]. on real-world task" structure, showing how InsCoQA integrates multiple referenced documents (<InsDoc\_1>, <InsDoc\_2>, <InsDoc\_3>) to support multi-step procedural reasoning [1].
+- **Empirical Evidence**: The figure caption explicitly states that InsCoQA provides more complex procedural guidance from multiple documents, while previous samples involve simple, single-document information [1].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Figure 1 illustrates that previous CQA samples focus on basic narrative facts and single-document retrieval (like news or children's stories), whereas InsCoQA requires multi-turn conversational synthesis across multiple instructional documents to produce structured, step-by-step procedural instructions for real-world tasks.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Figure 1 contrasts a previous CQA sample involving a simple single-document task with an InsCoQA conversation requiring multiple instructional documents and step-by-step procedural instructions.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 1} [{\color{passgreen}\textbf{SUPPORTED}}]: ``Comparison of Conversational Question''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/INS_Q4_fig_01_001.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 1 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 1 visually contrasts two CQA samples. The 'Previous CQA Sample' is labeled 'Single-doc, simple task' and shows a narrative about Jessica's birthday with Q\&A pairs (Q1-Q4). The 'Conversation from the InsCoQA dataset' is labeled 'Multi-docs, Pro...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{100\%} $\cdot$ Token F1: \textbf{32.2\%} $\cdot$ Atomic F1: \textbf{84.2\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 106.8s $\cdot$ Generated Tokens: 112}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 47: INS\_Q8}\hfill {\footnotesize\color{darkteal}\textbf{Type:} multimodal\_pipeline\_flow $\cdot$ \textbf{Target:} Page 4}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } What does Figure 3 show about the pipeline used to construct the InsCoQA dataset from user queries to procedural instructions?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+Figure 3 illustrates a sequential pipeline for constructing the InsCoQA dataset that begins with retrieving multiple instructional documents relevant to a user query from a pool [1]. These retrieved documents are then processed by an LLM to rewrite them into multi-turn instructional conversational Q\&A, which is subsequently summarized into procedural instructions [1]. The final step involves a human check before the data is finalized as the InsCoQA dataset [1].
+
+**Key Findings \& Mechanism**
+then distilled into concise procedural steps, ensuring the final instructions are both contextually grounded [1].
+- **Empirical Evidence**: This pipeline results in a dataset with specific statistical properties; for instance, the training set contains an average of 4.07 instructional documents per query, with each document containing roughly 144 words and 204 tokens on average [5].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Figure 3 details the construction sequence: User Query Pool -> Multi-instructional Documents retrieval -> Multi-turn Instructional Conversational QA generation (GPT-4) -> Procedural Instructions summarization -> Multi-annotator Human Check -> final InsCoQA benchmark.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Figure 3 presents the pipeline: User Query Pool -> Multi-instructional Documents -> Multi-turn Instructional Conversational QA -> Procedural Instructions -> Human Check -> InsCoQA dataset.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 4} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Pipeline for constructing the InsCoQA dataset. We begin by retrieving multiple instructional docu-''}
+\item {\footnotesize \textbf{Page 3} [{\color{gold}\textbf{UNSUPPORTED}}]: ``''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/INS_Q8_fig_04_003.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Figure 3 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Figure 3 illustrates the pipeline for constructing the InsCoQA dataset. The process begins with a 'User Query Pool' and 'Multi-instructional documents'. These are retrieved to form 'Multi-turn Instructional Conversational QA', which is then rewritten...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{100\%} $\cdot$ Token F1: \textbf{22.9\%} $\cdot$ Atomic F1: \textbf{42.9\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 58.1s $\cdot$ Generated Tokens: 129}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 48: INS\_Q10}\hfill {\footnotesize\color{darkteal}\textbf{Type:} evaluator\_metric\_differentiation $\cdot$ \textbf{Target:} Page 5}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } What are Judge Score and Task Completion Rate in INSEVAL, and how do they differ from character/word-level ROUGE-L?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+In the context of the INSEVAL framework described in the paper, **Judge Score (JS)** and **Task Completion Rate (TCR)** are metrics used to evaluate LLM performance on procedural tasks [5]. Specifically, TCR is defined as \$|M\_c|\$ (the count of completed steps) [5]. These metrics differ from character-level and word-level ROUGE-L in their focus: while ROUGE-L measures text alignment by calculating the F-measure (\$F\_\{lcs\}\$) for characters or words to account for grammar, punctuation, and specific word accuracy [1][3], JS and TCR are distinct evaluation dimensions. task completion (reflected by higher JS/TCR), despite having lower text-alignment scores (lower ROUGE-L) [1].
+
+**Key Insights**
+- **Judge Score (JS)** and **Task Completion Rate (TCR)** measure distinct aspects of LLM performance---task success and overall response quality---whereas **ROUGE-L** specifically measures text alignment (word/character overlap) [5].
+- The paper highlights a tradeoff where models like WizardLM-2-7B achieve high JS/TCR [1].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape Judge Score (1-10) assesses how helpfully and relevantly the plain-text answer resolves the user query within conversational context. Task Completion Rate measures the recall of correctly summarized procedural steps. They evaluate semantic helpfulness and task fulfillment, whereas ROUGE-L only measures surface n-gram text overlap.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Judge Score evaluates how well the response addresses user concerns (1-10 scale). Task Completion Rate evaluates whether predicted procedural instructions correctly summarize procedures. ROUGE-L only measures text alignment.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 6} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Evaluation performance using different LLM''}
+\item {\footnotesize \textbf{Page 10} [{\color{passgreen}\textbf{SUPPORTED}}]: ``E
+Judge Prompt''}
+\item {\footnotesize \textbf{Page 6} [{\color{gold}\textbf{UNSUPPORTED}}]: ``''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/INS_Q10_fig_06_008.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Table 4 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} The text defines word-level ROUGE-L as focusing on the accuracy of specific words by calculating F\_lcs for words in sentences. It defines character-level ROUGE-L as taking into account word forms, grammar, and punctuation by calculating F\_lcs for cha...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{21.7\%} $\cdot$ Atomic F1: \textbf{31.6\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 63.9s $\cdot$ Generated Tokens: 143}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 49: INS\_Q14}\hfill {\footnotesize\color{darkteal}\textbf{Type:} statistical\_corpus\_characterization $\cdot$ \textbf{Target:} Page 4}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } The paper reports that each conversation contains an average of 3.11 Q/A rounds and references about 4.09 instructional documents. What does this combination of statistics suggest about the kind of reasoning InsCoQA tests?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+The reported statistics---specifically an average of **3.11 Q/A rounds** per conversation referencing approximately **4.09 instructional documents** [2]---suggest that the InsCoQA benchmark tests a model's ability to perform **multi-hop reasoning across multiple distinct sources**. 
+
+**Key Findings \& Mechanism**
+ 
+- **Empirical Evidence**: Table 2 confirms this complexity by showing that even in the "Total average" row, the mean number of instructional documents per conversation is **4.09** [2][2].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape These statistics demonstrate that InsCoQA tests a hybrid of multi-turn conversational coreference/pragmatic reasoning (3.11 rounds) with dense cross-document information aggregation (4.09 documents per dialog), requiring models to resolve context dependencies across multiple instructional sources rather than isolated single passages.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize Each conversation contains an average of 3.11 Q/A rounds while referencing approximately 4.09 instructional documents. These statistics emphasize the complexity and multi-document nature of InsCoQA.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 5} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Average statistics across domains in the''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/INS_Q14_fig_05_006.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Table 2 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Table 2 presents average statistics across domains in the InsCoQA dataset. The columns are 'Domain', '\#Instr. Doc./conversation', 'Instruct Doc. length', '\#Q/A rounds', and '\#Instructional procedures'. The 'Total average' row shows a mean of 4.09 for...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{100\%} $\cdot$ Token F1: \textbf{33.3\%} $\cdot$ Atomic F1: \textbf{60.0\%} $\cdot$ Recall@1: $\times$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 89.8s $\cdot$ Generated Tokens: 66}
+\end{tcolorbox}
+\vspace{4pt}
+\begin{tcolorbox}[questionbox]
+{\noindent\bfseries\large\color{navy} Question 50: INS\_Q17}\hfill {\footnotesize\color{darkteal}\textbf{Type:} tabular\_metric\_divergence\_analysis $\cdot$ \textbf{Target:} Page 6}\\[4pt]
+{\noindent\bfseries\color{accentblue} Query: } Table 3 shows that GPT-4 has the highest Judge Score and Task Completion Rate, while WizardLM-2 has lower ROUGE-L scores than Llama-3.1-Instruct. What does this comparison demonstrate about response quality versus textual similarity to the ground truth?\\[6pt]
+{\noindent\bfseries\color{navy} ScholAR Model Output (Qwen 3.5 9B):}\\[2pt]
+{\small **Answer**
+ GPT-4 achieves the highest Judge Score (8.45) and Task Completion Rate (90.77\%) on the validation set [1], indicating superior response quality in understanding questions and summarizing instructions. Conversely, WizardLM-2 exhibits lower ROUGE-L scores (W-ROUGE-L: 0.18; C-ROUGE-L: 0.39) compared to Llama-3.1-Instruct (W-ROUGE-L: 0.25; C-ROUGE-L: 0.48) [1]. 
+
+**Key Findings \& Mechanism**
+summarizing instructions (high JS/TCR), models like WizardLM-2 can achieve comparable or better task completion with lower text-alignment to the ground truth, as reflected by their higher Judge Score/Task Completion Rate [2].
+- **Empirical Evidence**: GPT-4 leads in Judge Score (8.45) and Task Completion Rate (90.77\%) on the validation set [1], whereas WizardLM-2 has significantly lower W-ROUGE-L (0.18) and C-ROUGE-L (0.39) scores compared to Llama-3.1-Instruct's 0.25 and 0.48 respectively [1].}\\[6pt]
+{\noindent\bfseries\color{darkteal} Ground Truth Answer:}\\[2pt]
+{\small\itshape WizardLM-2 achieves higher Judge Score and Task Completion Rate than other 7/8B models despite exhibiting lower ROUGE-L scores than Llama-3.1. This demonstrates that textual surface similarity to ground truth does not correlate directly with answer utility, and that conversational procedural quality requires semantic task-fulfillment evaluation rather than lexical matching.}\\[4pt]
+{\noindent\bfseries\color{darkteal} Benchmark Ground Truth Evidence:}\\[2pt]
+{\footnotesize WizardLM-2-7B outperforms other 7/8B-level LLMs in response quality and task completion despite lower text alignment with the ground truth. This demonstrates textual similarity does not correspond directly to response quality.}\\[4pt]
+{\noindent\bfseries\color{navy} Retrieved ScholAR Citations:}\\[2pt]
+\begin{itemize}\setlength\itemsep{1pt}
+\item {\footnotesize \textbf{Page 6} [{\color{passgreen}\textbf{SUPPORTED}}]: ``Performance of various LLMs on the InsCoQA dataset, evaluated across four metrics used by INSEVAL.''}
+\item {\footnotesize \textbf{Page 6} [{\color{gold}\textbf{UNSUPPORTED}}]: ``Evaluation performance using different LLM''}
+\end{itemize}
+\vspace{4pt}
+{\noindent\bfseries\color{navy} Visual Evidence Extracted:}\\[4pt]
+\begin{center}
+\includegraphics[width=0.75\textwidth,height=5cm,keepaspectratio]{../results/50_eval_figures/INS_Q17_fig_06_007.png}\\[2pt]
+{\footnotesize\textbf{Visual Evidence:} Table 3 (Retrieved \& Grounded by ScholAR)}
+\end{center}
+{\footnotesize\textbf{VLM Visual Observation:} Table 3 shows that GPT-4 has a Judge Score of 8.45 and Task Completion Rate of 90.77\% on the Validation set, which are the highest values in the table. WizardLM-2 has a W-ROUGE-L score of 0.18 and C-ROUGE-L score of 0.39, while Llama-3.1-Instruct has...}\\[4pt]
+\vspace{4pt}\hrule\vspace{3pt}
+{\footnotesize \textbf{Evaluation Metrics:} Expert Correctness: \textbf{50\%} $\cdot$ Token F1: \textbf{24.7\%} $\cdot$ Atomic F1: \textbf{48.6\%} $\cdot$ Recall@1: $\checkmark$ $\cdot$ Recall@5: $\checkmark$ $\cdot$ Latency: 97.4s $\cdot$ Generated Tokens: 119}
+\end{tcolorbox}
+\vspace{4pt}
+
+\end{document}

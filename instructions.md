@@ -1,4 +1,4 @@
-# 🚀 ScholAR Quick-Start Guide for Windows
+# ScholAR Quick-Start Guide for Windows
 
 Welcome to **ScholAR**! Follow these quick steps to get ScholAR running locally on your Windows laptop.
 
@@ -9,9 +9,7 @@ Welcome to **ScholAR**! Follow these quick steps to get ScholAR running locally 
 Download and install these 4 free tools:
 
 1. **Git**: [Download Git for Windows](https://git-scm.com/download/win)
-2. **Python (3.11 or 3.12)**: [Download Python](https://www.python.org/downloads/)  
-   ⚠️ **CRITICAL**: On the very first installation screen, check the box:  
-   **☑️ "Add python.exe to PATH"** before clicking Install.
+2. **Python (3.11 or 3.12)**: [Download Python](https://www.python.org/downloads/)⚠️ **CRITICAL**: On the very first installation screen, check the box:**☑️ "Add python.exe to PATH"** before clicking Install.
 3. **Node.js (LTS)**: [Download Node.js](https://nodejs.org/) (Click the button that says *LTS Recommended For Most Users*)
 4. **Ollama**: [Download Ollama for Windows](https://ollama.com/download) (Run the downloaded `.exe`)
 
@@ -26,7 +24,7 @@ Download and install these 4 free tools:
    cd ScholAR
    git checkout feat/local-only-eval-and-paper-updates
    ```
-3. In that folder, double-click **`setup_windows.bat`** (or run `setup_windows.bat` in Command Prompt).  
+3. In that folder, double-click **`setup_windows.bat`** (or run `setup_windows.bat` in Command Prompt).
    *The script will automatically configure your Python environment and install all packages.*
 
 ---
@@ -53,7 +51,7 @@ Open **Command Prompt** and download your preferred model:
 Whenever you want to use the application:
 
 1. Double-click **`run_windows.bat`**.
-2. ScholAR will automatically start the backend, frontend, and open your browser to:  
+2. ScholAR will automatically start the backend, frontend, and open your browser to:
    👉 **http://localhost:3000**
 
 ---
@@ -73,5 +71,6 @@ When you're done, simply close the two Command Prompt windows that opened when y
 ---
 
 ## ❓ Need Help?
+
 - **Model is slow?** Open `backend\.env` in Notepad, change `OLLAMA_MODEL=qwen3.5:9b` to `OLLAMA_MODEL=llama3.2:3b`, save, and re-run `run_windows.bat`.
 - **Any other issue?** Check `WINDOWS_SETUP.md` for troubleshooting steps!
