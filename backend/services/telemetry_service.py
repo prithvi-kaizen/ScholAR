@@ -18,10 +18,12 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from backend.schemas.answer_trace import AnswerTrace
 from backend.schemas.claims import VerificationReport
 from backend.schemas.evidence_graph import ReasoningPath
 from backend.schemas.numeric_plan import NumericExecutionResult
 from backend.schemas.reasoning import QuestionAnalysis
+from backend.services.pdf_service import write_json
 
 logger = logging.getLogger("scholar.telemetry")
 
@@ -31,7 +33,20 @@ TRACES_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class TelemetryService:
-    """Manages structured JSON trace recording for enterprise observability."""
+    """Persists typed answer traces and legacy streaming telemetry records."""
+
+    @classmethod
+    def persist_trace(cls, trace: AnswerTrace) -> AnswerTrace:
+        """Atomically persist the exact trace returned by the answer pipeline."""
+        trace_file = TRACES_DIR / f"{trace.trace_id}.json"
+        try:
+            trace.persistence_succeeded = True
+            write_json(trace_file, trace.model_dump(mode="json"))
+            logger.info("Recorded answer trace [%s] for paper [%s]", trace.trace_id, trace.paper_id)
+        except Exception as exc:
+            trace.persistence_succeeded = False
+            logger.warning("Could not persist answer trace: %s", exc)
+        return trace
 
     @classmethod
     def record_trace(

@@ -10,44 +10,16 @@ import {
   Camera,
   Table as TableIcon,
   CheckCircle2,
-  AlertCircle,
   ExternalLink,
-  Zap,
 } from "lucide-react";
-import type { Citation } from "../types/paper";
-
-interface EvidenceNodeData {
-  node_id: string;
-  document_id: string;
-  page: number;
-  section: string;
-  modality: string;
-  text_preview: string;
-  reasoning_role: string;
-  score?: number;
-}
-
-interface EvidenceEdgeData {
-  source_id: string;
-  target_id: string;
-  relation: string;
-  description: string;
-}
+import type { Citation, ReasoningPathStep } from "../types/paper";
 
 interface EvidenceGraphModalProps {
   isOpen: boolean;
   onClose: () => void;
   query: string;
   reasoningLevel?: string;
-  reasoningSteps?: {
-    step_index: number;
-    evidence_id: string;
-    section?: string;
-    page: number;
-    modality: string;
-    role: string;
-    claim_contribution: string;
-  }[];
+  reasoningSteps?: ReasoningPathStep[];
   onNodeClick: (citation: Citation) => void;
 }
 
@@ -97,6 +69,33 @@ export function EvidenceGraphModal({
         return <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">3. Empirical Result</span>;
       default:
         return <span className="rounded bg-zinc-700 px-2 py-0.5 text-[10px] font-semibold text-zinc-300">Context</span>;
+    }
+  };
+
+  const getMLRModeBadge = (mode?: string, role?: string) => {
+    switch (mode) {
+      case "ProblemUnderstanding":
+        return <span className="rounded bg-sky-500/20 px-2 py-0.5 text-[10px] font-semibold text-sky-300">Problem Understanding</span>;
+      case "Planning":
+        return <span className="rounded bg-indigo-500/20 px-2 py-0.5 text-[10px] font-semibold text-indigo-300">Planning</span>;
+      case "Recall":
+        return <span className="rounded bg-blue-500/20 px-2 py-0.5 text-[10px] font-semibold text-blue-300">Recall</span>;
+      case "Derivation":
+        return <span className="rounded bg-cyan-500/20 px-2 py-0.5 text-[10px] font-semibold text-cyan-300">Derivation</span>;
+      case "Calculation":
+        return <span className="rounded bg-teal-500/20 px-2 py-0.5 text-[10px] font-semibold text-teal-300">Calculation</span>;
+      case "CaseAnalysis":
+        return <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300">Case Analysis</span>;
+      case "Verification":
+        return <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">Verification</span>;
+      case "ErrorCorrection":
+      case "Backtracking":
+        return <span className="rounded bg-rose-500/20 px-2 py-0.5 text-[10px] font-semibold text-rose-300">{mode}</span>;
+      case "Synthesis":
+      case "Finalization":
+        return <span className="rounded bg-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-300">{mode}</span>;
+      default:
+        return getRoleBadge(role || "primary_evidence");
     }
   };
 
@@ -178,10 +177,17 @@ export function EvidenceGraphModal({
                             <span className="ml-2 text-[11px] text-zinc-400">Page {step.page}</span>
                           </div>
                         </div>
-                        {getRoleBadge(step.role)}
+                        {getMLRModeBadge(step.reasoning_mode, step.role)}
                       </div>
 
-                      <p className="mt-2 text-xs text-zinc-300 leading-relaxed line-clamp-2">
+                      {step.subgoal && (
+                        <p className="mt-1.5 text-[11px] font-medium text-purple-300 line-clamp-1">
+                          <span className="text-zinc-400 font-normal">Subgoal: </span>
+                          {step.subgoal}
+                        </p>
+                      )}
+
+                      <p className="mt-1.5 text-xs text-zinc-300 leading-relaxed line-clamp-2">
                         {step.claim_contribution}
                       </p>
                     </div>
@@ -208,6 +214,19 @@ export function EvidenceGraphModal({
                     <span>Page {currentStep.page}</span>
                   </div>
                 </div>
+
+                {currentStep.subgoal && (
+                  <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3 text-xs">
+                    <div className="text-[11px] font-semibold text-purple-300 mb-1">MLR Step Subgoal</div>
+                    <p className="text-zinc-200 leading-relaxed">{currentStep.subgoal}</p>
+                    {currentStep.reasoning_mode && (
+                      <div className="mt-2 pt-2 border-t border-purple-500/20 flex items-center justify-between text-[11px]">
+                        <span className="text-zinc-400">Mode:</span>
+                        {getMLRModeBadge(currentStep.reasoning_mode, currentStep.role)}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="rounded-xl border border-line bg-zinc-900/60 p-3 text-xs text-zinc-300 leading-relaxed">
                   <div className="font-medium text-white mb-1">Semantic Contribution:</div>

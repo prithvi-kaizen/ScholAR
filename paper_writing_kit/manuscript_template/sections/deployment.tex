@@ -1,0 +1,15 @@
+\section{Deployment Lessons}
+\paragraph{Provenance is not support.}
+Stable evidence identifiers and page mappings eliminate fabricated citation locations, but they do not establish entailment. In deployed scientific systems, page validity, page support, claim support, citation precision, and citation coverage represent orthogonal quantities and must be measured independently.
+
+\paragraph{Failure must be a first-class output.}
+Silent retries or substituting fallback text during evaluation hides real operational degradation. ScholAR treats errors and abstentions as immutable outcomes, categorizing infrastructure unavailabilities, evidence insufficiencies, verifier-driven abstentions, and generation errors as distinct terminal states in both telemetry and user interfaces.
+
+\paragraph{Locality is a lifecycle property.}
+Running local LLM inference does not make document ingestion, dependency resolution, or model asset downloads offline. Enforcing an explicit boundary between acquisition-enabled setup and strict-local analysis ensures the trust boundary is auditable and prevents unintended network leaks.
+
+\paragraph{Repair changes the product objective.}
+Deleting unsupported claims maximizes precision but carries a coverage cost. A production evaluation must therefore assess retained coverage, answerable abstention rates, end-to-end latency, and user task completion alongside raw claim support scores. Deterministic repair renders these trade-offs auditable.
+
+\paragraph{Consumer hardware constraints.}
+ScholAR is targeted at consumer-tier hardware, specifically Apple Silicon workstations (16GB--64GB unified memory) and consumer GPUs (16GB--24GB VRAM). Deployments require balancing VRAM allocation between 4-bit quantized local generators (e.g., \texttt{qwen2.5:7b-instruct-q4\_K\_M}), sentence transformers, and multi-vector ColQwen2 indices. Profiling isolates latencies across ingestion, five-channel retrieval, local generation, and verification passes. Malformed PDFs, scanned documents, reading-order ambiguities, and interrupted transactions remain monitored failure modes.

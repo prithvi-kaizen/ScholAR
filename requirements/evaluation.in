@@ -1,0 +1,8 @@
+# Optional local-model/evaluation stack. Ollama models and Hugging Face
+# snapshots are external assets, not Python dependencies. Transformers 5.8.1
+# provides the native ColQwen2 retrieval model and processor used by ScholAR.
+-r base.in
+torch==2.13.0
+transformers==5.8.1
+safetensors==0.8.0
+pillow==12.3.0

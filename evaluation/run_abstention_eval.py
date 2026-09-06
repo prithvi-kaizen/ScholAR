@@ -29,11 +29,9 @@ EVAL_DIR = PROJECT_ROOT / "evaluation"
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(EVAL_DIR))
 
-from backend.services.retrieval_service import retrieve_chunks  # noqa: E402
-from backend.services.ollama_service import OLLAMA_MODEL, generate  # noqa: E402
-from run_comparison_eval import (  # noqa: E402  (reuse the prompt + citation-aware sentence split)
-    substantive_sentences, _evidence_block, INDIRECT_RULES, TOP_K,
-)
+from backend.services.ollama_service import OLLAMA_MODEL  # noqa: E402
+from scholar_runner import ScholarRunResult, run_scholar_http  # noqa: E402
+from run_comparison_eval import substantive_sentences  # noqa: E402
 
 DATA_DIR = PROJECT_ROOT / "backend" / "data" / "papers"
 CASES = EVAL_DIR / "abstention_cases.json"
@@ -69,24 +67,52 @@ def classify(answer: str) -> tuple[bool, bool]:
     return abstained, (not abstained and cited)
 
 
-async def answer_one(case: dict, model: str) -> str:
-    chunks = json.loads((DATA_DIR / case["target_paper"] / "chunks.json").read_text())
-    ctx = retrieve_chunks(case["question"], chunks, limit=TOP_K)
-    prompt = f"{INDIRECT_RULES}\n\nEvidence:\n{_evidence_block(ctx)}\n\nQuestion: {case['question']}"
-    try:
-        return await generate(prompt, temperature=0.1, model=model)
-    except Exception as exc:
-        return f"[GENERATION ERROR: {type(exc).__name__}: {exc}]"
+async def answer_one(case: dict, model: str, backend: str) -> ScholarRunResult:
+    return await asyncio.to_thread(
+        run_scholar_http,
+        backend,
+        case["target_paper"],
+        case["question"],
+        model,
+        require_local_model=True,
+        experiment_id="abstention-v1",
+    )
 
 
-async def run(model: str, cases: list[dict]) -> list[dict]:
+async def run(model: str, cases: list[dict], backend: str) -> list[dict]:
     rows = []
-    for i, c in enumerate(cases, 1):
-        ans = await answer_one(c, model)
-        abst, fab_cite = classify(ans)
-        rows.append({"id": c["id"], "target_paper": c["target_paper"],
-                     "abstained": abst, "answered_with_citation": fab_cite, "answer": ans})
-        print(f"[{model}] [{i}/{len(cases)}] {'ABSTAIN' if abst else 'ANSWERED'}  {c['id']}")
+    for i, case in enumerate(cases, 1):
+        try:
+            result = await answer_one(case, model, backend)
+            answer = result.answer
+            abstained, fabricated_citation = classify(answer)
+            rows.append({
+                "id": case["id"],
+                "target_paper": case["target_paper"],
+                "abstained": abstained,
+                "native_abstained": result.trace.abstention.abstained,
+                "native_abstention_reason": result.trace.abstention.reason_code,
+                "answered_with_citation": fabricated_citation,
+                "answer": answer,
+                "trace_id": result.trace.trace_id,
+                "trace_schema_version": result.trace.schema_version,
+                "pipeline_version": result.trace.run_identity.pipeline_version,
+                "generation_mode": result.trace.generation.mode.value,
+                "pipeline_status": result.trace.status.value,
+            })
+        except Exception as exc:
+            abstained, fabricated_citation = False, False
+            rows.append({
+                "id": case["id"],
+                "target_paper": case["target_paper"],
+                "abstained": False,
+                "native_abstained": False,
+                "answered_with_citation": False,
+                "answer": "",
+                "pipeline_status": "ERROR",
+                "error": f"{type(exc).__name__}: {exc}",
+            })
+        print(f"[{model}] [{i}/{len(cases)}] {'ABSTAIN' if abstained else 'ANSWERED'}  {case['id']}")
     return rows
 
 
@@ -102,6 +128,7 @@ def summarize(rows: list[dict]) -> dict:
 async def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default=OLLAMA_MODEL)
+    ap.add_argument("--backend", default="http://127.0.0.1:8000")
     ap.add_argument("--rescore", action="store_true",
                     help="re-classify stored answers with the current detector (no generation)")
     args = ap.parse_args()
@@ -123,7 +150,7 @@ async def main() -> None:
         return
 
     cases = json.loads(CASES.read_text(encoding="utf-8"))
-    rows = await run(args.model, cases)
+    rows = await run(args.model, cases, args.backend)
     blob["raw"][args.model] = rows
     blob["summary"][args.model] = summarize(rows)
     OUT.write_text(json.dumps(blob, indent=2, ensure_ascii=False))

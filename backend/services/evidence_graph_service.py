@@ -16,12 +16,78 @@ from backend.schemas.evidence_graph import (
     EvidenceGraph,
     EvidenceNode,
     EvidenceRelation,
+    MLRReasoningMode,
     ReasoningPath,
     ReasoningPathStep,
 )
 from backend.schemas.reasoning import QuestionAnalysis, ReasoningLevel
+from backend.services.retrieval_service import evidence_identity
 
 logger = logging.getLogger("scholar.evidence_graph")
+
+
+def _infer_mlr_mode_and_subgoal(
+    node: EvidenceNode,
+    step_idx: int,
+    total_steps: int,
+    analysis: QuestionAnalysis,
+) -> tuple[MLRReasoningMode, str]:
+    """Assign MLR reasoning mode and concise actionable subgoal (<= 30 words)."""
+    section_name = (node.section or f"page {node.page}").strip()
+
+    if node.reasoning_role == "method_definition":
+        if node.modality == "visual":
+            mode = MLRReasoningMode.RECALL
+            subgoal = f"Inspect architectural diagram in {section_name} on page {node.page}"
+        elif step_idx == 1:
+            mode = MLRReasoningMode.PROBLEM_UNDERSTANDING
+            subgoal = f"Identify core method definitions and architectural formulation from {section_name}"
+        else:
+            mode = MLRReasoningMode.RECALL
+            subgoal = f"Recall methodological mechanics and definitions from {section_name}"
+    elif node.reasoning_role == "ablation_support":
+        mode = MLRReasoningMode.CASE_ANALYSIS
+        if node.modality == "table":
+            subgoal = f"Analyze ablation cases and isolated component impacts from table on page {node.page}"
+        else:
+            subgoal = f"Examine controlled ablation findings and trade-offs in {section_name}"
+    elif node.reasoning_role == "final_result":
+        if step_idx == total_steps:
+            mode = MLRReasoningMode.SYNTHESIS
+            if node.modality == "table":
+                subgoal = f"Synthesize benchmark results and comparative empirical metrics from table on page {node.page}"
+            else:
+                subgoal = f"Synthesize reported empirical conclusions and benchmark outcomes from {section_name}"
+        elif node.modality == "table" and analysis.requires_arithmetic:
+            mode = MLRReasoningMode.CALCULATION
+            subgoal = f"Calculate performance deltas and metric comparisons from table on page {node.page}"
+        else:
+            mode = MLRReasoningMode.DERIVATION
+            subgoal = f"Derive empirical performance trends from {section_name} on page {node.page}"
+    else:
+        # primary_evidence or other
+        if node.modality in ("table",) and analysis.requires_arithmetic:
+            mode = MLRReasoningMode.CALCULATION
+            subgoal = f"Extract and compute numerical values from table on page {node.page}"
+        elif node.modality in ("visual", "figure"):
+            mode = MLRReasoningMode.VERIFICATION
+            subgoal = f"Verify visual trends and qualitative figures from page {node.page}"
+        elif step_idx == 1 and total_steps > 1:
+            mode = MLRReasoningMode.PROBLEM_UNDERSTANDING
+            subgoal = f"Clarify problem context and baseline claims from {section_name}"
+        elif step_idx == total_steps and total_steps > 2:
+            mode = MLRReasoningMode.SYNTHESIS
+            subgoal = f"Consolidate contextual evidence from {section_name} for final answer"
+        else:
+            mode = MLRReasoningMode.DERIVATION
+            subgoal = f"Derive supporting claims from {section_name} on page {node.page}"
+
+    # Enforce MLR rule: action + object style, <= 30 words
+    words = subgoal.split()
+    if len(words) > 30:
+        subgoal = " ".join(words[:30])
+
+    return mode, subgoal
 
 
 class EvidenceGraphService:
@@ -44,10 +110,21 @@ class EvidenceGraphService:
             empty_path = ReasoningPath(query=query, reasoning_level=analysis.reasoning_level.value, graph=empty_graph)
             return empty_graph, empty_path
 
-        # 1. Create Evidence Nodes
+        # 1. Create Evidence Nodes. Local IDs remain readable for single-paper
+        # graphs, but cross-paper collisions are promoted to source-scoped IDs.
+        local_ids = [
+            str(chunk.get("evidence_id") or chunk.get("chunk_id") or f"E_{idx+1:03d}")
+            for idx, chunk in enumerate(retrieved_chunks)
+        ]
+        id_counts = {local_id: local_ids.count(local_id) for local_id in set(local_ids)}
         for idx, chunk in enumerate(retrieved_chunks):
-            eid = str(chunk.get("evidence_id") or chunk.get("chunk_id") or f"E_{idx+1:03d}")
-            doc_id = str(chunk.get("document_id") or "doc")
+            local_id = local_ids[idx]
+            if id_counts[local_id] > 1:
+                source_id, kind, identity_id = evidence_identity(chunk)
+                eid = f"{source_id}::{kind}::{identity_id}"
+            else:
+                eid = local_id
+            doc_id = str(chunk.get("document_id") or chunk.get("source_paper_id") or "doc")
             page_no = int(chunk.get("page", 1) or 1)
             sec = str(chunk.get("section") or "")
             mod = "table" if chunk.get("is_table_chunk") else ("visual" if chunk.get("is_figure_chunk") else "text")
@@ -120,8 +197,12 @@ class EvidenceGraphService:
                         description="Linear section sequence",
                     ))
 
-        # 4. Construct Ordered ReasoningPath
+        # 4. Construct Ordered ReasoningPath with MLR descriptors
+        total_steps = len(nodes)
         for step_idx, node in enumerate(nodes, start=1):
+            mode, subgoal = _infer_mlr_mode_and_subgoal(node, step_idx, total_steps, analysis)
+            node.reasoning_mode = mode
+
             contrib = ""
             if node.reasoning_role == "method_definition":
                 contrib = "Establishes core architectural mechanism and proposed formula."
@@ -139,7 +220,10 @@ class EvidenceGraphService:
                 page=node.page,
                 modality=node.modality,
                 role=node.reasoning_role,
+                reasoning_mode=mode,
+                subgoal=subgoal,
                 claim_contribution=contrib,
+                document_id=node.document_id,
             ))
 
         graph = EvidenceGraph(
@@ -150,12 +234,13 @@ class EvidenceGraphService:
             reasoning_level=analysis.reasoning_level.value,
         )
 
+        modes_summary = ", ".join(s.reasoning_mode.value for s in steps)
         path = ReasoningPath(
             query=query,
             reasoning_level=analysis.reasoning_level.value,
             steps=steps,
             graph=graph,
-            synthesized_rationale=f"Constructed multi-level reasoning path across {len(steps)} evidence steps.",
+            synthesized_rationale=f"Constructed multi-level reasoning path across {len(steps)} evidence steps ({modes_summary}).",
         )
 
         logger.info(

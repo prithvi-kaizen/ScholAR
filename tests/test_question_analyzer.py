@@ -90,6 +90,24 @@ class TestQuestionAnalyzer(unittest.TestCase):
         self.assertIn("reasoning_role", results[0])
         self.assertIn("subquery_id", results[0])
 
+    def test_implicit_multi_level_decomposition(self):
+        """Verify decomposition and modality routing on multi-clause questions without explicit figure/table numbers."""
+        q = (
+            "How does isolating attention to a single head compare to using multiple parallel heads "
+            "in terms of translation quality, and what structural limitation in the parallel projection "
+            "mechanism explains why single-head attention underperforms?"
+        )
+        analysis = QuestionAnalyzer.analyze_query(q)
+        self.assertEqual(analysis.reasoning_level, ReasoningLevel.L5_MULTI_HOP_SYNTHESIS)
+        self.assertGreaterEqual(len(analysis.subqueries), 2)
+        # Check that one subquery focuses on the empirical comparison / table, and another on the mechanism / figure
+        subquery_texts = [sq.query_text.lower() for sq in analysis.subqueries]
+        self.assertTrue(any("single head" in text or "translation" in text for text in subquery_texts))
+        self.assertTrue(any("parallel projection" in text or "mechanism" in text for text in subquery_texts))
+        subquery_mods = [sq.target_modality for sq in analysis.subqueries]
+        self.assertTrue(TargetModality.TABLE in subquery_mods or TargetModality.MULTIMODAL in subquery_mods)
+        self.assertTrue(TargetModality.FIGURE in subquery_mods or TargetModality.MULTIMODAL in subquery_mods)
+
 
 if __name__ == "__main__":
     unittest.main()

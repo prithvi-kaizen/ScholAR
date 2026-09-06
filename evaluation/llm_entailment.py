@@ -27,6 +27,8 @@ import sys
 
 import httpx
 
+from backend.services.network_policy_service import NetworkPolicyService
+
 OLLAMA = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
 JUDGE_MODEL = os.getenv("FAITH_JUDGE_MODEL", "qwen3.5:9b")
 
@@ -65,6 +67,7 @@ def classify(hypothesis: str, premise: str, model: str | None = None) -> tuple[s
         "stream": False, "think": False,
         "options": {"temperature": 0.0, "num_predict": 8},
     }
+    NetworkPolicyService.require_local_endpoint(OLLAMA, "Ollama judge")
     try:
         with httpx.Client(timeout=120.0, trust_env=False) as c:
             r = c.post(f"{OLLAMA}/api/generate", json=payload)
@@ -82,7 +85,8 @@ def _selfcheck() -> None:
     assert _parse("clearly contradicts") == "CONTRADICTION"
     assert _parse("not enough info") == "NEUTRAL"
     print("parser selfcheck OK")
-    # live smoke (only if Ollama reachable)
+    # live smoke (only if loopback Ollama is reachable)
+    NetworkPolicyService.require_local_endpoint(OLLAMA, "Ollama judge")
     try:
         httpx.Client(timeout=3.0, trust_env=False).get(f"{OLLAMA}/api/tags")
     except Exception:

@@ -1,9 +1,35 @@
 from __future__ import annotations
 
 import json
+import re
+from collections import Counter
 from pathlib import Path
 from typing import Any
 from evaluation.benchmarks.base import GoldEvidence, QAExample
+
+
+def _normalize_text(text: str) -> str:
+    """Normalize text for token-level scoring."""
+    lower = str(text or "").lower()
+    cleaned = re.sub(r"[^\w\s]", " ", lower)
+    return " ".join(cleaned.split())
+
+
+def _compute_token_f1(prediction: str, gold: str) -> float:
+    """Compute token-level F1 overlap between prediction and reference answer."""
+    pred_tokens = _normalize_text(prediction).split()
+    gold_tokens = _normalize_text(gold).split()
+    if not pred_tokens or not gold_tokens:
+        return 1.0 if pred_tokens == gold_tokens else 0.0
+    common = Counter(pred_tokens) & Counter(gold_tokens)
+    num_same = sum(common.values())
+    if num_same == 0:
+        return 0.0
+    precision = num_same / len(pred_tokens)
+    recall = num_same / len(gold_tokens)
+    if precision + recall == 0:
+        return 0.0
+    return 2.0 * (precision * recall) / (precision + recall)
 
 
 class SciVQAAdapter:
@@ -58,21 +84,53 @@ class SciVQAAdapter:
 
     def compute_metrics(self, predictions: list[dict[str, Any]]) -> dict[str, float]:
         if not predictions:
-            return {"visual_qa_accuracy": 0.0, "visual_hit_rate": 0.0}
+            return {"visual_qa_accuracy": 0.0, "exact_match": 0.0, "mean_token_f1": 0.0, "visual_hit_rate": 0.0}
 
         correct = 0
         hits = 0
         total = len(predictions)
+        f1_sum = 0.0
+        em_sum = 0
 
         for p in predictions:
             if p.get("figure_found"):
                 hits += 1
-            gold_ans = p.get("gold_answer", "").lower()
-            pred_ans = p.get("prediction", "").lower()
-            if any(term in pred_ans for term in gold_ans.split() if len(term) > 3):
+
+            gold_raw = p.get("gold_answer") or p.get("gold_answers", [])
+            if isinstance(gold_raw, str):
+                golds = [gold_raw] if gold_raw else []
+            else:
+                golds = list(gold_raw)
+
+            pred_ans = str(p.get("prediction", "")).strip()
+            norm_pred = _normalize_text(pred_ans)
+
+            is_correct = False
+            best_f1 = 0.0
+            is_em = False
+
+            for g in golds:
+                norm_gold = _normalize_text(g)
+                if not norm_gold:
+                    continue
+                if norm_pred == norm_gold:
+                    is_em = True
+                # Containment of the complete normalized gold phrase (not arbitrary single words)
+                if norm_gold in norm_pred:
+                    is_correct = True
+                f1 = _compute_token_f1(pred_ans, g)
+                if f1 > best_f1:
+                    best_f1 = f1
+
+            if is_correct:
                 correct += 1
+            if is_em:
+                em_sum += 1
+            f1_sum += best_f1
 
         return {
             "visual_qa_accuracy": round(correct / total, 4),
+            "exact_match": round(em_sum / total, 4),
+            "mean_token_f1": round(f1_sum / total, 4),
             "visual_hit_rate": round(hits / total, 4),
         }

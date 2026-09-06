@@ -1,0 +1,100 @@
+{
+  "aggregation_order": [
+    "within_answer",
+    "across_seeds_within_case",
+    "across_cases"
+  ],
+  "case_rows": [
+    {
+      "case_id": "case_alpha",
+      "metric_denominators": {
+        "abstention_rate": 2,
+        "error_rate": 2,
+        "latency_ms": 2,
+        "success_rate": 2,
+        "supported_claim_rate": 2
+      },
+      "metrics": {
+        "abstention_rate": 0.0,
+        "error_rate": 0.0,
+        "latency_ms": 30.0,
+        "success_rate": 1.0,
+        "supported_claim_rate": 1.0
+      },
+      "model": "fixture-model:1",
+      "n_expected_repetitions": 2,
+      "status_counts": {
+        "SUCCESS": 2
+      },
+      "system": "fixture_system"
+    },
+    {
+      "case_id": "case_beta",
+      "metric_denominators": {
+        "abstention_rate": 2,
+        "error_rate": 2,
+        "latency_ms": 1,
+        "success_rate": 2,
+        "supported_claim_rate": 2
+      },
+      "metrics": {
+        "abstention_rate": 0.5,
+        "error_rate": 0.5,
+        "latency_ms": 21.0,
+        "success_rate": 0.0,
+        "supported_claim_rate": 0.0
+      },
+      "model": "fixture-model:1",
+      "n_expected_repetitions": 2,
+      "status_counts": {
+        "ABSTAINED": 1,
+        "ERROR": 1
+      },
+      "system": "fixture_system"
+    }
+  ],
+  "groups": [
+    {
+      "metric_case_denominators": {
+        "abstention_rate": 2,
+        "error_rate": 2,
+        "latency_ms": 2,
+        "success_rate": 2,
+        "supported_claim_rate": 2
+      },
+      "metrics": {
+        "abstention_rate": 0.25,
+        "error_rate": 0.25,
+        "latency_ms": 25.5,
+        "success_rate": 0.5,
+        "supported_claim_rate": 0.5
+      },
+      "model": "fixture-model:1",
+      "n_cases": 2,
+      "n_expected": 4,
+      "status_counts": {
+        "ABSTAINED": 1,
+        "ERROR": 1,
+        "SUCCESS": 2
+      },
+      "system": "fixture_system"
+    }
+  ],
+  "metric_names": [
+    "success_rate",
+    "abstention_rate",
+    "error_rate",
+    "supported_claim_rate",
+    "latency_ms"
+  ],
+  "n_expected": 4,
+  "n_scored": 4,
+  "release_id": "release_v1_minimal",
+  "run_id": "fixture-run-v1",
+  "schema_version": "1.0",
+  "status_counts": {
+    "ABSTAINED": 1,
+    "ERROR": 1,
+    "SUCCESS": 2
+  }
+}

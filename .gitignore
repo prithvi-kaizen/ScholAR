@@ -14,6 +14,7 @@ tmp/
 .env.local
 .DS_Store
 backend/data/papers/*/
+backend/data/papers/.*.lock
 backend/data/traces/
 backend/data/search_cache.json
 !backend/data/papers/.gitkeep
@@ -21,6 +22,7 @@ backend/data/search_cache.json
 # Local tooling / editor working directories
 .claude/
 .impeccable/
+.chrome_temp/
 
 # Disconnected prototype code (future-work scaffolding, not part of the app)
 backend/parsers/
@@ -29,15 +31,21 @@ backend/rlm/
 # bulky third-party reference PDFs (kept locally, not shipped)
 docs/reference_papers/
 
-# human-eval generated artifacts (regeneratable; answers.json is committed)
+# human-eval generated artifacts (regeneratable and local-only)
 evaluation/human_eval/score_sheet.html
 evaluation/human_eval/exports/
+evaluation/human_eval/answers.json
 
 # M3SciQA dataset clone (74MB, re-fetchable: see evaluation/m3sciqa/build_m3sciqa.py)
 evaluation/m3sciqa/data/
 # derived cases file (16MB, regenerate: python3 evaluation/m3sciqa/build_m3sciqa.py)
 evaluation/m3sciqa/m3sciqa_cases.json
+evaluation/results/*
+!evaluation/results/.gitkeep
+evaluation/visual_eval_results.json
+evaluation/mined_cases.json
 
 # reference papers kept locally for figure/table study (not ours to redistribute)
 /m3sciqa.pdf
 /paperqa.pdf
+scratch/

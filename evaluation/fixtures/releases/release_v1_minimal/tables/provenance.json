@@ -1,0 +1,11 @@
+{
+  "aggregate_sha256": "a1586467e0f65512a326fc7830f4bd69ee6b8765aac4d2842b6ee0f78fa584b8",
+  "release_id": "release_v1_minimal",
+  "run_id": "fixture-run-v1",
+  "schema_version": "1.0",
+  "source": "summary.json",
+  "tables": [
+    "summary.csv",
+    "summary.tex"
+  ]
+}

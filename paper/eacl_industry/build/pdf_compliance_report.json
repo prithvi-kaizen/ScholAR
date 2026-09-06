@@ -1,0 +1,16 @@
+{
+  "artifact_type": "compiled_pdf_compliance_report",
+  "checks": [
+    "qpdf",
+    "A4",
+    "embedded_fonts",
+    "no_type3",
+    "anonymous_review",
+    "six_content_pages"
+  ],
+  "pdf_path": "paper/eacl_industry/main.pdf",
+  "pdf_sha256": "3c7830e81c57283e2f0ef11e54c6428ce6060bb4c2bafb9e8f5345446586369b",
+  "schema_version": "1.0",
+  "status": "PASS",
+  "style_manifest_sha256": "977a4b70bf3ad866b5218abeca6d8e42527e783323fb6029dbf4a3a5a54c7124"
+}

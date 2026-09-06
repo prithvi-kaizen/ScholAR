@@ -1,0 +1,2 @@
+release_id,run_id,aggregate_sha256,system,model,n_expected,n_cases,success_rate,abstention_rate,error_rate,supported_claim_rate,latency_ms
+release_v1_minimal,fixture-run-v1,a1586467e0f65512a326fc7830f4bd69ee6b8765aac4d2842b6ee0f78fa584b8,fixture_system,fixture-model:1,4,2,0.5,0.25,0.25,0.5,25.5

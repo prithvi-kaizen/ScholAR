@@ -87,19 +87,32 @@ class CrossDocumentReasoningService:
         # Build unified graph
         graph, path = EvidenceGraphService.build_evidence_graph(query, retrieved_chunks, analysis)
 
-        # Infer Cross-Document Comparative Edges between different papers
+        # Infer Cross-Document Comparative Edges between different papers based on semantic overlap
         cross_doc_edges: list[EvidenceEdge] = []
+        from backend.services.retrieval_service import tokenize
+        stopwords = {"this", "that", "with", "from", "were", "been", "have", "more", "also", "then", "into", "their", "paper", "section", "model"}
+
         for i in range(len(graph.nodes)):
             n1 = graph.nodes[i]
+            t1 = set(tokenize(n1.text_preview.lower())) - stopwords
             for j in range(i + 1, len(graph.nodes)):
                 n2 = graph.nodes[j]
                 if n1.document_id != n2.document_id:
-                    cross_doc_edges.append(EvidenceEdge(
-                        source_id=n1.node_id,
-                        target_id=n2.node_id,
-                        relation=EvidenceRelation.SUPPORTS_MECHANISM,
-                        description=f"Cross-paper bridge: {n1.document_id} ({n1.section}) <-> {n2.document_id} ({n2.section})",
-                    ))
+                    t2 = set(tokenize(n2.text_preview.lower())) - stopwords
+                    shared = {tok for tok in t1.intersection(t2) if len(tok) >= 4}
+                    # Only form an edge if there is verified semantic concept overlap
+                    if len(shared) >= 2:
+                        rel = EvidenceRelation.SUPPORTS_MECHANISM
+                        preview_combined = (n1.text_preview + " " + n2.text_preview).lower()
+                        if any(w in preview_combined for w in ("baseline", "outperform", "compare", "versus", "vs")):
+                            rel = EvidenceRelation.CONTRADICTS_BASELINE
+                        cross_doc_edges.append(EvidenceEdge(
+                            source_id=n1.node_id,
+                            target_id=n2.node_id,
+                            relation=rel,
+                            weight=round(min(1.0, len(shared) / 5.0), 2),
+                            description=f"Cross-paper bridge on shared concepts ({', '.join(sorted(list(shared))[:3])}): {n1.document_id} <-> {n2.document_id}",
+                        ))
 
         # PaperQA2 Citation-Graph Traversal for mentioned entities
         from backend.services.reference_service import traverse_citation_graph

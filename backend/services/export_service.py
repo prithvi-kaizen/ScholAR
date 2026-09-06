@@ -64,7 +64,9 @@ class ExportService:
                 "### Detailed Evidence Nodes",
             ])
             for s in path.steps:
-                lines.append(f"- **Step {s.step_index}** (`{s.evidence_id}`, Page {s.page}, Role: `{s.role}`): {s.claim_contribution}")
+                mode_val = getattr(s.reasoning_mode, "value", str(s.reasoning_mode))
+                subgoal_text = f" — *Subgoal: {s.subgoal}*" if s.subgoal else ""
+                lines.append(f"- **Step {s.step_index}** [`{mode_val}`] (`{s.evidence_id}`, Page {s.page}, Role: `{s.role}`){subgoal_text}: {s.claim_contribution}")
             lines.append("")
 
         if verification:
@@ -108,7 +110,8 @@ class ExportService:
         if path and path.steps:
             for idx, s in enumerate(path.steps):
                 sec_clean = (s.section or s.evidence_id).replace("_", "\\_")
-                tikz_nodes.append(f"\\node[draw, rounded corners, fill=purple!10, text width=3.5cm, align=center] (n{idx+1}) at ({idx*4.2}, 0) {{\\textbf{{Step {s.step_index}}}\\\\{sec_clean}\\\\\\footnotesize Page {s.page}}};")
+                mode_clean = getattr(s.reasoning_mode, "value", str(s.reasoning_mode)).replace("_", "\\_")
+                tikz_nodes.append(f"\\node[draw, rounded corners, fill=purple!10, text width=3.8cm, align=center] (n{idx+1}) at ({idx*4.4}, 0) {{\\textbf{{Step {s.step_index}: {mode_clean}}}\\\\{sec_clean}\\\\\\footnotesize Page {s.page}}};")
                 if idx > 0:
                     tikz_edges.append(f"\\draw[->, thick, purple!70] (n{idx}) -- (n{idx+1});")
 

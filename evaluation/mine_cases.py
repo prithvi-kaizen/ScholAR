@@ -21,10 +21,16 @@ import json
 import os
 import random
 import re
+import sys
 import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from backend.services.network_policy_service import NetworkPolicyService  # noqa: E402
+
 PAPERS = ROOT / "backend" / "data" / "papers"
 OUT = ROOT / "evaluation" / "mined_cases.json"
 OLLAMA = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
@@ -50,6 +56,7 @@ def norm(s: str) -> str:
 
 
 def llm_json(prompt: str, model: str) -> dict | None:
+    NetworkPolicyService.require_local_endpoint(OLLAMA, "Ollama case miner")
     body = {"model": model, "prompt": prompt, "stream": False, "format": "json",
             "options": {"temperature": 0.4, "num_predict": 400}}
     req = urllib.request.Request(OLLAMA + "/api/generate",

@@ -19,6 +19,7 @@ from typing import Any
 
 import httpx
 
+from backend.services.network_policy_service import NetworkPolicyService
 from backend.services.pdf_service import paper_dir, read_json, write_json
 
 # ---------------------------------------------------------------------------
@@ -57,7 +58,8 @@ def save_references(local_id: str, refs: list[dict[str, Any]]) -> None:
 # ---------------------------------------------------------------------------
 
 async def _s2_get(url: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
-    """Rate-limited GET against the S2 API. Returns None on any error."""
+    """Rate-limited GET against the S2 API. Returns None on HTTP errors."""
+    NetworkPolicyService.require_acquisition("resolve-references", url)
     global _s2_last_at
     async with _s2_lock:
         elapsed = time.monotonic() - _s2_last_at
@@ -335,6 +337,8 @@ async def resolve_references(
         # resolvable references) — an empty list is falsy, so check file
         # existence rather than truthiness or this cache never "sticks".
         return load_references(local_id)
+
+    NetworkPolicyService.require_acquisition("resolve-references")
 
     arxiv_id = metadata.get("id", "")
     is_upload = metadata.get("source") == "upload"

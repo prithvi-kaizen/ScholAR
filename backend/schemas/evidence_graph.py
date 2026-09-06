@@ -25,6 +25,37 @@ class EvidenceRelation(str, Enum):
     SECTION_SEQUENCE = "section_sequence"          # Linear reading order bridge
 
 
+class MLRReasoningMode(str, Enum):
+    """Multi-Level Reasoning (MLR) mode taxonomy (ICLR 2026).
+
+    Standardized reasoning modes representing high-level structured step descriptors:
+    - ProblemUnderstanding: restate goal, identify givens/unknowns, clarify constraints
+    - Planning: outline substeps, decompose, decide next objective (without executing)
+    - Recall: state relevant definition/theorem/formula/fact needed for solution
+    - Derivation: derive non-trivial intermediate claim/lemma
+    - Calculation: perform algebra/arithmetic/symbolic manipulation or computation
+    - CaseAnalysis: explore alternatives or split into cases without abandoning direction
+    - Verification: check correctness/consistency (plug-in, sanity check, cross-check)
+    - ErrorCorrection: fix detected mistake while keeping overall approach
+    - Backtracking: explicitly abandon/revise prior approach/assumption and switch direction
+    - Synthesis: combine intermediate results to reach final conclusion
+    - Finalization: present final answer or format output
+    - Other: unclassified or generic reasoning step
+    """
+    PROBLEM_UNDERSTANDING = "ProblemUnderstanding"
+    PLANNING = "Planning"
+    RECALL = "Recall"
+    DERIVATION = "Derivation"
+    CALCULATION = "Calculation"
+    CASE_ANALYSIS = "CaseAnalysis"
+    VERIFICATION = "Verification"
+    ERROR_CORRECTION = "ErrorCorrection"
+    BACKTRACKING = "Backtracking"
+    SYNTHESIS = "Synthesis"
+    FINALIZATION = "Finalization"
+    OTHER = "Other"
+
+
 class EvidenceNode(BaseModel):
     """Node in the reasoning evidence graph."""
     node_id: str                              # Canonical evidence_id (e.g., "E_001", "E_TAB_02", "VIS_F1")
@@ -34,6 +65,7 @@ class EvidenceNode(BaseModel):
     modality: str = "text"
     text_preview: str = ""
     reasoning_role: str = "primary_evidence"  # method_definition, ablation_support, final_result, etc.
+    reasoning_mode: MLRReasoningMode = MLRReasoningMode.PROBLEM_UNDERSTANDING
     score: float = 1.0
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -63,14 +95,19 @@ class EvidenceGraph(BaseModel):
 
 
 class ReasoningPathStep(BaseModel):
-    """One step in an ordered evidence path (E1 -> E2 -> E3)."""
+    """One step in an ordered evidence path (E1 -> E2 -> E3) following MLR descriptors."""
     step_index: int
     evidence_id: str
     section: str = ""
     page: int = 1
     modality: str = "text"
     role: str = "primary_evidence"
+    reasoning_mode: MLRReasoningMode = MLRReasoningMode.PROBLEM_UNDERSTANDING
+    subgoal: str = ""                         # Concise action + object descriptor (<= 30 words)
     claim_contribution: str = ""
+    source_paper_id: str = ""
+    document_id: str = ""
+    source_evidence_id: str = ""
 
 
 class ReasoningPath(BaseModel):
@@ -80,3 +117,4 @@ class ReasoningPath(BaseModel):
     steps: list[ReasoningPathStep] = Field(default_factory=list)
     graph: EvidenceGraph | None = None
     synthesized_rationale: str = ""
+

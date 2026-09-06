@@ -1,0 +1,97 @@
+{
+  "backend_url": "http://127.0.0.1:9",
+  "command": [
+    ".venv/bin/python",
+    "evaluation/fixtures/releases/release_v1_minimal/build_fixture.py"
+  ],
+  "dataset": {
+    "cases_path": "evaluation/fixtures/releases/release_v1_minimal/data_cards/cases.json",
+    "claim_status": "non_release",
+    "evidence_class": "toy",
+    "name": "Release pipeline toy fixture",
+    "paper_disjoint_from_development": false,
+    "sha256": "25ad03d7e9cbae5a6f792adb5c328ed36b393e160265c07d4a8986748abbf24e",
+    "version": "1.0"
+  },
+  "metrics": [
+    {
+      "denominator": "all_expected",
+      "description": "Toy outcome metric.",
+      "name": "success_rate",
+      "on_abstained": 0.0,
+      "on_error": 0.0,
+      "source": "success_rate"
+    },
+    {
+      "denominator": "all_expected",
+      "description": "Toy outcome metric.",
+      "name": "abstention_rate",
+      "on_abstained": 1.0,
+      "on_error": 0.0,
+      "source": "abstention_rate"
+    },
+    {
+      "denominator": "all_expected",
+      "description": "Toy outcome metric.",
+      "name": "error_rate",
+      "on_abstained": 0.0,
+      "on_error": 1.0,
+      "source": "error_rate"
+    },
+    {
+      "denominator": "all_expected",
+      "description": "Toy trace-derived metric.",
+      "name": "supported_claim_rate",
+      "on_abstained": 0.0,
+      "on_error": 0.0,
+      "source": "supported_claim_rate"
+    },
+    {
+      "denominator": "eligible_only",
+      "description": "Toy trace latency.",
+      "name": "latency_ms",
+      "on_abstained": null,
+      "on_error": null,
+      "source": "latency_ms"
+    }
+  ],
+  "models": [
+    {
+      "digest": "sha256:fixture-model-v1",
+      "quantization": "none",
+      "tag": "fixture-model:1"
+    }
+  ],
+  "output_dir": "evaluation/fixtures/releases/release_v1_minimal",
+  "prompt_hashes": {
+    "fixture": "sha256:fixture-prompt-v1"
+  },
+  "release_id": "release_v1_minimal",
+  "run_id": "fixture-run-v1",
+  "schema_version": "1.0",
+  "seeds": [
+    11,
+    29
+  ],
+  "study_status": "READY",
+  "systems": [
+    {
+      "description": "Deterministic toy adapter; not a measured system.",
+      "name": "fixture_system",
+      "options": {
+        "decoding": {
+          "num_ctx": 16000,
+          "num_predict": 1650,
+          "temperature": 0.1,
+          "top_p": 0.9
+        },
+        "execution_policy": "REQUIRE_LOCAL_MODEL",
+        "intervention": {
+          "abstain_on_no_supported_claims": true,
+          "repair_mode": "SELECTIVE"
+        }
+      },
+      "runner": "fixture"
+    }
+  ]
+}

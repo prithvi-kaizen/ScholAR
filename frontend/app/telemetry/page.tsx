@@ -7,22 +7,22 @@ import {
   ArrowLeft,
   Cpu,
   Database,
-  Layers,
   Network,
   ShieldCheck,
   Zap,
   CheckCircle2,
-  AlertCircle,
   Calculator,
   RefreshCw,
 } from "lucide-react";
 import { Navbar } from "../../components/Navbar";
+import type { SystemDiagnostic, TelemetryTrace } from "../../types/api";
+import { isSystemDiagnostic, isTelemetryTrace } from "../../types/api";
 
 export default function TelemetryPage() {
-  const [diagnostics, setDiagnostics] = useState<any | null>(null);
-  const [traces, setTraces] = useState<any[]>([]);
+  const [diagnostics, setDiagnostics] = useState<SystemDiagnostic | null>(null);
+  const [traces, setTraces] = useState<TelemetryTrace[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [selectedTrace, setSelectedTrace] = useState<any | null>(null);
+  const [selectedTrace, setSelectedTrace] = useState<TelemetryTrace | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -32,14 +32,20 @@ export default function TelemetryPage() {
         fetch(`${backendUrl}/api/system/health-diagnostic`),
         fetch(`${backendUrl}/api/telemetry/traces`),
       ]);
-      if (diagRes.ok) setDiagnostics(await diagRes.json());
+      if (diagRes.ok) {
+        const diagnosticData: unknown = await diagRes.json();
+        setDiagnostics(isSystemDiagnostic(diagnosticData) ? diagnosticData : null);
+      }
       if (tracesRes.ok) {
-        const tr = await tracesRes.json();
-        setTraces(tr);
-        if (tr.length > 0) setSelectedTrace(tr[0]);
+        const traceData: unknown = await tracesRes.json();
+        const validTraces = Array.isArray(traceData) ? traceData.filter(isTelemetryTrace) : [];
+        setTraces(validTraces);
+        setSelectedTrace(validTraces[0] ?? null);
       }
     } catch {
-      // Offline fallback
+      setDiagnostics(null);
+      setTraces([]);
+      setSelectedTrace(null);
     } finally {
       setLoading(false);
     }
@@ -210,7 +216,7 @@ export default function TelemetryPage() {
                         Decomposed Subqueries
                       </div>
                       <div className="space-y-1.5">
-                        {selectedTrace.subqueries.map((sq: any) => (
+                        {selectedTrace.subqueries.map((sq) => (
                           <div key={sq.subquery_id} className="rounded-lg bg-zinc-900/60 p-2.5 text-xs text-zinc-300 flex items-center gap-2">
                             <span className="rounded bg-purple-500/20 px-1.5 py-0.5 font-mono text-[10px] text-purple-300 font-semibold">{sq.subquery_id}</span>
                             <span>{sq.query_text}</span>
@@ -240,7 +246,7 @@ export default function TelemetryPage() {
                         Evidence Reasoning Path Steps ({selectedTrace.reasoning_path.length})
                       </div>
                       <div className="space-y-2">
-                        {selectedTrace.reasoning_path.map((step: any) => (
+                        {selectedTrace.reasoning_path.map((step) => (
                           <div key={step.step_index} className="rounded-xl border border-line bg-zinc-900/40 p-3 text-xs space-y-1">
                             <div className="flex items-center justify-between text-zinc-400">
                               <span className="font-semibold text-white">Step {step.step_index}: {step.section || step.evidence_id}</span>

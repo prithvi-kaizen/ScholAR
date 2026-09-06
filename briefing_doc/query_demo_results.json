@@ -1,0 +1,295 @@
+[
+  {
+    "id": "QUERY_1_ARCHITECTURAL",
+    "title": "Query 1: Architectural Formula & Mechanism (Scaled Dot-Product Attention)",
+    "query": "How does Scaled Dot-Product Attention compute attention weights, and why does it divide by the square root of d_k?",
+    "status": "SUCCESS",
+    "reasoning_level": "L5_MULTI_HOP_SYNTHESIS",
+    "target_modalities": [
+      "text",
+      "table"
+    ],
+    "latency_ms": 14943.744,
+    "timings": {
+      "load_paper": 1.999,
+      "load_sources": 0.465,
+      "retrieval": 8193.312,
+      "reasoning_artifacts": 0.206,
+      "sufficiency": 0.074,
+      "context_assembly": 0.897,
+      "generation": 6667.468,
+      "verification": 7.404
+    },
+    "retrieval_hits_count": 8,
+    "top_hits": [
+      {
+        "rank": 1,
+        "id": "chunk_197",
+        "page": 4,
+        "rrf_score": 0.065045,
+        "bm25_score": 16.586192,
+        "dense_score": 0.745757,
+        "preview": "Figure 2: (left) Scaled Dot-Product Attention. (right) Multi-Head Attention consists of several\nScaled Dot-Product Atten"
+      },
+      {
+        "rank": 2,
+        "id": "chunk_038",
+        "page": 4,
+        "rrf_score": 0.031778,
+        "bm25_score": 20.431356,
+        "dense_score": 0.637736,
+        "preview": "We call our particular attention \"Scaled Dot-Product Attention\" (Figure 2). The input consists of\nqueries and keys of di"
+      },
+      {
+        "rank": 3,
+        "id": "chunk_043",
+        "page": 4,
+        "rrf_score": 0.026767,
+        "bm25_score": 3.295802,
+        "dense_score": 0.72497,
+        "preview": "While for small values of dk the two mechanisms perform similarly, additive attention outperforms\ndot product attention "
+      }
+    ],
+    "final_answer": "**Problem Context & Direct Resolution**\n\nThe question asks for the computation of attention weights in Scaled Dot-Product Attention and the reason for dividing by the square root of d_k [3]. According to the paper, the attention weights are computed by computing the dot products of the query with all keys, dividing each by \u221adk, and applying a softmax function [1]. \n\n**Mathematical or Architectural Derivation**\n\nThe mathematical derivation of the attention weights can be broken down into two steps [8]. First, the dot product of the query with all keys is computed as follows: [1]\n\nSecond, the attention weights are computed by dividing each dot product by \u221adk and applying a softmax function: [1]\n\na_k = softmax(q_k / \u221adk) [1]\n\n**Empirical Verification & Quantitative Evidence**\n\nThe paper also provides empirical evidence that supports the use of Scaled Dot-Product Attention [3]. According to [2], additive attention outperforms dot product attention without scaling for larger values of dk. This suggests that the scaling factor of \u221adk is necessary to ensure that the attention mechanism is effective for large input sequences [7].\n\nHowever, the paper does not provide explicit quantitative evidence for the computation of attention weights.",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 4,
+        "chunk_id": "chunk_038",
+        "section_title": "Attention Is All You Need",
+        "chunk_type": "body",
+        "quote": "We compute the dot products of the query with all keys, divide each by \u221adk, and apply a softmax function to obtain the weights on the values.",
+        "source_paper_id": "1706.03762",
+        "document_id": "1706.03762",
+        "source_evidence_id": "E_038",
+        "verification": "UNSUPPORTED",
+        "confidence": 0.333
+      },
+      {
+        "ref_id": 2,
+        "page": 4,
+        "chunk_id": "chunk_043",
+        "section_title": "Attention Is All You Need",
+        "chunk_type": "body",
+        "quote": "While for small values of dk the two mechanisms perform similarly, additive attention outperforms dot product attention without scaling for larger values of dk [3].",
+        "source_paper_id": "1706.03762",
+        "document_id": "1706.03762",
+        "source_evidence_id": "E_043",
+        "verification": "SUPPORTED",
+        "confidence": 0.9
+      },
+      {
+        "ref_id": 3,
+        "page": 4,
+        "chunk_id": "chunk_038",
+        "section_title": "Attention Is All You Need",
+        "chunk_type": "body",
+        "quote": "We call our particular attention \"Scaled Dot-Product Attention\" (Figure 2).",
+        "source_paper_id": "1706.03762",
+        "document_id": "1706.03762",
+        "source_evidence_id": "E_038",
+        "verification": "UNSUPPORTED",
+        "confidence": 0.25,
+        "evidence_id": "E1"
+      },
+      {
+        "ref_id": 7,
+        "page": 4,
+        "chunk_id": "chunk_042",
+        "section_title": "Attention Is All You Need",
+        "chunk_type": "body",
+        "quote": "Dot-product attention is identical to our algorithm, except for the scaling factor of 1 \u221adk .",
+        "source_paper_id": "1706.03762",
+        "document_id": "1706.03762",
+        "source_evidence_id": "E_042",
+        "verification": "UNSUPPORTED",
+        "confidence": 0.273,
+        "evidence_id": "E5"
+      },
+      {
+        "ref_id": 8,
+        "page": 4,
+        "chunk_id": "chunk_042",
+        "section_title": "Attention Is All You Need",
+        "chunk_type": "body",
+        "quote": "While the two are similar in theoretical complexity, dot-product attention is much faster and more space-efficient in practice, since it can be implemented using highly optimized matrix multiplication code.",
+        "source_paper_id": "1706.03762",
+        "document_id": "1706.03762",
+        "source_evidence_id": "E_042",
+        "verification": "UNSUPPORTED",
+        "confidence": 0.3,
+        "evidence_id": "E6"
+      }
+    ],
+    "verification": {
+      "supported": 4,
+      "partial": 5,
+      "unsupported": 0,
+      "contradicted": 0,
+      "edits_count": 12
+    }
+  },
+  {
+    "id": "QUERY_2_TABULAR_NUMERIC",
+    "title": "Query 2: Tabular Reasoning & Quantitative Comparison (Table 2 BLEU)",
+    "query": "In Table 2, what BLEU score did the Transformer (big) achieve on EN-DE, and what was the improvement over ConvS2S?",
+    "status": "SUCCESS",
+    "reasoning_level": "L4_CROSS_MODAL",
+    "target_modalities": [
+      "text",
+      "table"
+    ],
+    "latency_ms": 5829.256,
+    "timings": {
+      "load_paper": 1.928,
+      "load_sources": 0.543,
+      "retrieval": 515.305,
+      "reasoning_artifacts": 0.199,
+      "sufficiency": 0.089,
+      "context_assembly": 0.784,
+      "generation": 5166.631,
+      "verification": 5.632
+    },
+    "retrieval_hits_count": 10,
+    "top_hits": [
+      {
+        "rank": 1,
+        "id": "chunk_199",
+        "page": 8,
+        "rrf_score": 0.065574,
+        "bm25_score": 16.043999,
+        "dense_score": 0.725873,
+        "preview": "Table 2: The Transformer achieves better BLEU scores than previous state-of-the-art models on the\nTable 2: The Transform"
+      },
+      {
+        "rank": 2,
+        "id": "chunk_200",
+        "page": 8,
+        "rrf_score": 0.064516,
+        "bm25_score": 14.328743,
+        "dense_score": 0.622239,
+        "preview": "Table 2: summarizes our results and compares our translation quality and training costs to other model\nTable 2: The Tran"
+      },
+      {
+        "rank": 3,
+        "id": "chunk_107",
+        "page": 8,
+        "rrf_score": 0.031498,
+        "bm25_score": 12.813123,
+        "dense_score": 0.586516,
+        "preview": "On the WMT 2014 English-to-German translation task, the big transformer model (Transformer (big)\nin Table 2) outperforms"
+      }
+    ],
+    "final_answer": "**Problem Context & Direct Resolution**\nThe question asks for the BLEU score achieved by the Transformer (big) model on the EN-DE task and the improvement over ConvS2S [1].\n\n**Table 2: Transformer Achievements**\nAccording to Table 2, the Transformer (big) model achieved a BLEU score of 28.4 on the EN-DE task [1].\n\n**Improvement over ConvS2S**\nThe Transformer (big) model outperforms ConvS2S by 2.8 BLEU score points [6].\n\n**Empirical Verification & Quantitative Evidence**\nThis improvement is supported by the evidence in Table 2, which lists the Transformer (big) model's performance on the EN-DE task, as well as the performance of ConvS2S [1].\n\n| Model | BLEU Score |\n| --- | --- |\n| Transformer (big) | 28.4 |\n| ConvS2S | 25.16 |\n\n**Mathematical or Architectural Derivation**\n However, the evidence suggests that the Transformer (big) model's better performance is due to its ability to achieve better BLEU scores than previous state-of-the-art models [6].\n\n**No additional information is available to provide a more detailed explanation.**",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 8,
+        "chunk_id": "chunk_107",
+        "section_title": "The Transformer uses multi-head attention in three different ways:",
+        "chunk_type": "body",
+        "quote": "On the WMT 2014 English-to-German translation task, the big transformer model (Transformer (big) in Table 2) outperforms the best previously reported models (including ensembles) by more than 2.0 BLEU, establishing a new state-of-the-art BLEU score of 28.4.",
+        "source_paper_id": "1706.03762",
+        "document_id": "1706.03762",
+        "source_evidence_id": "E_107",
+        "verification": "UNSUPPORTED",
+        "confidence": 0.333
+      },
+      {
+        "ref_id": 6,
+        "page": 8,
+        "chunk_id": "chunk_200",
+        "section_title": "Table",
+        "chunk_type": "table",
+        "quote": "Table 2: summarizes our results and compares our translation quality and training costs to other model Table 2: The Transformer achieves better BLEU scores than previous state-of-the-art models on the English-to-German and English-to-French newstest2014 tests at a fraction of the training cost.",
+        "source_paper_id": "1706.03762",
+        "document_id": "1706.03762",
+        "source_evidence_id": "VIS_FIG_08_005",
+        "verification": "UNSUPPORTED",
+        "confidence": 0.333,
+        "evidence_id": "E4"
+      }
+    ],
+    "verification": {
+      "supported": 2,
+      "partial": 3,
+      "unsupported": 0,
+      "contradicted": 0,
+      "edits_count": 6
+    }
+  },
+  {
+    "id": "QUERY_3_HYPERPARAMETERS",
+    "title": "Query 3: Training Details & Optimizer Hyperparameters (Section 5.3)",
+    "query": "What optimizer and what beta1, beta2, and epsilon values were used during training the Transformer?",
+    "status": "SUCCESS",
+    "reasoning_level": "L1_DIRECT_LOOKUP",
+    "target_modalities": [
+      "text"
+    ],
+    "latency_ms": 4862.855,
+    "timings": {
+      "load_paper": 1.891,
+      "load_sources": 0.534,
+      "retrieval": 295.075,
+      "reasoning_artifacts": 0.196,
+      "sufficiency": 0.064,
+      "context_assembly": 0.636,
+      "generation": 4470.399,
+      "verification": 4.829
+    },
+    "retrieval_hits_count": 7,
+    "top_hits": [
+      {
+        "rank": 1,
+        "id": "chunk_088",
+        "page": 7,
+        "rrf_score": 0.032787,
+        "bm25_score": 11.272269,
+        "dense_score": 0.624558,
+        "preview": "We used the Adam optimizer [20] with \u03b21 = 0.9, \u03b22 = 0.98 and \u03f5 = 10\u22129. We varied the learning\nrate over the course of tr"
+      },
+      {
+        "rank": 2,
+        "id": "chunk_105",
+        "page": 8,
+        "rrf_score": 0.027584,
+        "bm25_score": 6.006352,
+        "dense_score": 0.476789,
+        "preview": "Label Smoothing\nDuring training, we employed label smoothing of value \u03f5ls = 0.1 [36]. This\nhurts perplexity, as the mode"
+      },
+      {
+        "rank": 3,
+        "id": "chunk_087",
+        "page": 7,
+        "rrf_score": 0.03125,
+        "bm25_score": 7.349647,
+        "dense_score": 0.50707,
+        "preview": "5.3\nOptimizer"
+      }
+    ],
+    "final_answer": "**Problem Context & Direct Resolution**\n\nThe question asks for the optimizer and beta values used during training the Transformer [1]. The authors directly state that they used the Adam optimizer with specific values for beta1, beta2, and epsilon [1].\n\n**Mathematical or Architectural Derivation**\n\nThe Adam optimizer is defined as follows: [1]\n\n\u03b21 = 0.9 [1]\n\u03b22 = 0.98 [1]\n\u03b5 = 10\u22129 [1]\n\n**Empirical Verification & Quantitative Evidence**\n\n \n\n**Conclusion**\n\nThe authors used the Adam optimizer with \u03b21 = 0.9, \u03b22 = 0.98, and \u03b5 = 10\u22129 during training the Transformer [1].",
+    "citations": [
+      {
+        "ref_id": 1,
+        "page": 7,
+        "chunk_id": "chunk_088",
+        "section_title": "The Transformer uses multi-head attention in three different ways:",
+        "chunk_type": "body",
+        "quote": "We used the Adam optimizer [20] with \u03b21 = 0.9, \u03b22 = 0.98 and \u03f5 = 10\u22129.",
+        "source_paper_id": "1706.03762",
+        "document_id": "1706.03762",
+        "source_evidence_id": "E_088",
+        "verification": "UNSUPPORTED",
+        "confidence": 0.25
+      }
+    ],
+    "verification": {
+      "supported": 5,
+      "partial": 2,
+      "unsupported": 0,
+      "contradicted": 0,
+      "edits_count": 10
+    }
+  }
+]

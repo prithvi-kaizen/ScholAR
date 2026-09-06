@@ -5,6 +5,8 @@ import {
   BookOpen, ChevronDown, ChevronUp, ExternalLink,
   Loader2, Plus, CheckCircle2, AlertTriangle, Download
 } from "lucide-react";
+import { useNetworkPolicy } from "../lib/networkPolicy";
+import { getApiErrorMessage } from "../types/api";
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
 
@@ -65,6 +67,7 @@ export function ReferencesPanel({
   const [ingestMessage, setIngestMessage] = useState<Record<number, string>>({});
   const [error,         setError]         = useState<string | null>(null);
   const [batchLoading,  setBatchLoading]  = useState(false);
+  const { policy } = useNetworkPolicy();
 
   const loadRefs = useCallback(async () => {
     if (refs.length > 0) return;
@@ -105,8 +108,8 @@ export function ReferencesPanel({
       );
       clearTimeout(timer);
       if (!res.ok) {
-        const p = await res.json().catch(() => ({}));
-        throw new Error(p.detail ?? "Ingest failed");
+        const payload: unknown = await res.json().catch(() => ({}));
+        throw new Error(getApiErrorMessage(payload, "Ingest failed"));
       }
       const payload = await res.json();
       const secId: string = payload.secondary_paper_id;
@@ -187,6 +190,13 @@ export function ReferencesPanel({
 
       {open && (
         <div className={inline ? "px-4 py-4" : "max-h-80 overflow-y-auto px-5 pb-4"}>
+          {policy ? (
+            <div className="mb-3 rounded-xl border border-line bg-panel p-3 text-xs text-zinc-400">
+              {policy.mode === "strict-local"
+                ? "Strict-local: cached reference metadata and prepared secondary papers are available; resolution and uncached downloads are blocked."
+                : "Acquisition-enabled: resolving or loading an uncached reference may contact Semantic Scholar, arXiv, or an open-access host."}
+            </div>
+          ) : null}
           {/* Upload warning */}
           {uploadWarning && (
             <div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">

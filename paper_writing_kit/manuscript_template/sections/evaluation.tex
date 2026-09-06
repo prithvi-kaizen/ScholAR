@@ -1,0 +1,20 @@
+\section{Evaluation and Release Protocol}
+\subsection{Predeclared evidence gates}
+The final evaluation protocol enforces strict separation between software infrastructure and empirical effectiveness claims. It mandates a paper-disjoint evaluation set of previously unseen scientific documents with verified answerability ground-truth, supporting text spans, visual regions, and reference key points. Claim-support thresholds must be pre-calibrated on development documents before scoring held-out test splits.
+
+The primary intervention endpoint is the independently judged supported atomic-claim rate. We predeclare a success gate requiring at least five absolute percentage points improvement with a paired 95\% bootstrap confidence interval excluding zero, while answer key-point coverage may decrease by at most five percentage points. If this gate fails, the manuscript reports a null or adverse result and cannot claim effective selective repair. Secondary metrics include contradiction rate, citation precision and coverage, answerable versus unanswerable abstention, character edit distance, stage latencies, and terminal error counts.
+
+\subsection{Immutable expected-key accounting}
+Before evaluation begins, the runner defines and serializes the complete Cartesian key universe:
+\begin{equation}
+\mathcal{K} = \mathcal{S} \times \mathcal{M} \times \mathcal{R} \times \mathcal{C}
+\end{equation}
+where $\mathcal{S}$ is the set of system variants, $\mathcal{M}$ is the set of model tags and SHA-256 digests, $\mathcal{R}$ is the set of random seeds, and $\mathcal{C}$ is the evaluation case set.
+
+Every key in $\mathcal{K}$ maps to exactly one JSONL record recording an immutable terminal status: \textsc{Success}, \textsc{Abstained}, or \textsc{Error}. Interrupted runs resume by skipping already-recorded keys; duplicate or missing keys trigger immediate validation failure. Crucially, failures and abstentions remain in all metric denominators. Metrics are aggregated hierarchically: scores are computed within each answer, averaged across seeds within each case, and finally averaged across cases, preventing answers with high claim counts from distorting the aggregate.
+
+\subsection{Artifact-only reproduction}
+The codebase provides a deterministic toy fixture containing multi-seed runs, out-of-order execution traces, and all three terminal statuses. In a strictly isolated, network-denied sandbox, the reproduction runner recomputes scored records, aggregate JSON summaries, and \LaTeX{} tables from raw traces, validating them byte-for-byte against golden checksums. This verifies the integrity of the release tooling independently of empirical model weights.
+
+\subsection{External benchmark grounding with SPIQA}
+To evaluate cross-modal reasoning without artificial prompt hints, ScholAR implements an evaluation adapter for \textsc{SPIQA}~\citep{banerjee2024spiqa}. SPIQA benchmarks multimodal question answering over research papers across five canonical visual categories: Architectural Diagrams, Performance Plots, Comparative Tables, Loss Curves, and System Schemas. The adapter evaluates retrieval accuracy (Hit@K, MRR), answer fidelity (token-level macro-F1 and exact match), and visual modality selection precision under real scientific reasoning workloads.

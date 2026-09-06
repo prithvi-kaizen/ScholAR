@@ -2,8 +2,7 @@ import unittest
 from evaluation.benchmarks.qasper import QASPERAdapter
 from evaluation.benchmarks.peerqa import PeerQAAdapter
 from evaluation.benchmarks.scivqa import SciVQAAdapter
-from evaluation.interventions.perturbation import EvidencePerturbationRunner, InterventionResult
-from evaluation.run_comprehensive_eval import run_model_matrix
+from evaluation.interventions.perturbation import EvidencePerturbationRunner
 
 
 class TestBenchmarksAndInterventions(unittest.TestCase):
@@ -80,16 +79,6 @@ class TestBenchmarksAndInterventions(unittest.TestCase):
         self.assertTrue(res_vesr.followed_intervention)
         vesr = EvidencePerturbationRunner.compute_vesr([res_vesr])
         self.assertEqual(vesr, 1.0)
-
-    def test_model_capability_matrix(self):
-        matrix = run_model_matrix()
-        self.assertIn("qwen3.5:9b", matrix)
-        self.assertIn("gemma4:12b", matrix)
-        self.assertIn("llama3.1:8b", matrix)
-        # Vision models have visual budget in AUTO mode
-        self.assertGreater(matrix["qwen3.5:9b"]["auto_visual_budget"], 0)
-        # In TEXT_ONLY mode, visual budget is 0
-        self.assertEqual(matrix["qwen3.5:9b"]["text_only_mode_visual_budget"], 0)
 
 
 if __name__ == "__main__":

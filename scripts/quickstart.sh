@@ -21,8 +21,8 @@ echo -e "${BOLD}${CYAN}======================================================${R
 # 1. Check prerequisites
 echo -e "${BOLD}Checking prerequisites...${RESET}"
 
-if ! command -v python3 &> /dev/null; then
-    echo -e "${YELLOW}Error: python3 is not installed. Please install Python 3.11 or 3.12.${RESET}"
+if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)' 2>/dev/null; then
+    echo -e "${YELLOW}Error: the reproducible setup requires Python 3.12.${RESET}"
     exit 1
 fi
 
@@ -54,18 +54,13 @@ elif [ -f ".venv/Scripts/activate" ]; then
     source .venv/Scripts/activate
 fi
 
-echo -e "Installing Python dependencies from requirements.txt..."
-pip install --upgrade pip --quiet
-pip install -r requirements.txt --quiet
+echo -e "Installing exact Python dependencies from requirements/locks/base-py312.txt..."
+pip install -r requirements/locks/base-py312.txt --quiet
 
 # 3. Setup Frontend dependencies
 echo -e "\n${BOLD}Installing Frontend dependencies...${RESET}"
 cd frontend
-if [ -f "package-lock.json" ]; then
-    npm ci --silent
-else
-    npm install --silent
-fi
+npm ci --silent
 cd ..
 
 # 4. Copy environment templates if missing
@@ -79,15 +74,16 @@ if [ ! -f "backend/.env" ]; then
 fi
 
 if [ ! -f "frontend/.env.local" ]; then
-    if [ -f "frontend/.env.example" ]; then
-        cp frontend/.env.example frontend/.env.local
+    if [ -f "frontend/.env.local.example" ]; then
+        cp frontend/.env.local.example frontend/.env.local
     else
         echo "NEXT_PUBLIC_BACKEND_URL=http://localhost:8000" > frontend/.env.local
     fi
 fi
 
-# 5. Run hardware-aware model configuration
-python3 scripts/setup_models.py
+# 5. Keep model acquisition explicit and separate from package installation.
+echo -e "\n${BOLD}Model acquisition is not run automatically.${RESET}"
+echo -e "After reviewing the command and enabling acquisition, run ${CYAN}make models${RESET} if needed."
 
 # 6. Run environment doctor diagnostics
 echo -e "\n${BOLD}Running system verification (doctor.py)...${RESET}"

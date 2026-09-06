@@ -1,0 +1,128 @@
+{
+  "benchmark": "SPIQA",
+  "version": "1.0",
+  "description": "Representative scientific paper multimodal question answering benchmark cases adapted from SPIQA (NeurIPS 2024).",
+  "cases": [
+    {
+      "case_id": "spiqa_trans_fig1",
+      "paper_id": "1706.03762",
+      "paper_title": "Attention Is All You Need",
+      "question": "According to the architecture schematic in Figure 1, what two sub-layers constitute each layer of the encoder?",
+      "visual_type": "schematic_diagram",
+      "figure_label": "Figure 1",
+      "gold_pages": [3],
+      "caption": "Figure 1: The Transformer - model architecture.",
+      "evidence": [
+        {
+          "page": 3,
+          "section": "Figure 1",
+          "caption": "The Transformer - model architecture.",
+          "bbox_norm": [0.12, 0.22, 0.88, 0.78]
+        }
+      ],
+      "answers": [
+        "Multi-Head Attention and a simple, position-wise fully connected feed-forward network",
+        "Multi-Head Attention and Feed Forward sub-layers"
+      ],
+      "split": "test",
+      "answerable": true
+    },
+    {
+      "case_id": "spiqa_trans_tab1",
+      "paper_id": "1706.03762",
+      "paper_title": "Attention Is All You Need",
+      "question": "What BLEU score does the Transformer (big) achieve on the English-to-German (EN-DE) translation task in Table 2?",
+      "visual_type": "table",
+      "figure_label": "Table 2",
+      "gold_pages": [8],
+      "caption": "Table 2: The Transformer achieves better BLEU scores than previous state-of-the-art models on the English-to-German and English-to-French newstest2014 tests at a fraction of the training cost.",
+      "evidence": [
+        {
+          "page": 8,
+          "section": "Table 2",
+          "caption": "The Transformer achieves better BLEU scores than previous state-of-the-art models on the English-to-German and English-to-French newstest2014 tests at a fraction of the training cost.",
+          "bbox_norm": [0.10, 0.30, 0.90, 0.65]
+        }
+      ],
+      "answers": [
+        "28.4",
+        "28.4 BLEU"
+      ],
+      "split": "test",
+      "answerable": true
+    },
+    {
+      "case_id": "spiqa_trans_tab2_cost",
+      "paper_id": "1706.03762",
+      "paper_title": "Attention Is All You Need",
+      "question": "Based on Table 2, what training cost in FLOPs is reported for the base Transformer model on the English-to-German translation task?",
+      "visual_type": "table",
+      "figure_label": "Table 2",
+      "gold_pages": [8],
+      "caption": "Table 2: The Transformer achieves better BLEU scores at a fraction of the training cost.",
+      "evidence": [
+        {
+          "page": 8,
+          "section": "Table 2",
+          "caption": "Table 2: Training cost in FLOPs",
+          "bbox_norm": [0.10, 0.30, 0.90, 0.65]
+        }
+      ],
+      "answers": [
+        "3.3 · 10^18",
+        "3.3 x 10^18",
+        "3.3e18"
+      ],
+      "split": "test",
+      "answerable": true
+    },
+    {
+      "case_id": "spiqa_trans_fig2",
+      "paper_id": "1706.03762",
+      "paper_title": "Attention Is All You Need",
+      "question": "What is the primary difference between Scaled Dot-Product Attention and Multi-Head Attention depicted in Figure 2?",
+      "visual_type": "schematic_diagram",
+      "figure_label": "Figure 2",
+      "gold_pages": [4],
+      "caption": "Figure 2: (left) Scaled Dot-Product Attention. (right) Multi-Head Attention consists of several attention layers running in parallel.",
+      "evidence": [
+        {
+          "page": 4,
+          "section": "Figure 2",
+          "caption": "Figure 2: (left) Scaled Dot-Product Attention. (right) Multi-Head Attention consists of several attention layers running in parallel.",
+          "bbox_norm": [0.15, 0.20, 0.85, 0.60]
+        }
+      ],
+      "answers": [
+        "Multi-Head Attention projects queries, keys, and values h times with different linear projections before attending in parallel and concatenating",
+        "Multi-Head Attention consists of multiple attention layers running in parallel with linear projections"
+      ],
+      "split": "dev",
+      "answerable": true
+    },
+    {
+      "case_id": "spiqa_trans_tab3_ablation",
+      "paper_id": "1706.03762",
+      "paper_title": "Attention Is All You Need",
+      "question": "In Table 3, row (A), what happens to the PPL (perplexity) and BLEU score when the number of attention heads h is set to 1?",
+      "visual_type": "table",
+      "figure_label": "Table 3",
+      "gold_pages": [9],
+      "caption": "Table 3: Variations on the Transformer architecture. Unlisted values are identical to those of the base model.",
+      "evidence": [
+        {
+          "page": 9,
+          "section": "Table 3",
+          "caption": "Table 3: Variations on the Transformer architecture.",
+          "bbox_norm": [0.08, 0.15, 0.92, 0.55]
+        }
+      ],
+      "answers": [
+        "PPL is 5.42 and BLEU is 26.8",
+        "Perplexity increases to 5.42 and BLEU drops to 26.8"
+      ],
+      "split": "test",
+      "answerable": true
+    }
+  ]
+}

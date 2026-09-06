@@ -54,6 +54,16 @@ _DIRECT_LOOKUP_PATTERNS = [
 ]
 
 
+def _extract_clean_concept(query: str) -> str:
+    cleaned = re.sub(
+        r"^(?:how does|how do|what is|what are|why does|why do|can we|compare|comparing|what happens when|what happens to|in terms of|according to|explain)\s+",
+        "",
+        query.strip(),
+        flags=re.IGNORECASE,
+    ).rstrip("?. ")
+    return cleaned or query
+
+
 class QuestionAnalyzer:
     """Analyzes scientific questions and constructs bounded multi-level reasoning plans."""
 
@@ -105,20 +115,57 @@ class QuestionAnalyzer:
 
         # 3. Generate Bounded Atomic SubQueries (Max 3)
         subqueries: list[SubQuery] = []
+        from backend.services.routing_service import QueryDecomposer
+        decomposed_targets = QueryDecomposer.decompose(q_clean)
 
-        if level == ReasoningLevel.L5_MULTI_HOP_SYNTHESIS:
+        if decomposed_targets and len(decomposed_targets) >= 2:
+            # Targeted semantic subqueries from decomposition
+            for idx, target in enumerate(decomposed_targets[:3], start=1):
+                target_lower = target.lower()
+                is_table_target = any(term in target_lower for term in (
+                    "table", "tab", "metric", "bleu", "score", "ablation", "quality", "ppl",
+                    "perplexity", "flops", "latency", "accuracy", "parameter", "drop", "delta",
+                    "performance", "result"
+                ))
+                is_fig_target = any(term in target_lower for term in (
+                    "fig", "figure", "mechanism", "structure", "structural", "architecture",
+                    "diagram", "projection", "layer", "flowchart", "schematic", "visual",
+                    "parallel projection", "attention head", "component"
+                ))
+                if is_table_target and is_fig_target:
+                    target_mod = TargetModality.MULTIMODAL
+                    target_secs = ["Architecture", "Methodology", "Results", "Ablation"]
+                elif is_table_target:
+                    target_mod = TargetModality.TABLE
+                    target_secs = ["Ablation", "Experiments", "Results"]
+                elif is_fig_target:
+                    target_mod = TargetModality.FIGURE
+                    target_secs = ["Architecture", "Methodology", "Model"]
+                else:
+                    target_mod = TargetModality.TEXT
+                    target_secs = ["Methodology", "Results", "Experiments"]
+
+                subqueries.append(SubQuery(
+                    subquery_id=f"SQ{idx}",
+                    query_text=target,
+                    target_sections=target_secs,
+                    target_modality=target_mod,
+                    priority=idx,
+                ))
+        elif level == ReasoningLevel.L5_MULTI_HOP_SYNTHESIS:
+            clean_concept = _extract_clean_concept(q_clean)
             # Subquery 1: Methodological definition / mechanism
             subqueries.append(SubQuery(
                 subquery_id="SQ1",
-                query_text=f"Methodology and architectural mechanisms: {q_clean}",
+                query_text=f"Architectural mechanism and structural design: {clean_concept}",
                 target_sections=["Methodology", "Architecture", "Introduction"],
-                target_modality=TargetModality.TEXT,
+                target_modality=TargetModality.FIGURE if requires_visual else TargetModality.TEXT,
                 priority=1,
             ))
             # Subquery 2: Ablation / isolation evidence
             subqueries.append(SubQuery(
                 subquery_id="SQ2",
-                query_text=f"Ablation study and component analysis: {q_clean}",
+                query_text=f"Ablation study, component variation, and metrics: {clean_concept}",
                 target_sections=["Ablation", "Experiments", "Results"],
                 target_modality=TargetModality.TABLE if requires_table else TargetModality.TEXT,
                 priority=2,
@@ -126,7 +173,7 @@ class QuestionAnalyzer:
             # Subquery 3: Quantitative comparison / final results
             subqueries.append(SubQuery(
                 subquery_id="SQ3",
-                query_text=f"Quantitative performance comparison and table/figure results: {q_clean}",
+                query_text=f"Quantitative performance comparison and parameter tradeoffs: {clean_concept}",
                 target_sections=["Results", "Experiments", "Conclusion"],
                 target_modality=TargetModality.TABLE if requires_table else (TargetModality.FIGURE if requires_visual else TargetModality.TEXT),
                 priority=3,

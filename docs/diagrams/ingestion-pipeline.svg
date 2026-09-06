@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="960" viewBox="0 0 1500 960" role="img" aria-labelledby="title desc">
+  <title id="title">ScholAR ingestion pipeline</title>
+  <desc id="desc">A PDF is parsed with optional Docling and PyMuPDF, converted to an evidence AST, rendered into figure crops and full pages, chunked by AST block, validated in staging, and atomically published.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#07131f"/><stop offset="1" stop-color="#102b3b"/></linearGradient>
+    <filter id="sh"><feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#020617" flood-opacity=".42"/></filter>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#67e8f9"/></marker>
+    <style>.ttl{font:700 34px Inter,system-ui;fill:#f8fafc}.sub{font:400 16px Inter,system-ui;fill:#b9cadb}.box{rx:18;stroke-width:2;filter:url(#sh)}.h{font:700 19px Inter,system-ui;fill:#f8fafc}.t{font:400 14px Inter,system-ui;fill:#dbe7f2}.s{font:500 12px Inter,system-ui;fill:#b9cadb}.n{font:700 15px Inter,system-ui;fill:#08111f}.line{fill:none;stroke:#67e8f9;stroke-width:3;marker-end:url(#a)}.dash{fill:none;stroke:#fbbf24;stroke-width:2.5;stroke-dasharray:8 6;marker-end:url(#a)}</style>
+  </defs>
+  <rect width="1500" height="960" fill="url(#bg)"/>
+  <text x="60" y="58" class="ttl">PDF → validated multimodal paper bundle</text>
+  <text x="60" y="88" class="sub">Everything is built in staging; publication occurs only after identity, path, count, database, and checksum validation.</text>
+
+  <circle cx="90" cy="171" r="24" fill="#67e8f9"/><text x="90" y="177" text-anchor="middle" class="n">1</text>
+  <rect x="130" y="120" width="250" height="110" class="box" fill="#17324d" stroke="#60a5fa"/>
+  <text x="255" y="158" text-anchor="middle" class="h">PDF input</text><text x="255" y="187" text-anchor="middle" class="t">local upload or explicit download</text><text x="255" y="211" text-anchor="middle" class="s">bounded + atomic write</text>
+
+  <circle cx="470" cy="171" r="24" fill="#67e8f9"/><text x="470" y="177" text-anchor="middle" class="n">2</text>
+  <rect x="510" y="105" width="400" height="140" class="box" fill="#153e52" stroke="#22d3ee"/>
+  <text x="710" y="143" text-anchor="middle" class="h">Dual-engine parse</text>
+  <rect x="535" y="165" width="160" height="55" rx="12" fill="#164e63" stroke="#67e8f9"/><text x="615" y="187" text-anchor="middle" class="t">Docling semantics</text><text x="615" y="207" text-anchor="middle" class="s">optional local assets</text>
+  <rect x="725" y="165" width="160" height="55" rx="12" fill="#164e63" stroke="#67e8f9"/><text x="805" y="187" text-anchor="middle" class="t">PyMuPDF geometry</text><text x="805" y="207" text-anchor="middle" class="s">always available</text>
+
+  <circle cx="1000" cy="171" r="24" fill="#67e8f9"/><text x="1000" y="177" text-anchor="middle" class="n">3</text>
+  <rect x="1040" y="105" width="400" height="140" class="box" fill="#26345c" stroke="#818cf8"/>
+  <text x="1240" y="143" text-anchor="middle" class="h">Canonical EvidenceAST</text>
+  <text x="1080" y="177" class="t">section path · page · modality</text><text x="1080" y="202" class="t">text/table cells · normalized bbox</text><text x="1080" y="227" class="s">stable evidence ID + neighboring blocks</text>
+
+  <path d="M380 175H510" class="line"/><path d="M910 175H1040" class="line"/>
+
+  <circle cx="90" cy="379" r="24" fill="#67e8f9"/><text x="90" y="385" text-anchor="middle" class="n">4</text>
+  <rect x="130" y="300" width="390" height="170" class="box" fill="#3a2851" stroke="#c084fc"/>
+  <text x="325" y="338" text-anchor="middle" class="h">Render visual units</text>
+  <text x="170" y="374" class="t">Figure/table crops: caption region at 3×</text>
+  <text x="170" y="402" class="t">Full pages: every page at 1.6×</text>
+  <text x="170" y="430" class="t">PNG SHA-256 + safe relative path</text>
+  <text x="170" y="454" class="s">full pages cover missed captions and vector art</text>
+
+  <circle cx="610" cy="379" r="24" fill="#67e8f9"/><text x="610" y="385" text-anchor="middle" class="n">5</text>
+  <rect x="650" y="300" width="400" height="170" class="box" fill="#153f36" stroke="#34d399"/>
+  <text x="850" y="338" text-anchor="middle" class="h">AST-block chunking</text>
+  <text x="690" y="374" class="t">one EvidenceBlock → one chunk</text>
+  <text x="690" y="402" class="t">never merge pages or source papers</text>
+  <text x="690" y="430" class="t">section prefix only in retrieval_text</text>
+  <text x="690" y="454" class="s">P4 declares 500/100, but runtime is not sliding-window</text>
+
+  <circle cx="1140" cy="379" r="24" fill="#67e8f9"/><text x="1140" y="385" text-anchor="middle" class="n">6</text>
+  <rect x="1180" y="300" width="260" height="170" class="box" fill="#4a3214" stroke="#fbbf24"/>
+  <text x="1310" y="338" text-anchor="middle" class="h">Relational view</text>
+  <text x="1310" y="378" text-anchor="middle" class="t">document.db</text><text x="1310" y="406" text-anchor="middle" class="t">papers · sections</text><text x="1310" y="434" text-anchor="middle" class="t">chunks · figures · regions</text>
+
+  <path d="M1240 245V270H325V300" class="line"/><path d="M520 385H650" class="line"/><path d="M1050 385H1180" class="line"/>
+
+  <circle cx="90" cy="617" r="24" fill="#67e8f9"/><text x="90" y="623" text-anchor="middle" class="n">7</text>
+  <rect x="130" y="530" width="850" height="190" class="box" fill="#163046" stroke="#38bdf8"/>
+  <text x="555" y="570" text-anchor="middle" class="h">Staged paper generation</text>
+  <text x="175" y="607" class="t">paper.pdf · metadata.json · ingestion_manifest.json · evidence_ast.json</text>
+  <text x="175" y="638" class="t">pages.json · chunks.json · figures.json · visual_units.json · document.db</text>
+  <text x="175" y="669" class="t">figures/*.png · page_images/*.png</text>
+  <text x="175" y="699" class="s">manifest binds generation, inputs, counts, chunk hashes, and file checksums</text>
+
+  <circle cx="1070" cy="617" r="24" fill="#67e8f9"/><text x="1070" y="623" text-anchor="middle" class="n">8</text>
+  <rect x="1110" y="530" width="330" height="190" class="box" fill="#3f222a" stroke="#fb7185"/>
+  <text x="1275" y="570" text-anchor="middle" class="h">Fail-closed validation</text>
+  <text x="1150" y="607" class="t">required files and counts</text><text x="1150" y="636" class="t">source identities and unique IDs</text><text x="1150" y="665" class="t">safe paths and image hashes</text><text x="1150" y="694" class="t">SQLite rows and manifest hashes</text>
+
+  <path d="M1310 470V500H555V530" class="line"/><path d="M980 625H1110" class="line"/>
+
+  <rect x="350" y="798" width="800" height="105" class="box" fill="#15412f" stroke="#4ade80"/>
+  <text x="750" y="838" text-anchor="middle" class="h">Atomic directory publication</text>
+  <text x="750" y="869" text-anchor="middle" class="t">validated staging replaces the prior generation by rename; backup restores on failure</text>
+  <text x="750" y="892" text-anchor="middle" class="s">lazy text, crop-image, and page-patch indexes are created later on first retrieval</text>
+  <path d="M1275 720V755H750V798" class="line"/>
+</svg>

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -27,8 +28,10 @@ def _get_db_path(paper_id: str) -> Path:
 
 
 def _init_db(db_path: Path) -> sqlite3.Connection:
+    db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     with conn:
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS papers (
@@ -120,13 +123,18 @@ class StorageService:
         metadata: dict[str, Any],
         chunks: list[dict[str, Any]],
         figures: list[dict[str, Any]] | None = None,
+        db_path: Path | None = None,
     ) -> None:
-        """Sync in-memory or JSON paper artifacts to the relational database."""
-        db_path = _get_db_path(paper_id)
-        conn = _init_db(db_path)
+        """Replace a paper's relational views with one artifact generation."""
+        resolved_db_path = Path(db_path) if db_path is not None else _get_db_path(paper_id)
         figures = figures or []
 
-        with conn:
+        with closing(_init_db(resolved_db_path)) as conn, conn:
+            # Remove all rows owned by the prior generation before inserting the
+            # replacement. This prevents omitted chunks/figures from surviving.
+            for table in ("visual_regions", "figures", "chunks", "sections"):
+                conn.execute(f"DELETE FROM {table} WHERE paper_id = ?", (paper_id,))
+
             # 1. Upsert paper record
             conn.execute(
                 """
@@ -140,10 +148,10 @@ class StorageService:
                     metadata.get("title", ""),
                     json.dumps(metadata.get("authors", [])),
                     str(metadata.get("year", "")),
-                    metadata.get("summary", ""),
+                    metadata.get("summary") or metadata.get("abstract", ""),
                     json.dumps(metadata.get("categories", [])),
                     metadata.get("pdf_url", ""),
-                    int(metadata.get("pages", 0)),
+                    int(metadata.get("page_count", metadata.get("pages", 0)) or 0),
                     len(chunks),
                     len(figures),
                     metadata.get("source", "arxiv"),
@@ -153,8 +161,8 @@ class StorageService:
             # 2. Sync sections from chunk hierarchy
             seen_sections: set[str] = set()
             for chunk in chunks:
-                sec_path = chunk.get("section_path") or [chunk.get("section_title", "Body")]
-                sec_title = chunk.get("section_title", "Body")
+                sec_title = chunk.get("section_title") or chunk.get("section") or "Body"
+                sec_path = chunk.get("section_path") or [sec_title]
                 sec_id = f"sec_{paper_id}_{sec_title.replace(' ', '_')}"
                 if sec_id not in seen_sections:
                     seen_sections.add(sec_id)
@@ -176,6 +184,13 @@ class StorageService:
 
             # 3. Sync chunks
             for chunk in chunks:
+                text = chunk.get("text") or chunk.get("original_text") or ""
+                section_title = chunk.get("section_title") or chunk.get("section") or "Body"
+                section_path = chunk.get("section_path") or ([section_title] if section_title else [])
+                modality = chunk.get("modality", "text")
+                default_chunk_type = "figure" if modality == "visual" else ("table" if modality == "table" else "body")
+                char_start = int(chunk.get("char_start", 0) or 0)
+                char_end = int(chunk.get("char_end", 0) or 0) or (char_start + len(text))
                 conn.execute(
                     """
                     INSERT OR REPLACE INTO chunks (
@@ -188,16 +203,16 @@ class StorageService:
                         chunk.get("chunk_id", ""),
                         paper_id,
                         int(chunk.get("page", 1)),
-                        chunk.get("section_title", ""),
-                        json.dumps(chunk.get("section_path", [])),
-                        chunk.get("chunk_type", "body"),
-                        chunk.get("text", ""),
-                        chunk.get("retrieval_text", chunk.get("text", "")),
-                        chunk.get("paragraph_text", ""),
-                        1 if chunk.get("is_figure_chunk") else 0,
-                        int(chunk.get("char_start", 0)),
-                        int(chunk.get("char_end", 0)),
-                        chunk.get("source_paper_id", paper_id),
+                        section_title,
+                        json.dumps(section_path),
+                        chunk.get("chunk_type") or default_chunk_type,
+                        text,
+                        chunk.get("retrieval_text") or text,
+                        chunk.get("paragraph_text") or text[:500],
+                        1 if chunk.get("is_figure_chunk") or modality == "visual" else 0,
+                        char_start,
+                        char_end,
+                        chunk.get("source_paper_id") or chunk.get("document_id") or paper_id,
                     ),
                 )
 
@@ -217,12 +232,11 @@ class StorageService:
                         fig.get("label", ""),
                         fig.get("figure_type", "figure"),
                         fig.get("caption", ""),
-                        fig.get("image_file", ""),
-                        json.dumps(fig.get("bbox", {})),
+                        fig.get("image_file") or fig.get("image_path", ""),
+                        json.dumps(fig.get("bbox_normalized") or fig.get("bbox_norm") or fig.get("bbox") or {}),
                         fig.get("ocr_text", ""),
                     ),
                 )
-        conn.close()
 
     @classmethod
     def query_sql(
@@ -264,7 +278,7 @@ class StorageService:
             document_id=paper_id,
             source_sha256="",
             filename=metadata_raw.get("filename", "paper.pdf"),
-            page_count=int(metadata_raw.get("pages", 1)),
+            page_count=int(metadata_raw.get("page_count", metadata_raw.get("pages", 1)) or 1),
             title=metadata_raw.get("title"),
             authors=metadata_raw.get("authors", []),
             parser_name="pymupdf",
@@ -290,7 +304,7 @@ class StorageService:
         # 3. Visual Evidence
         visual_evidence: list[VisualEvidence] = []
         for fig in figures_raw:
-            raw_bbox = fig.get("bbox") or {}
+            raw_bbox = fig.get("bbox_normalized") or fig.get("bbox_norm") or fig.get("bbox") or {}
             bbox_norm = BoundingBox(
                 x0=raw_bbox.get("x0", 0.0),
                 y0=raw_bbox.get("y0", 0.0),
@@ -300,15 +314,15 @@ class StorageService:
             )
             visual_evidence.append(
                 VisualEvidence(
-                    evidence_id=f"fig_{fig.get('figure_id')}",
+                    evidence_id=str(fig.get("figure_id") or f"figure_{len(visual_evidence) + 1}"),
                     document_id=paper_id,
                     visual_type="table_image" if fig.get("figure_type") == "table" else "figure",
                     page=int(fig.get("page", 1)),
                     bbox_normalized=bbox_norm,
-                    image_path=str(fig.get("image_file", "")),
+                    image_path=str(fig.get("image_file") or fig.get("image_path") or ""),
                     image_sha256="",
-                    pixel_width=int(fig.get("pixel_width", 800)),
-                    pixel_height=int(fig.get("pixel_height", 600)),
+                    pixel_width=int(fig.get("width_px", fig.get("pixel_width", 800))),
+                    pixel_height=int(fig.get("height_px", fig.get("pixel_height", 600))),
                     figure_label=fig.get("label"),
                     caption=fig.get("caption"),
                     ocr_text=fig.get("ocr_text"),

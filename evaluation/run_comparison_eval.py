@@ -9,7 +9,7 @@ controlled dimensions (chunking, RCS on/off, citation mechanism):
   2. vanilla_rag : fixed cross-page chunks + dense retrieval, free-form cites (Q2 baseline)
   3. paperqa2    : retrieval + RCS (summarize+score rerank), free-form cites  (SOTA method, local)
   4. scholar     : page-preserving retrieval + indirect (evidence-ID) cites  (ScholAR)
-  5. scholar_rcs : ScholAR + RCS, keeping indirect citation                  (the "improve" variant)
+  5. scholar_rcs_intervention : approximate ScholAR+RCS intervention (not production)
 
 3 and 5 share the SAME RCS step; they differ ONLY in the citation mechanism, so the
 pair isolates "the citation guarantee" from "the retrieval technique".
@@ -47,6 +47,7 @@ sys.path.insert(0, str(EVAL_DIR))
 
 from backend.services.retrieval_service import retrieve_chunks  # noqa: E402
 from backend.services.ollama_service import OLLAMA_MODEL, generate  # noqa: E402
+from scholar_runner import run_scholar_http  # noqa: E402
 import nli_faithfulness as _nli  # noqa: E402
 
 DATA_DIR = PROJECT_ROOT / "backend" / "data" / "papers"
@@ -63,7 +64,7 @@ except Exception as exc:  # pragma: no cover
 _nli.set_embedder(_EMBEDDER)
 _NLI = _nli.NLIFaithfulnessScorer()
 
-ALL_SYSTEMS = ["pdfchat", "vanilla_rag", "paperqa2", "scholar", "scholar_rcs"]
+ALL_SYSTEMS = ["pdfchat", "vanilla_rag", "paperqa2", "scholar", "scholar_rcs_intervention"]
 TOP_K = 4            # chunks fed to the answer prompt (kept small for local compute)
 CTX_CHARS = 8000     # context budget for the PDF-chat baseline
 
@@ -115,6 +116,7 @@ _PCITE = re.compile(r"\[\s*p\.?\s*(\d+)\s*\]|\(\s*pages?\s*(\d+)(?:\s*[-–]\s*\
 # Models group identifiers ("[E1, E4]") as often as they emit them singly; a single-id pattern
 # would count those sentences as uncited and understate citation recall.
 _ECITE = re.compile(r"\[\s*E\s*(\d+)(?:\s*(?:,|;|/|&|and)\s*E?\s*\d+)*\s*\]", re.I)
+_NCITE = re.compile(r"\[\s*(\d+)\s*\]")
 _EIDS = re.compile(r"\d+")
 _SENT = re.compile(r"(?<=[.!?])\s+")
 
@@ -199,11 +201,12 @@ async def rcs(chunks: list[dict], question: str, model: str) -> list[dict]:
 
 
 # ── the five systems: each returns (answer, cited_sentences, context_chunks, mode) ──
-async def run_system(system: str, case: dict, model: str) -> dict:
+async def run_system(system: str, case: dict, model: str, backend: str = "http://127.0.0.1:8000") -> dict:
     paper_id = case["paper_id"]
     question = case["question"]
     pages = load_json(paper_id, "pages.json")
     chunks = load_json(paper_id, "chunks.json")
+    trace_metadata: dict[str, Any] = {}
 
     if system == "pdfchat":
         body = "\n".join(f"[p. {p.get('page')}] {p.get('text','')}" for p in pages)[:CTX_CHARS]
@@ -221,10 +224,28 @@ async def run_system(system: str, case: dict, model: str) -> dict:
         prompt = f"{FREEFORM_RULES}\n\nContext:\n{_page_block(ctx)}\n\nQuestion: {question}"
         answer, mode = await gen(prompt, model), "freeform"
     elif system == "scholar":
-        ctx = retrieve_chunks(question, chunks, limit=TOP_K)
-        prompt = f"{INDIRECT_RULES}\n\nEvidence:\n{_evidence_block(ctx)}\n\nQuestion: {question}"
-        answer, mode = await gen(prompt, model), "indirect"
-    elif system == "scholar_rcs":
+        result = await asyncio.to_thread(
+            run_scholar_http,
+            backend,
+            paper_id,
+            question,
+            model,
+            require_local_model=True,
+            experiment_id="comparison-scholar-v1",
+        )
+        answer = result.answer
+        ctx = [
+            {"text": item.quote, "page": item.page, "global_id": item.identity.global_id}
+            for item in result.trace.prompt_evidence
+        ]
+        mode = "numeric_indirect"
+        trace_metadata = {
+            "trace_id": result.trace.trace_id,
+            "trace_schema_version": result.trace.schema_version,
+            "pipeline_version": result.trace.run_identity.pipeline_version,
+            "generation_mode": result.trace.generation.mode.value,
+        }
+    elif system in {"scholar_rcs", "scholar_rcs_intervention"}:
         ctx = await rcs(retrieve_chunks(question, chunks, limit=6), question, model)
         prompt = f"{INDIRECT_RULES}\n\nEvidence:\n{_evidence_block(ctx)}\n\nQuestion: {question}"
         answer, mode = await gen(prompt, model), "indirect"
@@ -233,12 +254,15 @@ async def run_system(system: str, case: dict, model: str) -> dict:
 
     # resolve cited page numbers
     if mode == "indirect":
-        cited = [(s, [ctx[e-1].get("page") for e in eids if 1 <= e <= len(ctx)])
-                 for s, eids in sentences_with(answer, _ECITE, all_ids=True)]
+        cited = [(sentence, [ctx[evidence_id - 1].get("page") for evidence_id in evidence_ids if 1 <= evidence_id <= len(ctx)])
+                 for sentence, evidence_ids in sentences_with(answer, _ECITE, all_ids=True)]
+    elif mode == "numeric_indirect":
+        cited = [(sentence, [ctx[ref_id - 1].get("page") for ref_id in ref_ids if 1 <= ref_id <= len(ctx)])
+                 for sentence, ref_ids in sentences_with(answer, _NCITE, all_ids=True)]
     else:
         cited = sentences_with(answer, _PCITE)
     return {"answer": answer, "cited": cited, "ctx": ctx, "mode": mode,
-            "n_pages": num_pages(pages), "pages": pages}
+            "n_pages": num_pages(pages), "pages": pages, **trace_metadata}
 
 
 # ── scoring (pure; recomputable offline from stored raw rows via --rescore) ─
@@ -265,7 +289,7 @@ def substantive_sentences(answer: str) -> list[tuple[str, bool]]:
         c = _clean(sent)
         if len(c) <= 40 or _REFUSAL.search(sent):
             continue
-        out.append((c, bool(_PCITE.search(sent) or _ECITE.search(sent))))
+        out.append((c, bool(_PCITE.search(sent) or _ECITE.search(sent) or _NCITE.search(sent))))
     return out
 
 
@@ -354,6 +378,11 @@ def raw_row(system: str, case: dict, res: dict) -> dict:
         "n_pages": res["n_pages"],
         "gold_must_include": case.get("must_include"),
         "gold_page": gold_page_for(case) if case["source"] == "labeled" else None,
+        **{
+            key: res[key]
+            for key in ("trace_id", "trace_schema_version", "pipeline_version", "generation_mode")
+            if key in res
+        },
     }
 
 
@@ -363,6 +392,7 @@ async def main() -> None:
     ap.add_argument("--cases", default="both", choices=["labeled", "diverse", "both"])
     ap.add_argument("--limit", type=int, default=40, help="max diverse cases")
     ap.add_argument("--model", default="qwen3.5:9b")
+    ap.add_argument("--backend", default="http://127.0.0.1:8000")
     ap.add_argument("--rescore", action="store_true",
                     help="recompute all metrics from stored raw rows; no model calls")
     args = ap.parse_args()
@@ -379,7 +409,7 @@ async def main() -> None:
                 if key in rows and "answer" in rows[key]:
                     continue
                 try:
-                    res = await run_system(system, case, args.model)
+                    res = await run_system(system, case, args.model, args.backend)
                     rows[key] = raw_row(system, case, res)
                 except Exception as exc:
                     print(f"  [{system}] {case['id']}: ERROR {type(exc).__name__}: {exc}")

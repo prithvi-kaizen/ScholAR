@@ -1,87 +1,110 @@
-"""Strict Offline & Zero Data Egress Verification Test for ScholAR.
+"""Clean-fixture strict-local smoke with process-level outbound socket denial."""
 
-Ensures:
-- Pipeline executes with HF_HUB_OFFLINE=1 and TRANSFORMERS_OFFLINE=1
-- Ingestion, hybrid retrieval, graph synthesis, math, verifier, and export execute locally
-- Zero outbound network sockets or external API egress
-"""
-
+import asyncio
+import json
 import os
+import socket
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
-# Force strict offline environment
-os.environ["HF_HUB_OFFLINE"] = "1"
-os.environ["TRANSFORMERS_OFFLINE"] = "1"
-
-from backend.schemas.claims import VerificationReport
-from backend.schemas.numeric_plan import NumericOp
-from backend.schemas.reasoning import ReasoningLevel
-from backend.services.budgeting_service import BudgetingService
-from backend.services.dense_embedding_service import DenseEmbeddingService
-from backend.services.evidence_graph_service import EvidenceGraphService
-from backend.services.export_service import ExportService
-from backend.services.pdf_service import paper_dir
-from backend.services.question_analyzer import QuestionAnalyzer
-from backend.services.reranker_service import RerankerService
-from backend.services.retrieval_service import retrieve_chunks
-from backend.services.table_arithmetic_service import TableArithmeticService
-from backend.services.verifier_service import ClaimVerifierService
+from backend.schemas.answer_trace import (
+    AnswerPipelineRequest,
+    ExecutionPolicy,
+    GenerationMode,
+    PipelineStatus,
+)
+from backend.services.answer_pipeline import AnswerPipelineService
+from backend.services.network_policy_service import NetworkPolicyService
+from backend.services.telemetry_service import TelemetryService
 
 
 class TestStrictOfflineExecution(unittest.TestCase):
+    def test_prepared_fixture_answer_completes_while_outbound_sockets_are_blocked(self) -> None:
+        denied_attempts: list[str] = []
+        real_getaddrinfo = socket.getaddrinfo
+        real_connect = socket.socket.connect
+        real_create_connection = socket.create_connection
 
-    def test_complete_offline_reasoning_lifecycle(self):
-        """Verify the full ScholAR reasoning pipeline executes with zero network access."""
-        query = "Why does the Transformer outperform ConvS2S based on architecture and results?"
-        paper_id = "1706.03762"
-        p_path = paper_dir(paper_id)
-        chunks_path = p_path / "chunks.json"
+        def is_loopback(host: object) -> bool:
+            rendered = str(host)
+            return rendered == "localhost" or rendered == "::1" or rendered.startswith("127.")
 
-        self.assertTrue(chunks_path.exists(), "Chunks must exist locally")
-        import json
-        chunks = json.loads(chunks_path.read_text(encoding="utf-8"))
+        def guarded_getaddrinfo(host: object, *args: object, **kwargs: object):
+            if not is_loopback(host):
+                denied_attempts.append(f"dns:{host}")
+                raise AssertionError(f"outbound DNS denied for {host}")
+            return real_getaddrinfo(host, *args, **kwargs)
 
-        # 1. Question Analysis
-        analysis = QuestionAnalyzer.analyze_query(query)
-        self.assertIsNotNone(analysis.reasoning_level)
+        def guarded_connect(sock: socket.socket, address: object):
+            host = address[0] if isinstance(address, tuple) and address else address
+            if not is_loopback(host):
+                denied_attempts.append(f"connect:{host}")
+                raise AssertionError(f"outbound socket denied for {host}")
+            return real_connect(sock, address)
 
-        # 2. Dense Embeddings & Hybrid Retrieval (Local MPS / CPU)
-        retrieved = retrieve_chunks(message=query, chunks=chunks, limit=6, paper_id=paper_id)
-        self.assertTrue(len(retrieved) > 0)
+        def guarded_create_connection(address: object, *args: object, **kwargs: object):
+            host = address[0] if isinstance(address, tuple) and address else address
+            if not is_loopback(host):
+                denied_attempts.append(f"create:{host}")
+                raise AssertionError(f"outbound connection denied for {host}")
+            return real_create_connection(address, *args, **kwargs)
 
-        # 3. Local Reranking
-        reranked = RerankerService.rerank(query, retrieved, top_k=4)
-        self.assertTrue(len(reranked) > 0)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            paper_root = Path(tmpdir) / "strict_fixture"
+            paper_root.mkdir()
+            chunk = {
+                "chunk_id": "chunk_001",
+                "evidence_id": "E_001",
+                "document_id": "strict_fixture",
+                "source_paper_id": "strict_fixture",
+                "page": 1,
+                "section": "Results",
+                "section_title": "Results",
+                "chunk_type": "result",
+                "paragraph_text": "Grounded retrieval improves scientific search accuracy on the local fixture.",
+                "text": "Grounded retrieval improves scientific search accuracy on the local fixture.",
+            }
+            (paper_root / "metadata.json").write_text(
+                json.dumps({"title": "Strict-local fixture", "authors": [], "summary": "Local fixture."}),
+                encoding="utf-8",
+            )
+            (paper_root / "pages.json").write_text(
+                json.dumps([{"page": 1, "text": chunk["text"]}]), encoding="utf-8"
+            )
+            (paper_root / "chunks.json").write_text(json.dumps([chunk]), encoding="utf-8")
+            (paper_root / "paper.pdf").write_bytes(b"%PDF-local-fixture")
 
-        # 4. Evidence Graph & Budget Pruning
-        ev_graph, ev_path = EvidenceGraphService.build_evidence_graph(query, reranked, analysis)
-        budget = BudgetingService.get_evidence_budget()
-        pruned_graph, pruned_path = BudgetingService.prune_to_budget(ev_graph, ev_path, budget)
-        self.assertTrue(len(pruned_graph.nodes) > 0)
+            strict_env = {
+                "SCHOLAR_NETWORK_MODE": "strict-local",
+                "HF_HUB_OFFLINE": "1",
+                "HF_DATASETS_OFFLINE": "1",
+                "TRANSFORMERS_OFFLINE": "1",
+            }
+            with (
+                patch.dict(os.environ, strict_env),
+                patch("socket.getaddrinfo", side_effect=guarded_getaddrinfo),
+                patch("socket.socket.connect", new=guarded_connect),
+                patch("socket.create_connection", side_effect=guarded_create_connection),
+                patch("backend.services.answer_pipeline.paper_dir", return_value=paper_root),
+                patch("backend.services.answer_pipeline.ollama_available", AsyncMock(return_value=False)),
+                patch.object(TelemetryService, "persist_trace", side_effect=lambda trace: trace),
+            ):
+                self.assertTrue(NetworkPolicyService.is_strict_local())
+                trace = asyncio.run(AnswerPipelineService.answer(AnswerPipelineRequest(
+                    paper_id="strict_fixture",
+                    query="What improves scientific search accuracy?",
+                    execution_policy=ExecutionPolicy.ALLOW_EXTRACTIVE_FALLBACK,
+                )))
 
-        # 5. Deterministic Decimal Table Arithmetic
-        table_text = "| Model | BLEU |\n| Transformer | 28.4 |\n| ConvS2S | 25.16 |"
-        math_res = TableArithmeticService.extract_and_calculate_from_table_text(
-            table_text=table_text,
-            entity_a="Transformer",
-            entity_b="ConvS2S",
-            op=NumericOp.DIFFERENCE,
-        )
-        self.assertIsNotNone(math_res)
-        self.assertAlmostEqual(math_res.computed_value, 3.24, places=2)
-
-        # 6. 3-Way Atomic Claim Verification
-        ans = "The Transformer achieves 28.4 BLEU [1]."
-        report = ClaimVerifierService.generate_atomic_verification_report(ans, reranked)
-        self.assertIsNotNone(report)
-
-        # 7. Local Export Generation (LaTeX TikZ + Markdown)
-        md_export = ExportService.export_to_markdown(paper_id, query, ans, analysis, pruned_path, math_res, report)
-        tex_export = ExportService.export_to_latex(paper_id, query, ans, analysis, pruned_path, math_res, report)
-
-        self.assertIn("# ScholAR Multi-Level Reasoning Report", md_export)
-        self.assertIn("\\documentclass{article}", tex_export)
+        self.assertEqual(denied_attempts, [])
+        self.assertEqual(trace.status, PipelineStatus.SUCCESS)
+        self.assertEqual(trace.generation.mode, GenerationMode.EXTRACTIVE_FALLBACK)
+        self.assertEqual(trace.schema_version, "1.0")
+        self.assertTrue(trace.prompt_evidence)
+        self.assertTrue(trace.verification.reverified)
+        self.assertIn("scientific search accuracy", trace.final_answer)
 
 
 if __name__ == "__main__":

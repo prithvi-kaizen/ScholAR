@@ -1,0 +1,54 @@
+\section{System and Trust Boundaries}
+\subsection{Canonical document state}
+ScholAR accepts a local PDF upload or an explicitly acquired document. Publication is transactional: all processing occurs in an isolated sibling staging directory (\texttt{.staging-\textit{uuid}}). Ingestion derives nine canonical artifacts validated by \texttt{PaperFinalizeService}:
+\begin{enumerate}
+    \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
+    \item \texttt{paper.pdf}: verified source PDF byte stream;
+    \item \texttt{evidence\_ast.json}: structural EvidenceAST;
+    \item \texttt{pages.json}: contiguous 1-based page records;
+    \item \texttt{chunks.json}: semantic chunks with section tags;
+    \item \texttt{figures.json}: isolated figure and table metadata;
+    \item \texttt{visual\_units.json}: page and crop image descriptors;
+    \item \texttt{metadata.json}: bibliographic metadata and counts;
+    \item \texttt{document.db}: relational SQLite index;
+    \item \texttt{ingestion\_manifest.json}: SHA-256 chunk and bundle hashes.
+\end{enumerate}
+Before publication, the service validates document identity across all files, contiguous page sequences, globally unique block and chunk identifiers, chunk-to-AST referential consistency, figure image file checksums, and SQLite relational constraints. A file-level Unix lock (\texttt{fcntl.flock}) serializes concurrent updates. Publication executes via an atomic directory rename (\texttt{os.replace}); if replacement fails, the previous valid generation is automatically restored from backup.
+
+\subsection{Acquisition-enabled and strict-local modes}
+The network boundary distinguishes two operational modes. \emph{Acquisition-enabled} mode permits outbound HTTPS requests to paper repositories, package registries, and model repositories. \emph{Strict-local} mode enforces total isolation: \texttt{NetworkPolicyService} intercepts all outbound requests prior to DNS resolution or socket creation, rejecting external network access. Only local filesystem caches, prepared uploads, and loopback HTTP endpoints (\texttt{127.0.0.1}, \texttt{::1}, \texttt{localhost}) for local Ollama runtimes are permitted.
+
+\subsection{Retrieval, cross-modal expansion, and fusion}
+Queries undergo intent-driven semantic decomposition, splitting compound questions across clause boundaries into orthogonal sub-intents to detect implicit visual or tabular demands without requiring explicit figure or table keywords.
+
+Retrieval executes across five complementary channels:
+\begin{itemize}
+    \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
+    \item \textbf{Lexical:} Okapi BM25 \citep{robertson2009bm25} with parameters $k_1 = 1.4$ and $b = 0.72$ over camelCase-tokenized chunk texts (with average chunk length $\bar{L}$):
+    \begin{equation}
+    \begin{aligned}
+    \text{BM25}(q, d) &= \sum_{t \in q} \text{IDF}(t) \\
+    &\cdot \frac{f(t, d)(k_1 + 1)}{f(t, d) + k_1 (1 - b + b |d| / \bar{L})}
+    \end{aligned}
+    \end{equation}
+    \item \textbf{Dense text:} Cosine similarity over dense sentence embeddings (\texttt{all-MiniLM-L6-v2}).
+    \item \textbf{Crop visual:} Cosine similarity over CLIP embeddings (\texttt{openai/}\allowbreak\texttt{clip-vit-}\allowbreak\texttt{base-patch32}) with a strict similarity floor $\ge 0.18$.
+    \item \textbf{Page visual:} Full-page late-interaction scoring via ColQwen2 (\texttt{vidore/}\allowbreak\texttt{colqwen2-}\allowbreak\texttt{v1.0-hf}) using the MaxSim token-level operator:
+    \begin{equation}
+    S(Q, P) = \sum_{i=1}^{|Q|} \max_{j=1}^{|P|} \mathbf{q}_i^\top \mathbf{p}_j
+    \end{equation}
+    \item \textbf{Modality scoring:} Rule-based heuristic boosts (+3.0 for bridged figures cited in top text chunks, +2.5 for comparative result or ablation tables, +2.0 for intent-matched visuals, +1.0 for preferred pages).
+\end{itemize}
+
+Channel ranks are merged using Reciprocal Rank Fusion (RRF) with constant $k = 60$:
+\begin{equation}
+\text{RRF}(d) = \sum_{c \in \mathcal{C}} \frac{1}{60 + \text{rank}_c(d)}
+\end{equation}
+
+When retrieved text chunks cite visual or tabular elements, \emph{active cross-modal graph expansion} automatically resolves and pins those visual AST nodes into the prompt context. To prevent spurious visual hallucinations, visual hits receive a reranking prior only if corroborated by lexical overlap, bridged citation in text, or explicit figure references. Uncorroborated visual hits are retained strictly as bounded inspection candidates.
+
+\subsection{Structured multi-level reasoning paths}
+To ensure structured reasoning fidelity, ScholAR organizes evidence and generation into multi-level reasoning paths following \citet{sun2025mlr}. Rather than emitting unconstrained chains-of-thought, the pipeline maps intermediate reasoning steps across a structured mode taxonomy (\textsc{ProblemUnderstanding}, \textsc{HypothesisFormation}, \textsc{Derivation}, \textsc{Verification}, \textsc{Calculation}, \textsc{Synthesis}), bounding each intermediate subgoal to $\le 30$ words. Text synthesis organizes responses across three structured tiers: (1)~Problem Context and Phenomenon Definition, (2)~Mechanistic and Mathematical Derivation, and (3)~Quantitative Empirical Evidence with sentence-terminal citation attribution.
+
+\subsection{One production and evaluation trace}
+All user-facing chat endpoints and release evaluation harnesses invoke the unified \texttt{AnswerPipeline}\allowbreak\texttt{Service}. The resulting \texttt{AnswerTrace} stores request parameters, seed, model tag, prompt hash, Git commit identity, multi-channel retrieval scores, exact prompt evidence, raw LLM completion, normalized text, citation origins (model-emitted, application-imputed, or remapped), initial and post-repair verification reports, concrete text edits, abstention reasons, and stage-by-stage latency breakdowns. Evaluation observes this identical execution trace, preventing drift between development evaluation and deployed behavior.

@@ -8,6 +8,9 @@ from typing import Any
 
 import httpx
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field
+
+from backend.services.network_policy_service import NetworkPolicyService
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -18,16 +21,50 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3.5:9b")
 STUDY_GOAL_PROMPT_VERSION = "study-goals-v8-recursive"
 
 
-def _ollama_options(temperature: float) -> dict[str, Any]:
-    return {
+class LocalGenerationResult(BaseModel):
+    """Ollama response text plus the local runtime metadata needed for auditability."""
+
+    response: str = ""
+    requested_model: str
+    resolved_model: str | None = None
+    model_digest: str | None = None
+    quantization: str | None = None
+    options: dict[str, Any] = Field(default_factory=dict)
+    done: bool | None = None
+    done_reason: str | None = None
+    total_duration: int | None = None
+    load_duration: int | None = None
+    prompt_eval_count: int | None = None
+    prompt_eval_duration: int | None = None
+    eval_count: int | None = None
+    eval_duration: int | None = None
+
+
+def _optional_int(value: Any) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def _ollama_options(
+    temperature: float,
+    seed: int | None = None,
+    *,
+    top_p: float | None = None,
+    num_ctx: int | None = None,
+    num_predict: int | None = None,
+) -> dict[str, Any]:
+    options: dict[str, Any] = {
         "temperature": temperature,
-        "top_p": float(os.getenv("OLLAMA_TOP_P", "0.9")),
-        "num_ctx": int(os.getenv("OLLAMA_NUM_CTX", "16000")),
-        "num_predict": int(os.getenv("OLLAMA_NUM_PREDICT", "1650")),
-}
+        "top_p": top_p if top_p is not None else float(os.getenv("OLLAMA_TOP_P", "0.9")),
+        "num_ctx": num_ctx if num_ctx is not None else int(os.getenv("OLLAMA_NUM_CTX", "16000")),
+        "num_predict": num_predict if num_predict is not None else int(os.getenv("OLLAMA_NUM_PREDICT", "1650")),
+    }
+    if seed is not None:
+        options["seed"] = seed
+    return options
 
 
 async def ollama_available() -> bool:
+    NetworkPolicyService.require_local_endpoint(OLLAMA_BASE_URL, "Ollama")
     try:
         async with httpx.AsyncClient(timeout=3.0, trust_env=False) as client:
             response = await client.get(f"{OLLAMA_BASE_URL}/api/tags")
@@ -36,21 +73,86 @@ async def ollama_available() -> bool:
         return False
 
 
-async def generate(prompt: str, temperature: float = 0.2, images: list[str] | None = None, model: str | None = None) -> str:
+async def generate_result(
+    prompt: str,
+    temperature: float = 0.2,
+    images: list[str] | None = None,
+    model: str | None = None,
+    seed: int | None = None,
+    *,
+    top_p: float | None = None,
+    num_ctx: int | None = None,
+    num_predict: int | None = None,
+) -> LocalGenerationResult:
+    requested_model = model or OLLAMA_MODEL
+    options = _ollama_options(
+        temperature,
+        seed,
+        top_p=top_p,
+        num_ctx=num_ctx,
+        num_predict=num_predict,
+    )
     payload: dict[str, Any] = {
-        "model": model or OLLAMA_MODEL,
+        "model": requested_model,
         "prompt": prompt,
         "stream": False,
         "think": False,
-        "options": _ollama_options(temperature),
+        "options": options,
     }
     if images:
         payload["images"] = images
+    model_digest: str | None = None
+    quantization: str | None = None
+    NetworkPolicyService.require_local_endpoint(OLLAMA_BASE_URL, "Ollama")
     async with httpx.AsyncClient(timeout=float(os.getenv("OLLAMA_TIMEOUT", "240")), trust_env=False) as client:
+        try:
+            tags_response = await client.get(f"{OLLAMA_BASE_URL}/api/tags")
+            if tags_response.status_code == 200:
+                for item in tags_response.json().get("models", []):
+                    if (item.get("name") or item.get("model")) == requested_model:
+                        model_digest = str(item.get("digest") or "") or None
+                        details = item.get("details") if isinstance(item.get("details"), dict) else {}
+                        quantization = str(details.get("quantization_level") or "") or None
+                        break
+        except Exception:
+            # Generation remains available outside measured releases even when the
+            # local runtime cannot expose immutable model metadata.
+            pass
         response = await client.post(f"{OLLAMA_BASE_URL}/api/generate", json=payload)
         response.raise_for_status()
     data = response.json()
-    return data.get("response", "").strip()
+    if not isinstance(data, dict):
+        raise ValueError("Ollama returned a non-object response")
+    return LocalGenerationResult(
+        response=str(data.get("response", "")).strip(),
+        requested_model=requested_model,
+        resolved_model=str(data["model"]) if data.get("model") else requested_model,
+        model_digest=model_digest,
+        quantization=quantization,
+        options=options,
+        done=data.get("done") if isinstance(data.get("done"), bool) else None,
+        done_reason=str(data["done_reason"]) if data.get("done_reason") else None,
+        total_duration=_optional_int(data.get("total_duration")),
+        load_duration=_optional_int(data.get("load_duration")),
+        prompt_eval_count=_optional_int(data.get("prompt_eval_count")),
+        prompt_eval_duration=_optional_int(data.get("prompt_eval_duration")),
+        eval_count=_optional_int(data.get("eval_count")),
+        eval_duration=_optional_int(data.get("eval_duration")),
+    )
+
+
+async def generate(
+    prompt: str,
+    temperature: float = 0.2,
+    images: list[str] | None = None,
+    model: str | None = None,
+    seed: int | None = None,
+) -> str:
+    """Compatibility wrapper for call sites that only need generated text."""
+    result = await generate_result(
+        prompt, temperature=temperature, images=images, model=model, seed=seed
+    )
+    return result.response
 
 
 async def generate_stream(
@@ -69,6 +171,7 @@ async def generate_stream(
     }
     if images:
         payload["images"] = images
+    NetworkPolicyService.require_local_endpoint(OLLAMA_BASE_URL, "Ollama")
     async with httpx.AsyncClient(timeout=float(os.getenv("OLLAMA_TIMEOUT", "240")), trust_env=False) as client:
         async with client.stream("POST", f"{OLLAMA_BASE_URL}/api/generate", json=payload) as response:
             response.raise_for_status()

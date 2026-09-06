@@ -6,16 +6,12 @@ import {
   ArrowLeft,
   GitCompare,
   Network,
-  BookOpen,
-  Send,
-  Layers,
   Sparkles,
   ArrowRight,
-  Download,
-  CheckCircle2,
-  Table as TableIcon,
 } from "lucide-react";
 import { Navbar } from "../../components/Navbar";
+import type { CrossDocumentReasoningResponse } from "../../types/api";
+import { isCrossDocumentReasoningResponse } from "../../types/api";
 
 const BENCHMARK_PAPERS = [
   { id: "1706.03762", title: "Attention Is All You Need (Vaswani et al., 2017)", year: "2017" },
@@ -37,7 +33,7 @@ export default function CrossPaperComparePage() {
     "How does the self-attention mechanism in Vaswani 2017 compare with the cross-attention conditioning in Rombach 2022?"
   );
   const [loading, setLoading] = useState<boolean>(false);
-  const [graphResult, setGraphResult] = useState<any | null>(null);
+  const [graphResult, setGraphResult] = useState<CrossDocumentReasoningResponse | null>(null);
 
   const handleCompare = async () => {
     if (!query.trim() || loading) return;
@@ -53,10 +49,13 @@ export default function CrossPaperComparePage() {
         }),
       });
       if (!res.ok) throw new Error();
-      const data = await res.json();
+      const data: unknown = await res.json();
+      if (!isCrossDocumentReasoningResponse(data)) {
+        throw new Error("Invalid cross-document response");
+      }
       setGraphResult(data);
     } catch {
-      // Fallback sample
+      setGraphResult(null);
     } finally {
       setLoading(false);
     }
@@ -210,7 +209,7 @@ export default function CrossPaperComparePage() {
 
             {/* Nodes Flow */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {graphResult.graph?.nodes?.map((node: any, idx: number) => (
+              {graphResult.graph?.nodes?.map((node, idx: number) => (
                 <div key={node.node_id || idx} className="rounded-xl border border-line bg-zinc-900/60 p-4 space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-white font-mono">{node.node_id}</span>
@@ -232,7 +231,7 @@ export default function CrossPaperComparePage() {
                 Cross-Paper Conceptual Bridges
               </div>
               <div className="space-y-2">
-                {graphResult.graph?.edges?.map((edge: any, eIdx: number) => (
+                {graphResult.graph?.edges?.map((edge, eIdx: number) => (
                   <div key={eIdx} className="flex items-center gap-2 rounded-lg bg-zinc-900/40 p-2.5 text-xs text-zinc-300">
                     <span className="font-mono text-purple-300">{edge.source_id}</span>
                     <ArrowRight size={12} className="text-zinc-500 shrink-0" />

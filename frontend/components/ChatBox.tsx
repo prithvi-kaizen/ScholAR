@@ -8,7 +8,19 @@ import {
   Layers, Network, Calculator, ShieldCheck, ChevronRight
 } from "lucide-react";
 import katex from "katex";
-import type { ChatMessage, Citation, CustomSnippet } from "../types/paper";
+import type {
+  ChatMessage,
+  Citation,
+  CustomSnippet,
+  ReasoningPathStep,
+} from "../types/paper";
+import type { ChatRequest } from "../types/api";
+import {
+  getApiErrorMessage,
+  isChatResponse,
+  isExportReasoningResponse,
+  isFigureListResponse,
+} from "../types/api";
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
 
@@ -113,7 +125,7 @@ function renderInline(
       if (cit.verification === "SUPPORTED") {
         badgeClasses = "border-emerald-400/60 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/35";
         statusPrefix = "Verified Evidence";
-      } else if (cit.verification === "PARTIALLY_SUPPORTED") {
+      } else if (cit.verification === "PARTIAL" || cit.verification === "PARTIALLY_SUPPORTED") {
         badgeClasses = "border-amber-400/60 bg-amber-500/20 text-amber-100 hover:bg-amber-500/35";
         statusPrefix = "Partial Evidence";
       } else if (cit.verification === "CONTRADICTED") {
@@ -342,8 +354,8 @@ function ReasoningBadge({ level }: { level?: string }) {
 import { EvidenceGraphModal } from "./EvidenceGraphModal";
 
 function ReasoningTrail({ steps, onStepClick, onOpenGraph }: {
-  steps?: { step_index: number; evidence_id: string; section?: string; page: number; modality: string; role: string; claim_contribution: string }[];
-  onStepClick?: (step: any) => void;
+  steps?: ReasoningPathStep[];
+  onStepClick?: (citation: Citation) => void;
   onOpenGraph?: () => void;
 }) {
   if (!steps || steps.length <= 1) return null;
@@ -378,9 +390,14 @@ function ReasoningTrail({ steps, onStepClick, onOpenGraph }: {
                 quote: step.claim_contribution,
               })}
               className="inline-flex items-center gap-1 rounded bg-purple-500/20 px-1.5 py-0.5 font-mono text-[10px] text-purple-200 hover:bg-purple-500/30 transition text-left"
-              title={step.claim_contribution}
+              title={`${step.reasoning_mode ? `[${step.reasoning_mode}] ` : ""}${step.subgoal ? `${step.subgoal} — ` : ""}${step.claim_contribution}`}
             >
               <span className="font-semibold">{step.step_index}.</span>
+              {step.reasoning_mode && (
+                <span className="text-[9px] uppercase tracking-wider font-semibold text-purple-300 bg-purple-900/50 px-1 rounded">
+                  {step.reasoning_mode.replace("ProblemUnderstanding", "Understand").replace("CaseAnalysis", "Cases")}
+                </span>
+              )}
               {step.section || step.evidence_id} (p.{step.page})
             </button>
             {idx < steps.length - 1 && <ChevronRight size={10} className="text-zinc-500 shrink-0" />}
@@ -424,7 +441,7 @@ function VerificationBadge({ label }: { label?: string }) {
   if (label === "SUPPORTED") {
     return <span className="ml-auto rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-300">Verified</span>;
   }
-  if (label === "PARTIALLY_SUPPORTED") {
+  if (label === "PARTIAL" || label === "PARTIALLY_SUPPORTED") {
     return <span className="ml-auto rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-amber-300">Partial</span>;
   }
   if (label === "CONTRADICTED") {
@@ -493,14 +510,6 @@ function FigureThumbnail({ imageUrl, label, caption, onClick }: {
   );
 }
 
-interface FigureMeta {
-  figure_id: string;
-  figure_type: string;
-  label: string;
-  caption: string;
-  page: number;
-}
-
 export function ChatBox({
   paperId,
   queuedPrompt,
@@ -520,7 +529,7 @@ export function ChatBox({
     isOpen: boolean;
     query: string;
     level?: string;
-    steps?: any[];
+    steps?: ReasoningPathStep[];
   }>({
     isOpen: false,
     query: "",
@@ -543,9 +552,13 @@ export function ChatBox({
       try {
         const res = await fetch(`${backendUrl}/api/papers/${encodeURIComponent(paperId)}/figures`);
         if (!res.ok) throw new Error();
-        const figs: FigureMeta[] = await res.json();
+        const data: unknown = await res.json();
+        if (!isFigureListResponse(data)) {
+          throw new Error("Invalid figures response");
+        }
         if (cancelled) return;
 
+        const figs = data.figures;
         const prompts: { icon: typeof FileText; text: string }[] = [];
         const tables = figs.filter((f) => f.figure_type === "table" || f.label.toLowerCase().includes("table"));
         const figures = figs.filter((f) => f.figure_type === "figure" || f.label.toLowerCase().includes("figure"));
@@ -590,7 +603,10 @@ export function ChatBox({
         }),
       });
       if (!res.ok) throw new Error();
-      const data = await res.json();
+      const data: unknown = await res.json();
+      if (!isExportReasoningResponse(data)) {
+        throw new Error("Invalid reasoning export response");
+      }
       const blob = new Blob([data.content], { type: format === "latex" ? "application/x-latex" : "text/markdown" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -618,7 +634,7 @@ export function ChatBox({
     const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
     let md = `# ScholAR Study Notes: Paper ${paperId}\n*Exported on ${dateStr}*\n\n---\n\n`;
 
-    messages.forEach((m, idx) => {
+    messages.forEach((m) => {
       if (m.role === "user") {
         md += `## Question: ${m.content}\n\n`;
       } else {
@@ -655,7 +671,7 @@ export function ChatBox({
     setLoading(true);
 
     try {
-      const payloadBody: Record<string, any> = {
+      const payloadBody: ChatRequest = {
         message: trimmed,
         history,
         secondary_paper_ids: secondaryPaperIds,
@@ -675,10 +691,13 @@ export function ChatBox({
         body: JSON.stringify(payloadBody),
       });
       if (!res.ok) {
-        const p = await res.json().catch(() => ({}));
-        throw new Error(p.detail ?? "Chat failed");
+        const errorPayload: unknown = await res.json().catch(() => null);
+        throw new Error(getApiErrorMessage(errorPayload, "Chat failed"));
       }
-      const payload = await res.json();
+      const payload: unknown = await res.json();
+      if (!isChatResponse(payload)) {
+        throw new Error("The chat service returned an invalid response.");
+      }
 
       if (payload.error) {
         setMessages((prev) => [
@@ -697,17 +716,21 @@ export function ChatBox({
         {
           role: "assistant",
           content: payload.answer,
-          citations: payload.citations ?? [],
-          vision: Boolean(payload.vision),
-          vision_fallback: Boolean(payload.vision_fallback),
-          is_snippet: Boolean(payload.is_snippet),
+          citations: payload.citations,
+          abstained: payload.abstained,
+          uncertainty_reason: payload.uncertainty_reason,
+          route_type: payload.route_type,
+          capability_mode: payload.capability_mode,
+          vision: payload.vision,
+          vision_fallback: payload.vision_fallback,
+          is_snippet: payload.is_snippet,
           snippet_id: payload.snippet_id ?? undefined,
           figure_id: payload.figure_id ?? undefined,
           figure_label: payload.figure_label ?? undefined,
           figure_image_url: payload.figure_image_url ?? undefined,
-          model: payload.model ?? undefined,
-          reasoning_level: payload.reasoning_level ?? undefined,
-          reasoning_steps: payload.reasoning_steps ?? undefined,
+          model: payload.model,
+          reasoning_level: payload.reasoning_level,
+          reasoning_steps: payload.reasoning_steps,
           numeric_plan: payload.numeric_plan ?? undefined,
           verification_report: payload.verification_report ?? undefined,
         },
@@ -895,7 +918,7 @@ export function ChatBox({
                         </div>
                         {cit.is_figure && (cit.figure_id || cit.image_file) ? (
                           <FigureThumbnail
-                            imageUrl={cit.figure_id ? `/api/papers/${cit.source_paper_id || paperId}/figures/${cit.figure_id}.png` : (msg.figure_image_url || "")}
+                            imageUrl={cit.image_url || (cit.figure_id ? `/api/papers/${cit.source_paper_id || paperId}/figures/${cit.figure_id}.png` : (msg.figure_image_url || ""))}
                             label={cit.label || sectionLabel(cit)}
                             caption={cit.caption || cit.quote}
                             onClick={() => onCitationClick(cit)}

@@ -1,0 +1,4 @@
+# Optional structured parser. Model artifacts are acquired separately and
+# configured with DOCLING_ARTIFACTS_PATH for strict-local operation.
+-r base.in
+docling==2.121.0

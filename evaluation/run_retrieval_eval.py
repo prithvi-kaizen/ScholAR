@@ -13,7 +13,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from backend.schemas.answer_trace import RETRIEVER_VERSION
+from backend.services.answer_pipeline import _merge_source_figure_chunks
 from backend.services.retrieval_service import extract_page_hints, retrieve_chunks, tokenize
+from backend.services.visual_embedding_service import VisualEmbeddingService
 
 EVAL_DIR = Path(__file__).resolve().parent
 if str(EVAL_DIR) not in sys.path:
@@ -34,10 +37,21 @@ def read_json(path: Path) -> Any:
 
 
 def load_chunks(paper_id: str) -> list[dict[str, Any]]:
-    path = DATA_DIR / paper_id / "chunks.json"
+    directory = DATA_DIR / paper_id
+    path = directory / "chunks.json"
     if not path.exists():
         raise FileNotFoundError(f"Missing chunks file: {path}")
-    return read_json(path)
+    chunks = [
+        {**chunk, "source_paper_id": chunk.get("source_paper_id") or paper_id}
+        for chunk in read_json(path)
+    ]
+    figures_path = directory / "figures.json"
+    figures = read_json(figures_path) if figures_path.is_file() else []
+    return _merge_source_figure_chunks(
+        paper_id,
+        chunks,
+        figures if isinstance(figures, list) else [],
+    )
 
 
 def keyword_overlap_retriever(query: str, chunks: list[dict[str, Any]], limit: int = 5, preferred_pages: list[int] | None = None) -> list[dict[str, Any]]:
@@ -93,11 +107,38 @@ def bm25_only_retriever(query: str, chunks: list[dict[str, Any]], limit: int = 5
 
 
 def bm25_primary_no_page_hints(query: str, chunks: list[dict[str, Any]], limit: int = 5, preferred_pages: list[int] | None = None) -> list[dict[str, Any]]:
-    return retrieve_chunks(query, chunks, limit=limit, preferred_pages=[])
+    """Frozen historical BM25+dense+modality condition without image retrieval."""
+    return retrieve_chunks(
+        query,
+        chunks,
+        limit=limit,
+        preferred_pages=[],
+        include_image_channel=False,
+    )
 
 
 def bm25_primary_with_page_hints(query: str, chunks: list[dict[str, Any]], limit: int = 5, preferred_pages: list[int] | None = None) -> list[dict[str, Any]]:
-    return retrieve_chunks(query, chunks, limit=limit, preferred_pages=preferred_pages or [])
+    """Frozen historical BM25+dense+modality condition with page hints."""
+    return retrieve_chunks(
+        query,
+        chunks,
+        limit=limit,
+        preferred_pages=preferred_pages or [],
+        include_image_channel=False,
+    )
+
+
+def four_channel_image_rrf_v1_no_page_hints(query: str, chunks: list[dict[str, Any]], limit: int = 5, preferred_pages: list[int] | None = None) -> list[dict[str, Any]]:
+    return retrieve_chunks(query, chunks, limit=limit, preferred_pages=[])
+
+
+def four_channel_image_rrf_v1_with_page_hints(query: str, chunks: list[dict[str, Any]], limit: int = 5, preferred_pages: list[int] | None = None) -> list[dict[str, Any]]:
+    return retrieve_chunks(
+        query,
+        chunks,
+        limit=limit,
+        preferred_pages=preferred_pages or [],
+    )
 
 
 def dense_only_retriever(query: str, chunks: list[dict[str, Any]], limit: int = 5, preferred_pages: list[int] | None = None) -> list[dict[str, Any]]:
@@ -110,7 +151,12 @@ RETRIEVERS: dict[str, Callable[[str, list[dict[str, Any]], int, list[int] | None
     "bm25_primary_no_page_hints": bm25_primary_no_page_hints,
     "bm25_primary_with_page_hints": bm25_primary_with_page_hints,
     "dense_only": dense_only_retriever,
+    "four_channel_image_rrf_v1_no_page_hints": four_channel_image_rrf_v1_no_page_hints,
+    "four_channel_image_rrf_v1_with_page_hints": four_channel_image_rrf_v1_with_page_hints,
 }
+
+CURRENT_RETRIEVER = "four_channel_image_rrf_v1_with_page_hints"
+CURRENT_RETRIEVER_NO_HINTS = "four_channel_image_rrf_v1_no_page_hints"
 
 
 def rank_of_first_relevant(retrieved: list[dict[str, Any]], relevant_ids: set[str]) -> int | None:
@@ -137,6 +183,29 @@ def evaluate_case(case: dict[str, Any], retriever_name: str) -> dict[str, Any]:
     retrieved_pages = [chunk.get("page") for chunk in retrieved]
     relevant_ids = set(case["relevant_chunk_ids"])
     rank = rank_of_first_relevant(retrieved, relevant_ids)
+    active_channels = [
+        channel
+        for channel, field in (
+            ("bm25", "bm25_rank"),
+            ("dense", "dense_rank"),
+            ("modality", "modality_rank"),
+            ("image_embedding", "image_embedding_rank"),
+        )
+        if any(chunk.get(field) is not None for chunk in retrieved)
+    ]
+    if retriever_name.startswith("four_channel_image_rrf_v1"):
+        visual_status = {
+            "condition_enabled": True,
+            **VisualEmbeddingService.status(),
+        }
+    else:
+        visual_status = {
+            "condition_enabled": False,
+            "last_request_attempted": False,
+            "last_request_succeeded": None,
+            "last_request_hit_count": 0,
+            "encoder_fingerprint": None,
+        }
 
     return {
         "case_id": case["id"],
@@ -146,6 +215,15 @@ def evaluate_case(case: dict[str, Any], retriever_name: str) -> dict[str, Any]:
         "relevant_chunk_ids": case["relevant_chunk_ids"],
         "retrieved_chunk_ids": retrieved_ids,
         "retrieved_pages": retrieved_pages,
+        "active_channels": active_channels,
+        "condition_eligible": (
+            visual_status.get("last_request_attempted") is True
+            if visual_status.get("condition_enabled") is True else True
+        ),
+        "visual_embedding": visual_status,
+        "eligible_image_hits_in_top_k": sum(
+            chunk.get("image_embedding_eligible") is True for chunk in retrieved
+        ),
         "first_relevant_rank": rank,
         "recall_at_1": 1 if rank is not None and rank <= 1 else 0,
         "recall_at_3": 1 if rank is not None and rank <= 3 else 0,
@@ -158,10 +236,18 @@ def evaluate_case(case: dict[str, Any], retriever_name: str) -> dict[str, Any]:
 def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
     summary: dict[str, Any] = {}
     for retriever in RETRIEVERS:
-        subset = [row for row in rows if row["retriever"] == retriever]
+        all_rows = [row for row in rows if row["retriever"] == retriever]
+        if retriever.startswith("four_channel_image_rrf_v1"):
+            subset = [row for row in all_rows if row.get("condition_eligible") is True]
+            excluded_no_image = len(all_rows) - len(subset)
+        else:
+            subset = all_rows
+            excluded_no_image = 0
         total = max(len(subset), 1)
         summary[retriever] = {
             "cases": len(subset),
+            "total_cases": len(all_rows),
+            "excluded_no_image": excluded_no_image,
             "recall_at_1": round(sum(row["recall_at_1"] for row in subset) / total, 3),
             "recall_at_3": round(sum(row["recall_at_3"] for row in subset) / total, 3),
             "recall_at_5": round(sum(row["recall_at_5"] for row in subset) / total, 3),
@@ -188,7 +274,7 @@ def failed_cases(rows: list[dict[str, Any]], retriever: str) -> list[dict[str, A
 
 
 def current_system_case_table(rows: list[dict[str, Any]]) -> str:
-    current = [row for row in rows if row["retriever"] == "bm25_primary_with_page_hints"]
+    current = [row for row in rows if row["retriever"] == CURRENT_RETRIEVER]
     lines = [
         "| Case | Paper | Expected chunks | Top 5 retrieved chunks | First relevant rank |",
         "|---|---|---|---|---:|",
@@ -204,11 +290,12 @@ def current_system_case_table(rows: list[dict[str, Any]]) -> str:
 
 def write_report(cases: list[dict[str, Any]], rows: list[dict[str, Any]], summary: dict[str, Any],
                  report_path: Path = REPORT_MD) -> None:
-    current = summary["bm25_primary_with_page_hints"]
+    current = summary[CURRENT_RETRIEVER]
     bm25 = summary["bm25_only"]
     keyword = summary["keyword_overlap"]
-    no_hints = summary["bm25_primary_no_page_hints"]
-    failures = failed_cases(rows, "bm25_primary_with_page_hints")
+    no_hints = summary[CURRENT_RETRIEVER_NO_HINTS]
+    failures = failed_cases(rows, CURRENT_RETRIEVER)
+    visual_status = VisualEmbeddingService.status()
 
     report = f"""# ScholAR Quantitative Evaluation Report
 
@@ -255,12 +342,13 @@ The benchmark covers these query types:
 
 ## What this means
 
-- The current BM25-primary retrieval reached Recall@5 of {current['recall_at_5']} and MRR of {current['mrr']} on this small benchmark.
+- The current `{CURRENT_RETRIEVER}` implementation reached Recall@5 of {current['recall_at_5']} and MRR of {current['mrr']} on {current['cases']} image-eligible cases; {current['excluded_no_image']} of {current['total_cases']} cases were explicitly excluded from this condition because no extracted image was available.
+- Its visual encoder status was `active={visual_status.get('active')}` with fingerprint `{visual_status.get('encoder_fingerprint')}` and a non-calibrated similarity floor of `{visual_status.get('minimum_similarity')}`.
 - The keyword baseline reached Recall@5 of {keyword['recall_at_5']} and MRR of {keyword['mrr']}.
 - The BM25 baseline reached Recall@5 of {bm25['recall_at_5']} and MRR of {bm25['mrr']}.
-- The page-hint ablation compares `bm25_primary_with_page_hints` against `bm25_primary_no_page_hints`. In this run, page hints changed MRR from {no_hints['mrr']} to {current['mrr']}, so there was no measurable aggregate gain on this small benchmark.
+- The page-hint ablation compares `{CURRENT_RETRIEVER}` against `{CURRENT_RETRIEVER_NO_HINTS}`. In this run, page hints changed MRR from {no_hints['mrr']} to {current['mrr']}.
 
-The important honest finding from the earlier run was that BM25 was more reliable than the older hybrid-primary scoring. Based on that result, ScholAR now uses BM25 as the primary retriever and keeps semantic, section, phrase, and page signals as small reranking boosts. In this run, the current system matches BM25-only on the measured metrics while still keeping room for careful page-aware reranking.
+The historical `bm25_primary_*` rows are frozen image-disabled tri-channel conditions for artifact comparability. The separately named four-channel rows measure the current implementation and must not be interpreted as visual-effectiveness evidence unless the recorded visual encoder is active and the planned visual controls have been run.
 
 These numbers are not a final research claim. They are a real starting point for the required quantitative evaluation.
 
@@ -268,10 +356,10 @@ These numbers are not a final research claim. They are a real starting point for
 
 This satisfies the requirement for at least one comparison or ablation:
 
-- Comparison: current BM25-primary retrieval versus keyword overlap and BM25-only retrieval.
-- Ablation: current BM25-primary retrieval with page hints versus the same retrieval without page hints.
+- Comparison: versioned four-channel retrieval versus keyword overlap, BM25-only, and the frozen historical BM25-primary condition.
+- Ablation: `{CURRENT_RETRIEVER}` versus `{CURRENT_RETRIEVER_NO_HINTS}`.
 
-## Failure cases for the current BM25-primary retrieval
+## Failure cases for the current versioned four-channel retrieval
 
 """
     if failures:
@@ -281,7 +369,7 @@ This satisfies the requirement for at least one comparison or ablation:
                 f"retrieved {failure['retrieved_chunk_ids']} on pages {failure['retrieved_pages']}.\n"
             )
     else:
-        report += "- No Recall@5 failures for `bm25_primary_with_page_hints` in this benchmark.\n"
+        report += f"- No Recall@5 failures for `{CURRENT_RETRIEVER}` in this benchmark.\n"
 
     report += f"""
 ## Per-case results for the current system
@@ -290,11 +378,9 @@ This satisfies the requirement for at least one comparison or ablation:
 
 ## How to interpret this for the project
 
-For the final submission, this evaluation can support a simple claim:
+The frozen historical rows continue to support the earlier conclusion that BM25 is a strong baseline on this benchmark. The versioned four-channel rows describe the current software condition separately; they do not establish a visual lift without an active recorded image encoder and visual-specific controls.
 
-ScholAR now uses the strongest observed baseline, BM25, as the main retrieval method. It improves over a simple keyword baseline and keeps page hints and lightweight reranking as careful additions instead of letting them overpower BM25.
-
-That is useful for the project because it shows an evidence-based engineering decision. The system was changed after evaluation showed that BM25 was the most reliable grounding method for this benchmark.
+This preserves the evidence-based BM25 decision while preventing a rerun of the changed production retriever from being mislabeled as the historical BM25-primary condition.
 
 To make this stronger for a conference-style submission, the benchmark should be expanded from 14 cases to at least 75 to 150 cases across more papers. The same script can be reused.
 
@@ -326,10 +412,42 @@ def main() -> None:
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     cases = read_json(Path(args.cases))
+    VisualEmbeddingService.initialize()
+    visual_preflight = VisualEmbeddingService.status()
+    if not visual_preflight.get("model_loaded") or not visual_preflight.get("encoder_fingerprint"):
+        raise SystemExit(
+            "The versioned four-channel evaluation requires a loadable, content-identified "
+            f"local visual encoder: {visual_preflight.get('fallback_reason')}"
+        )
+
     rows: list[dict[str, Any]] = []
     for case in cases:
         for retriever in RETRIEVERS:
             rows.append(evaluate_case(case, retriever))
+
+    four_channel_rows = [
+        row for row in rows
+        if row["retriever"].startswith("four_channel_image_rrf_v1")
+    ]
+    attempted_visual_rows = [
+        row for row in four_channel_rows
+        if row["visual_embedding"].get("last_request_attempted") is True
+    ]
+    failed_visual_rows = [
+        row for row in attempted_visual_rows
+        if row["visual_embedding"].get("last_request_succeeded") is not True
+    ]
+    if not attempted_visual_rows:
+        raise SystemExit(
+            "No benchmark case exposed an extracted image to the versioned four-channel condition."
+        )
+    if failed_visual_rows:
+        failed_ids = ", ".join(
+            f"{row['case_id']}:{row['retriever']}" for row in failed_visual_rows[:8]
+        )
+        raise SystemExit(
+            "Visual retrieval failed during nominal four-channel cases: " + failed_ids
+        )
 
     summary = summarize(rows)
     # Record whether the dense embedder was actually available. dense_only
@@ -346,7 +464,15 @@ def main() -> None:
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "case_count": len(cases),
         "retrievers": list(RETRIEVERS),
+        "current_retriever": CURRENT_RETRIEVER,
+        "retriever_version": RETRIEVER_VERSION,
         "embedder_available": embedder_available,
+        "visual_embedding": VisualEmbeddingService.status(),
+        "four_channel_case_policy": (
+            "Only rows with last_request_attempted=true are included in versioned "
+            "four-channel aggregates; image-ineligible rows remain in raw rows with "
+            "condition_eligible=false."
+        ),
         "summary": summary,
         "rows": rows,
     }

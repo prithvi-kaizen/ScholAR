@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import platform
 import re
 import shutil
@@ -18,6 +19,11 @@ from urllib.request import Request, urlopen
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from backend.services.network_policy_service import NetworkPolicyService  # noqa: E402
+
 BACKEND_ENV = ROOT / "backend" / ".env"
 FRONTEND_ENV = ROOT / "frontend" / ".env.local"
 
@@ -91,10 +97,8 @@ def fetch_status(url: str) -> int | None:
 def check_python() -> None:
     version = sys.version_info
     rendered = f"{version.major}.{version.minor}.{version.micro} at {sys.executable}"
-    if version < (3, 11):
-        record("FAIL", "Python", f"{rendered}; install Python 3.11 or 3.12")
-    elif version[:2] not in {(3, 11), (3, 12)}:
-        record("WARN", "Python", f"{rendered}; supported versions are 3.11 and 3.12")
+    if version[:2] != (3, 12):
+        record("FAIL", "Python", f"{rendered}; the locked runtime requires Python 3.12")
     else:
         record("PASS", "Python", rendered)
 
@@ -115,6 +119,8 @@ def check_python_packages() -> None:
         "python-dotenv": "dotenv",
         "pydantic": "pydantic",
         "python-multipart": "multipart",
+        "NumPy": "numpy",
+        "psutil": "psutil",
     }
     missing = [name for name, module in packages.items() if importlib.util.find_spec(module) is None]
     if missing:
@@ -155,7 +161,7 @@ def check_javascript() -> None:
         record("FAIL", "Frontend packages", "missing; run make setup or cd frontend && npm ci")
 
 
-def check_configuration() -> tuple[str, str]:
+def check_configuration() -> tuple[str, str, str]:
     if BACKEND_ENV.exists():
         record("PASS", "Backend environment", str(BACKEND_ENV))
     else:
@@ -175,7 +181,19 @@ def check_configuration() -> tuple[str, str]:
     env = read_env(BACKEND_ENV)
     base_url = env.get("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
     model = env.get("OLLAMA_MODEL", "qwen3.5:9b")
-    return base_url, model
+    network_mode = env.get("SCHOLAR_NETWORK_MODE", os.getenv("SCHOLAR_NETWORK_MODE", "acquisition-enabled"))
+    os.environ["SCHOLAR_NETWORK_MODE"] = network_mode
+    try:
+        status = NetworkPolicyService.status()
+        detail = (
+            f"{status.mode.value}; external acquisition "
+            f"{'allowed' if status.external_network_allowed else 'blocked'}; "
+            f"missing local assets: {', '.join(status.missing_assets) or 'none'}"
+        )
+        record("PASS", "Network policy", detail)
+    except RuntimeError as exc:
+        record("FAIL", "Network policy", str(exc))
+    return base_url, model, network_mode
 
 
 def check_ollama(base_url: str, model: str) -> None:
@@ -256,8 +274,11 @@ def main() -> int:
     check_python()
     check_python_packages()
     check_javascript()
-    base_url, model = check_configuration()
-    check_ollama(base_url, model)
+    base_url, model, network_mode = check_configuration()
+    if network_mode == "strict-local" and not NetworkPolicyService.is_loopback_url(base_url):
+        record("FAIL", "Ollama endpoint policy", f"strict-local mode rejects non-loopback URL {base_url}")
+    else:
+        check_ollama(base_url, model)
     check_running_services()
     print_report()
     return 1 if any(result.status == "FAIL" for result in results) else 0

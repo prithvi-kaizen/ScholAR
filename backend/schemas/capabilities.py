@@ -4,6 +4,8 @@ from enum import Enum
 from typing import Any
 from pydantic import BaseModel, Field
 
+from backend.services.network_policy_service import NetworkPolicyService
+
 
 class CapabilityMode(str, Enum):
     AUTO = "AUTO"
@@ -152,8 +154,9 @@ class ModelRegistry:
 
     @classmethod
     async def discover_ollama_models(cls, base_url: str = "http://localhost:11434") -> list[ModelCapabilities]:
-        """Query local Ollama server to discover and register all installed models."""
+        """Query a policy-approved Ollama server and register installed models."""
         import httpx
+        NetworkPolicyService.require_local_endpoint(base_url, "Ollama")
         try:
             async with httpx.AsyncClient(timeout=3.0, trust_env=False) as client:
                 response = await client.get(f"{base_url.rstrip('/')}/api/tags")

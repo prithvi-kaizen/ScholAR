@@ -1,9 +1,7 @@
 """
 run_generation_faithfulness_eval.py
-Measures the faithfulness of ScholAR's ACTUAL GENERATED ANSWERS, not of a
-pre-written gold claim. run_faithfulness_eval.py scores expected_claim vs
-retrieved chunks (a retrieval-support / answerability metric); this script
-instead generates a real answer for each query and scores whether that answer
+Measures the faithfulness of ScholAR's actual generated answers rather than a
+pre-written gold claim. It generates a real answer for each query and scores whether that answer
 is grounded in the retrieved context, plus whether each of its inline citations
 is actually supported. This is the automated counterpart to the human-eval
 citation grading and directly addresses generation hallucination.
@@ -34,8 +32,8 @@ EVAL_DIR = PROJECT_ROOT / "evaluation"
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(EVAL_DIR))
 
-from backend.services.retrieval_service import retrieve_chunks, extract_page_hints  # noqa: E402
 from backend.services.ollama_service import OLLAMA_MODEL  # noqa: E402
+from scholar_runner import run_scholar_http  # noqa: E402
 import nli_faithfulness as _nli  # noqa: E402
 
 DATA_DIR = PROJECT_ROOT / "backend" / "data" / "papers"
@@ -99,34 +97,47 @@ def _sentences_with_citations(answer: str) -> list[tuple[str, list[int]]]:
 def evaluate_case(case: dict, backend: str, model: str) -> dict:
     paper_id = case["paper_id"]
     query = case["query"]
-    all_chunks = load_chunks(paper_id)
-    preferred = extract_page_hints(query)
-    retrieved = retrieve_chunks(query, all_chunks, limit=5, preferred_pages=preferred)
-
-    resp = post_chat(backend, paper_id, {
-        "message": query, "history": [], "web_search": False, "model": model,
-    })
-    answer = resp.get("answer", "") or ""
-    citations = resp.get("citations", []) or []
+    run = run_scholar_http(
+        backend,
+        paper_id,
+        query,
+        model,
+        require_local_model=True,
+        experiment_id="generation-faithfulness-v1",
+    )
+    trace = run.trace
+    answer = trace.final_answer
+    citations = run.citations
+    generator_evidence = [
+        {"text": item.quote, "global_id": item.identity.global_id}
+        for item in trace.prompt_evidence
+    ]
 
     prose = _answer_prose(answer)
-    # Generation faithfulness: are the answer's atoms entailed by the retrieved context?
-    gen = _NLI.score_full(prose, retrieved, top_k=5) if prose else {
+    # Score against the exact evidence strings shown to this production generation,
+    # not an independently re-run retriever with potentially different budgets.
+    gen = _NLI.score_full(prose, generator_evidence, top_k=len(generator_evidence)) if prose and generator_evidence else {
         "cfs": 0.0, "n_atoms": 0, "n_entailed": 0, "n_neutral": 0, "n_contradicted": 0}
     n_atoms = max(gen["n_atoms"], 1)
     hallucination_rate = round(gen["n_contradicted"] / n_atoms, 3)
 
     # Citation support: for each [n] in the answer, does the cited chunk support
     # the sentence it is attached to? (automated Supported/Partial/Unsupported)
-    chunk_text_by_id = {c.get("chunk_id"): c.get("text", "") for c in all_chunks}
-    cit_by_ref = {c.get("ref_id"): c for c in citations}
+    evidence_text_by_identity = {
+        (item.identity.source_id, item.identity.local_id): item.quote
+        for item in trace.prompt_evidence
+    }
+    cit_by_ref = {citation.get("ref_id"): citation for citation in citations}
     cit_labels: list[str] = []
     for sent, refs in _sentences_with_citations(answer):
         for ref in refs:
             cit = cit_by_ref.get(ref)
             if not cit:
                 continue
-            chunk_text = chunk_text_by_id.get(cit.get("chunk_id")) or cit.get("quote", "")
+            source_id = cit.get("source_paper_id") or cit.get("document_id") or paper_id
+            chunk_text = evidence_text_by_identity.get(
+                (str(source_id), str(cit.get("chunk_id") or cit.get("source_evidence_id") or ""))
+            ) or cit.get("quote", "")
             if not chunk_text:
                 continue
             best = _NLI.score_claim_vs_chunks(sent, [chunk_text], top_k=1)
@@ -145,6 +156,15 @@ def evaluate_case(case: dict, backend: str, model: str) -> dict:
         "query": query,
         "claim_type": case.get("claim_type", "general"),
         "model": model,
+        "trace_id": trace.trace_id,
+        "trace_schema_version": trace.schema_version,
+        "pipeline_version": trace.run_identity.pipeline_version,
+        "generation_mode": trace.generation.mode.value,
+        "pipeline_status": trace.status.value,
+        "abstained": trace.abstention.abstained,
+        "answer": answer,
+        "citations": citations,
+        "prompt_evidence": [item.model_dump(mode="json") for item in trace.prompt_evidence],
         "answer_chars": len(answer),
         "generation_faithfulness": gen["cfs"],   # fraction of answer atoms entailed
         "hallucination_rate": hallucination_rate,
@@ -195,7 +215,15 @@ def main() -> None:
     ap.add_argument("--backend", default="http://localhost:8000")
     ap.add_argument("--model", default=OLLAMA_MODEL)
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument(
+        "--require-encoder",
+        action="store_true",
+        help="fail instead of silently using lexical fallback when MiniLM is unavailable",
+    )
     args = ap.parse_args()
+
+    if args.require_encoder and _EMBEDDER is None:
+        sys.exit("MiniLM encoder is required for this run; lexical fallback is not permitted.")
 
     # preflight
     try:
@@ -217,7 +245,26 @@ def main() -> None:
                   f"halluc={row['hallucination_rate']} cit_support={row['citation_support_rate']}")
         except Exception as exc:
             print(f"[{i}/{len(cases)}] {case['id']}: ERROR {type(exc).__name__}: {exc}")
-            continue
+            row = {
+                "case_id": case["id"],
+                "paper_id": case["paper_id"],
+                "query": case["query"],
+                "claim_type": case.get("claim_type", "general"),
+                "model": args.model,
+                "pipeline_status": "ERROR",
+                "error": f"{type(exc).__name__}: {exc}",
+                "answer_chars": 0,
+                "generation_faithfulness": 0.0,
+                "hallucination_rate": None,
+                "n_atoms": 0,
+                "n_entailed": 0,
+                "n_contradicted": 0,
+                "n_citations_checked": 0,
+                "citations_supported": 0,
+                "citations_partial": 0,
+                "citations_unsupported": 0,
+                "citation_support_rate": None,
+            }
         rows.append(row)
 
     if not rows:
@@ -229,7 +276,7 @@ def main() -> None:
         "model": args.model,
         "nli_mode": _NLI._mode,
         "measures": "faithfulness of GENERATED answers (not gold claims); "
-                    "contrast with run_faithfulness_eval.py which scores gold claims vs retrieval",
+                    "this scorer evaluates generated answers against their recorded context",
         "summary": summary,
         "by_claim_type": by_claim_type(rows),
         "rows": rows,

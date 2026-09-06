@@ -17,7 +17,7 @@ from backend.schemas.reasoning import (
     TargetModality,
 )
 from backend.services.question_analyzer import QuestionAnalyzer
-from backend.services.retrieval_service import retrieve_chunks
+from backend.services.retrieval_service import evidence_key, retrieve_chunks
 
 logger = logging.getLogger("scholar.multihop")
 
@@ -54,7 +54,7 @@ class MultiHopRetrievalService:
         from backend.services.retrieval_service import tokenize
 
         collected_chunks: list[dict[str, Any]] = []
-        seen_cids: set[str] = set()
+        seen_evidence: set[tuple[str, str, str]] = set()
         per_subquery_limit = max(2, limit // len(analysis.subqueries) + 1)
 
         for sq in analysis.subqueries:
@@ -102,13 +102,14 @@ class MultiHopRetrievalService:
                     "PAR-RAG: Subquery [%s] failed intermediate sufficiency (overlap=%.2f); ungrounded evidence filtered.",
                     sq.subquery_id, overlap
                 )
+                continue
 
             # Assign semantic role based on subquery
             role = "method_definition" if sq.subquery_id == "SQ1" else ("ablation_support" if sq.subquery_id == "SQ2" else "final_result")
             for chunk in sq_results:
-                cid = str(chunk.get("chunk_id") or chunk.get("evidence_id") or id(chunk))
-                if cid not in seen_cids:
-                    seen_cids.add(cid)
+                key = evidence_key(chunk, paper_id=paper_id)
+                if key not in seen_evidence:
+                    seen_evidence.add(key)
                     c_copy = dict(chunk)
                     c_copy["subquery_id"] = sq.subquery_id
                     c_copy["reasoning_role"] = role

@@ -1,18 +1,20 @@
-"""Tri-Channel Hybrid Retrieval Service for ScholAR.
+"""Hybrid text, crop-image, and full-page visual retrieval for ScholAR.
 
 Features:
 - Channel 1 (Lexical): BM25 scoring with camelCase tokenization and scientific term expansion
-- Channel 2 (Dense): Semantic embedding similarity via DenseEmbeddingService
-- Channel 3 (Visual & Tabular): Modality-directed boosting for figures, charts, and tables
-- Reciprocal Rank Fusion (RRF with k=60):
-    RRF(d) = sum_m 1 / (60 + rank_m(d))
-- Cross-Encoder Reranking: Qwen3-Reranker / Cross-Encoder sequence scoring
-- Software-owned provenance preservation
+- Channel 2 (Dense): text semantic similarity via DenseEmbeddingService
+- Channel 3 (Modality): query/section-directed boosts for figures, charts, and tables
+- Channel 4 (Crop image): always-on paired text/image similarity via VisualEmbeddingService
+- Channel 5 (Page image): full-page token-to-patch MaxSim via VisualPageRetrievalService
+- Reciprocal Rank Fusion (RRF with k=60), with channel score/rank provenance
+- Cross-Encoder Reranking with a bounded image-rank prior
+- Software-owned, source-scoped provenance preservation
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import math
 import re
@@ -20,7 +22,12 @@ from collections import Counter
 from typing import Any
 
 from backend.services.dense_embedding_service import DenseEmbeddingService
+from backend.services.document_visual_retrieval_service import (
+    DocumentVisualRetrievalService,
+)
 from backend.services.reranker_service import RerankerService
+from backend.services.visual_embedding_service import VisualEmbeddingService
+from backend.services.visual_page_retrieval_service import VisualPageRetrievalService
 
 logger = logging.getLogger("scholar.retrieval")
 
@@ -31,28 +38,10 @@ _VISUAL_CUE_TERMS = frozenset({
     "shown", "depicted", "illustrat", "visuali", "image", "schematic",
     "architecture diagram", "attention map", "heatmap",
 })
-_VISUAL_BOOST = 2.5
-_CAPTION_MATCH_BONUS = 1.8
-
 STOP_WORDS = {
     "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
     "how", "in", "is", "it", "main", "of", "on", "or", "paper",
     "propose", "proposed", "that", "the", "this", "to", "what", "with",
-}
-
-QUERY_EXPANSIONS = {
-    "result": ["result", "results", "achieve", "outperform", "significant", "comparison", "table", "accuracy", "bleu", "score"],
-    "results": ["result", "results", "achieve", "outperform", "significant", "comparison", "table", "accuracy", "bleu", "score"],
-    "finding": ["finding", "findings", "result", "evidence", "show", "support"],
-    "findings": ["finding", "findings", "result", "evidence", "show", "support"],
-    "method": ["method", "approach", "framework", "procedure", "algorithm", "architecture"],
-    "contribution": ["contribution", "introduce", "propose", "present", "novel", "new", "main"],
-    "contributions": ["contribution", "introduce", "propose", "present", "novel", "new", "main"],
-    "architecture": ["architecture", "model", "component", "layer", "module", "algorithm"],
-    "experiment": ["experiment", "evaluation", "dataset", "benchmark", "baseline", "metric"],
-    "experiments": ["experiment", "evaluation", "dataset", "benchmark", "baseline", "metric"],
-    "limitation": ["limitation", "limits", "failure", "assumption", "future", "caveat"],
-    "limitations": ["limitation", "limits", "failure", "assumption", "future", "caveat"],
 }
 
 _CAMEL_BOUNDARY_RE = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
@@ -71,14 +60,6 @@ def tokenize(text: str) -> list[str]:
             if part_lower != lowered and part_lower not in STOP_WORDS and len(part_lower) > 2:
                 tokens.append(part_lower)
     return tokens
-
-
-def expand_query_terms(tokens: list[str]) -> list[str]:
-    """Expand query terms with scientific synonyms."""
-    expanded = list(tokens)
-    for token in tokens:
-        expanded.extend(QUERY_EXPANSIONS.get(token, []))
-    return expanded
 
 
 def _normalize_figure_label(label: str) -> str:
@@ -118,21 +99,6 @@ def _section_hints(message: str) -> set[str]:
     if any(term in lowered for term in ("limitation", "weakness", "future", "assumption", "caveat")):
         hints.add("limitation")
     return hints
-
-
-def _hashed_embedding(tokens: list[str], dimensions: int = 128) -> list[float]:
-    vector = [0.0] * dimensions
-    for token in tokens:
-        digest = hashlib.md5(token.encode("utf-8")).digest()
-        index = int.from_bytes(digest[:4], "little") % dimensions
-        sign = 1.0 if digest[4] % 2 == 0 else -1.0
-        vector[index] += sign
-    norm = math.sqrt(sum(value * value for value in vector)) or 1.0
-    return [value / norm for value in vector]
-
-
-def _cosine(left: list[float], right: list[float]) -> float:
-    return sum(a * b for a, b in zip(left, right))
 
 
 def _bm25_scores(query_terms: list[str], chunks: list[dict[str, Any]]) -> dict[int, float]:
@@ -214,31 +180,117 @@ def _is_implicit_visual_or_tabular_query(message: str, base_query_terms: list[st
     return has_implicit_vis, has_implicit_tab
 
 
+def _identity_part(value: Any) -> str:
+    """Normalize an identity component without treating falsey numeric IDs as absent."""
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def evidence_identity(
+    chunk: dict[str, Any],
+    paper_id: str = "",
+) -> tuple[str, str, str]:
+    """Return a deterministic, source-scoped identity for an evidence chunk.
+
+    Per-chunk provenance always takes precedence over the caller paper, which is
+    only a compatibility fallback for legacy single-paper chunks. Existing
+    ``chunk_id`` and ``evidence_id`` fields are preserved and never rewritten.
+    """
+    source_id = (
+        _identity_part(chunk.get("source_paper_id"))
+        or _identity_part(chunk.get("document_id"))
+        or _identity_part(paper_id)
+        or "__unknown_source__"
+    )
+
+    chunk_id = _identity_part(chunk.get("chunk_id"))
+    if chunk_id:
+        return source_id, "chunk_id", chunk_id
+
+    evidence_id = _identity_part(chunk.get("evidence_id"))
+    if evidence_id:
+        return source_id, "evidence_id", evidence_id
+
+    # Stable, content-addressed fallback for legacy chunks with no identifiers.
+    # Restrict the digest to evidence content/provenance fields so transient
+    # ranking annotations do not change identity between retrieval channels.
+    content_fields = (
+        "page",
+        "section",
+        "section_title",
+        "chunk_type",
+        "label",
+        "caption",
+        "is_figure_chunk",
+        "is_table_chunk",
+        "text",
+    )
+    payload = {field: chunk.get(field) for field in content_fields}
+    serialized = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        default=str,
+    )
+    digest = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+    return source_id, "content_sha256", digest
+
+
+def evidence_key(
+    chunk: dict[str, Any],
+    paper_id: str = "",
+) -> tuple[str, str, str]:
+    """Alias for the shared canonical evidence identity helper."""
+    return evidence_identity(chunk, paper_id=paper_id)
+
+
+_CHANNEL_METADATA_FIELDS = {
+    "bm25_score", "bm25_rank", "bm25_has_lexical_overlap",
+    "dense_score", "dense_rank",
+    "modality_score", "modality_rank",
+    "image_embedding_score", "image_embedding_rank",
+    "image_embedding_eligible", "image_embedding_threshold",
+    "image_embedding_corroborated", "visual_inspection_candidate",
+    "page_image_score", "page_image_rank", "page_image_eligible",
+    "page_image_threshold", "page_image_corroborated",
+}
+
+
 def reciprocal_rank_fusion(
     ranked_lists: list[list[dict[str, Any]]],
     k: int = 60,
+    paper_id: str = "",
 ) -> list[dict[str, Any]]:
-    """Fuse multiple ranked lists using Reciprocal Rank Fusion (RRF).
-
-    Formula: RRF(d) = sum_{m} 1 / (k + rank_m(d))
-    """
-    rrf_scores: dict[str, float] = {}
-    chunk_map: dict[str, dict[str, Any]] = {}
+    """Fuse ranked channels while preserving their source-specific metadata."""
+    rrf_scores: dict[tuple[str, str, str], float] = {}
+    chunk_map: dict[tuple[str, str, str], dict[str, Any]] = {}
 
     for ranked_list in ranked_lists:
         for rank, chunk in enumerate(ranked_list, start=1):
-            cid = str(chunk.get("chunk_id") or chunk.get("evidence_id") or id(chunk))
-            chunk_map[cid] = chunk
-            rrf_scores[cid] = rrf_scores.get(cid, 0.0) + (1.0 / (k + rank))
+            key = evidence_key(chunk, paper_id=paper_id)
+            if key not in chunk_map:
+                chunk_map[key] = dict(chunk)
+            else:
+                current = chunk_map[key]
+                merged = dict(current)
+                merged.update(chunk)
+                for field in _CHANNEL_METADATA_FIELDS:
+                    if field in current and field not in chunk:
+                        merged[field] = current[field]
+                chunk_map[key] = merged
+            rrf_scores[key] = rrf_scores.get(key, 0.0) + (1.0 / (k + rank))
 
-    # Sort items by accumulated RRF score
-    sorted_items = sorted(rrf_scores.items(), key=lambda item: item[1], reverse=True)
+    sorted_items = sorted(
+        rrf_scores.items(),
+        key=lambda item: (-item[1], item[0]),
+    )
     fused: list[dict[str, Any]] = []
-    for cid, score in sorted_items:
-        c = dict(chunk_map[cid])
-        c["rrf_score"] = round(score, 6)
-        fused.append(c)
-
+    for key, score in sorted_items:
+        candidate = dict(chunk_map[key])
+        candidate["rrf_score"] = round(score, 6)
+        fused.append(candidate)
     return fused
 
 
@@ -248,108 +300,277 @@ def retrieve_chunks(
     limit: int = 4,
     preferred_pages: list[int] | None = None,
     paper_id: str = "",
+    *,
+    include_image_channel: bool = True,
+    include_crop_image_channel: bool | None = None,
+    include_page_image_channel: bool | None = None,
+    visual_page_backend: str | None = None,
+    retrieval_metadata: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
-    """Execute Tri-Channel Hybrid Retrieval (BM25 + Dense + Visual) with RRF & Reranking."""
+    """Run lexical, text-dense, modality, crop-image, and page-image retrieval."""
     base_query_terms = tokenize(message)
-    query_terms = expand_query_terms(base_query_terms)
     if not base_query_terms or not chunks:
         return []
 
-    has_visual_intent, has_tabular_intent = _is_implicit_visual_or_tabular_query(message, base_query_terms)
+    has_visual_intent, has_tabular_intent = _is_implicit_visual_or_tabular_query(
+        message, base_query_terms
+    )
 
-    # 1. Pinned Figure Reference Override
-    pinned_chunk: dict[str, Any] | None = None
+    pinned_chunks: list[dict[str, Any]] = []
     figure_refs = extract_figure_refs(message)
     if figure_refs:
+        matched_refs: set[str] = set()
         for chunk in chunks:
             if not chunk.get("is_figure_chunk"):
                 continue
-            if _normalize_figure_label(chunk.get("label", "")) in figure_refs:
-                pinned_chunk = chunk
-                break
+            norm_label = _normalize_figure_label(chunk.get("label", ""))
+            if norm_label in figure_refs and norm_label not in matched_refs:
+                pinned_chunks.append(chunk)
+                matched_refs.add(norm_label)
 
-    # 2. Channel 1: BM25 Lexical Ranking
     bm25 = _bm25_scores(base_query_terms, chunks)
-    bm25_ranked = []
+    bm25_ranked: list[tuple[float, bool, dict[str, Any]]] = []
     for index, chunk in enumerate(chunks):
         score = bm25.get(index, 0.0)
-        is_fig = chunk.get("is_figure_chunk", False)
-        is_tbl = chunk.get("is_table_chunk", False)
-        if score > 0 or (is_fig and (has_visual_intent or (is_tbl and has_tabular_intent))):
-            bm25_ranked.append((max(score, 0.08 if (is_tbl and has_tabular_intent) else (0.05 if is_fig else 0.0)), chunk))
-    bm25_ranked.sort(key=lambda x: x[0], reverse=True)
-    lexical_list = [c for _, c in bm25_ranked]
+        is_figure = bool(chunk.get("is_figure_chunk"))
+        is_table = bool(chunk.get("is_table_chunk"))
+        if score > 0 or (is_figure and (has_visual_intent or (is_table and has_tabular_intent))):
+            floor = 0.08 if is_table and has_tabular_intent else (0.05 if is_figure else 0.0)
+            bm25_ranked.append((max(score, floor), score > 0, chunk))
+    bm25_ranked.sort(key=lambda item: item[0], reverse=True)
+    lexical_list = [
+        {
+            **chunk,
+            "bm25_score": round(score, 6),
+            "bm25_rank": rank,
+            "bm25_has_lexical_overlap": has_lexical_overlap,
+        }
+        for rank, (score, has_lexical_overlap, chunk) in enumerate(
+            bm25_ranked, start=1
+        )
+    ]
 
-    # 3. Channel 2: Dense Semantic Embedding Ranking
-    p_id = paper_id or chunks[0].get("document_id", "default")
-    dense_results = DenseEmbeddingService.search_dense(p_id, message, chunks, top_k=max(limit * 8, 30))
-    dense_list = [c for c, _ in dense_results]
+    default_source = paper_id or str(chunks[0].get("document_id") or "default")
+    dense_results = DenseEmbeddingService.search_dense(
+        default_source,
+        message,
+        chunks,
+        top_k=max(limit * 8, 30),
+    )
+    dense_list = [
+        {**chunk, "dense_score": round(score, 6), "dense_rank": rank}
+        for rank, (chunk, score) in enumerate(dense_results, start=1)
+    ]
 
-    # 4. Cross-Modal Reference Bridging: Detect table/figure citations in top text hits
+    # Unlike modality heuristics, paired image retrieval is attempted for every
+    # query containing image-bearing evidence and never downloads at runtime.
+    crop_image_enabled = (
+        include_image_channel
+        if include_crop_image_channel is None
+        else include_crop_image_channel
+    )
+    page_image_enabled = (
+        include_image_channel
+        if include_page_image_channel is None
+        else include_page_image_channel
+    )
+    minimum_image_similarity = VisualEmbeddingService.minimum_similarity()
+    if crop_image_enabled:
+        image_results = VisualEmbeddingService.search_visual(
+            default_source,
+            message,
+            chunks,
+            top_k=max(limit * 6, 20),
+        )
+    else:
+        image_results = []
+    qualified_image_results = [
+        (chunk, score)
+        for chunk, score in image_results
+        if score >= minimum_image_similarity
+    ]
+    image_list = [
+        {
+            **chunk,
+            "image_embedding_score": round(score, 6),
+            "image_embedding_rank": rank,
+            "image_embedding_eligible": True,
+            "image_embedding_threshold": minimum_image_similarity,
+        }
+        for rank, (chunk, score) in enumerate(qualified_image_results, start=1)
+    ]
+
+    source_ids = sorted({
+        str(chunk.get("source_paper_id") or chunk.get("document_id") or paper_id)
+        for chunk in chunks
+        if chunk.get("source_paper_id") or chunk.get("document_id") or paper_id
+    })
+    if page_image_enabled:
+        page_search = DocumentVisualRetrievalService.search(
+            message,
+            source_ids,
+            top_k=max(limit * 4, 12),
+            backend=visual_page_backend,
+        )
+    else:
+        page_search = DocumentVisualRetrievalService.search(
+            "", [], top_k=0, backend=visual_page_backend
+        )
+    if retrieval_metadata is not None:
+        retrieval_metadata["visual_page_retrieval"] = page_search.status.as_dict()
+    page_list = [
+        {
+            **chunk,
+            "page_image_score": round(score, 6),
+            "page_image_rank": rank,
+            "page_image_eligible": True,
+            "page_image_threshold": page_search.status.minimum_score,
+        }
+        for rank, (chunk, score) in enumerate(page_search.hits, start=1)
+    ]
+
     bridged_figure_refs: set[str] = set()
-    for c in lexical_list[:5] + dense_list[:5]:
-        if not c.get("is_figure_chunk"):
-            bridged_figure_refs.update(extract_figure_refs(c.get("text", "")))
+    for candidate in lexical_list[:5] + dense_list[:5]:
+        if not candidate.get("is_figure_chunk"):
+            bridged_figure_refs.update(extract_figure_refs(candidate.get("text", "")))
 
-    # 5. Channel 3: Modality, Implicit Intent & Section Directed Visual Ranking
-    modality_ranked = []
-    sec_hints = _section_hints(message)
-    has_comparative_scaling = bool(_COMPARATIVE_SCALING_PATTERNS.search(message.lower()))
+    modality_ranked: list[tuple[float, dict[str, Any]]] = []
+    section_hints = _section_hints(message)
+    comparative = bool(_COMPARATIVE_SCALING_PATTERNS.search(message.lower()))
+    preferred_page_set = set(preferred_pages or [])
     for chunk in chunks:
-        mod_score = 0.0
-        is_fig = chunk.get("is_figure_chunk", False)
-        is_tbl = chunk.get("is_table_chunk", False)
-        norm_label = _normalize_figure_label(chunk.get("label", ""))
-        caption_lower = (chunk.get("caption", "") + " " + chunk.get("label", "")).lower()
-        sec_str = (str(chunk.get("section", "")) + " " + str(chunk.get("section_title", ""))).lower()
+        score = 0.0
+        is_figure = bool(chunk.get("is_figure_chunk"))
+        is_table = bool(chunk.get("is_table_chunk"))
+        normalized_label = _normalize_figure_label(chunk.get("label", ""))
+        caption = (str(chunk.get("caption", "")) + " " + str(chunk.get("label", ""))).lower()
+        section = (str(chunk.get("section", "")) + " " + str(chunk.get("section_title", ""))).lower()
 
-        # High priority boost if explicitly cited by top text chunks
-        if norm_label and norm_label in bridged_figure_refs:
-            mod_score += 3.0
-        elif is_tbl and has_tabular_intent:
-            mod_score += 2.5
-        elif is_fig and has_comparative_scaling and any(term in caption_lower for term in ("comparison", "scaling", "degrade", "performance", "score", "versus", "vs", "benchmark")):
-            mod_score += 3.0
-        elif is_fig and has_visual_intent:
-            mod_score += 2.0
-        elif is_tbl and ("table" in message.lower() or "result" in sec_hints):
-            mod_score += 2.0
+        if normalized_label and normalized_label in bridged_figure_refs:
+            score += 3.0
+        elif is_table and has_tabular_intent:
+            score += 2.5
+        elif is_figure and comparative and any(
+            term in caption
+            for term in ("comparison", "scaling", "degrade", "performance", "score", "versus", "vs", "benchmark")
+        ):
+            score += 3.0
+        elif is_figure and has_visual_intent:
+            score += 2.0
+        elif is_table and ("table" in message.lower() or "result" in section_hints):
+            score += 2.0
 
-        if has_comparative_scaling:
-            if chunk.get("chunk_type") in ("result", "experiment") or any(term in sec_str for term in ("result", "observation", "evaluation", "discussion", "scaling")):
-                mod_score += 2.5
+        if comparative and (
+            chunk.get("chunk_type") in ("result", "experiment")
+            or any(term in section for term in ("result", "observation", "evaluation", "discussion", "scaling"))
+        ):
+            score += 2.5
+        if chunk.get("page") in preferred_page_set:
+            score += 1.0
+        if chunk.get("chunk_type") in section_hints or any(hint in section for hint in section_hints):
+            score += 0.8
+        if score > 0:
+            modality_ranked.append((score, chunk))
+    modality_ranked.sort(key=lambda item: item[0], reverse=True)
+    modality_list = [
+        {**chunk, "modality_score": round(score, 6), "modality_rank": rank}
+        for rank, (score, chunk) in enumerate(modality_ranked, start=1)
+    ]
 
-        if chunk.get("page") in set(preferred_pages or []):
-            mod_score += 1.0
-        if chunk.get("chunk_type") in sec_hints or any(h in sec_str for h in sec_hints):
-            mod_score += 0.8
-
-        if mod_score > 0:
-            modality_ranked.append((mod_score, chunk))
-    modality_ranked.sort(key=lambda x: x[0], reverse=True)
-    modality_list = [c for _, c in modality_ranked]
-
-    # 6. Tri-Channel Reciprocal Rank Fusion (k=60)
     channel_lists = [lexical_list, dense_list]
     if modality_list:
         channel_lists.append(modality_list)
+    if image_list:
+        channel_lists.append(image_list)
+    if page_list:
+        channel_lists.append(page_list)
 
-    fused_candidates = reciprocal_rank_fusion(channel_lists, k=60)
+    fused_candidates = reciprocal_rank_fusion(channel_lists, k=60, paper_id=paper_id)
     top_candidates = fused_candidates[: max(limit * 6, 25)]
+    for candidate in top_candidates:
+        normalized_label = _normalize_figure_label(candidate.get("label", ""))
+        if normalized_label and normalized_label in bridged_figure_refs:
+            candidate["is_bridged_visual"] = True
+        candidate["image_embedding_corroborated"] = bool(
+            candidate.get("image_embedding_eligible") is True
+            and (
+                candidate.get("bm25_has_lexical_overlap") is True
+                or candidate.get("is_bridged_visual") is True
+                or (
+                    normalized_label
+                    and normalized_label in figure_refs
+                )
+            )
+        )
+        if candidate.get("is_page_visual_chunk"):
+            source_id = str(candidate.get("source_paper_id") or candidate.get("document_id") or paper_id)
+            page = candidate.get("page")
+            candidate["page_image_corroborated"] = any(
+                str(item.get("source_paper_id") or item.get("document_id") or paper_id) == source_id
+                and item.get("page") == page
+                for item in lexical_list[:5] + dense_list[:5]
+            )
 
-    # Tag bridged visual chunks so reranker knows they are linked to top text
-    for cand in top_candidates:
-        norm_lbl = _normalize_figure_label(cand.get("label", ""))
-        if norm_lbl and norm_lbl in bridged_figure_refs:
-            cand["is_bridged_visual"] = True
-
-    # 7. Cross-Encoder Reranking
     reranked = RerankerService.rerank(message, top_candidates, top_k=limit)
 
-    # Attach pinned chunk if specified
-    if pinned_chunk is not None:
-        rest = [c for c in reranked if c.get("chunk_id") != pinned_chunk.get("chunk_id")]
-        return [pinned_chunk] + rest[: max(limit - 1, 0)]
+    # A score-floor-qualified, uncorroborated image is retained only as a
+    # bounded inspection candidate. It receives no reranker prior and does not
+    # establish evidence sufficiency.
+    inspection_candidate = next(
+        (
+            candidate for candidate in top_candidates
+            if candidate.get("image_embedding_eligible") is True
+        ),
+        None,
+    )
+    if inspection_candidate is not None and limit > 0:
+        inspection_key = evidence_key(inspection_candidate, paper_id=paper_id)
+        if all(
+            evidence_key(candidate, paper_id=paper_id) != inspection_key
+            for candidate in reranked
+        ):
+            retained = dict(inspection_candidate)
+            retained["visual_inspection_candidate"] = True
+            reranked = reranked[: max(limit - 1, 0)] + [retained]
+
+    page_inspection_candidate = next(
+        (
+            candidate for candidate in top_candidates
+            if candidate.get("page_image_eligible") is True
+        ),
+        None,
+    )
+    if page_inspection_candidate is not None and limit > 0:
+        inspection_key = evidence_key(page_inspection_candidate, paper_id=paper_id)
+        if all(
+            evidence_key(candidate, paper_id=paper_id) != inspection_key
+            for candidate in reranked
+        ):
+            retained = dict(page_inspection_candidate)
+            retained["visual_inspection_candidate"] = True
+            reranked = reranked[: max(limit - 1, 0)] + [retained]
+
+    if pinned_chunks:
+        pinned_keys = {evidence_key(chunk, paper_id=paper_id) for chunk in pinned_chunks}
+        annotated_pinned_list: list[dict[str, Any]] = []
+        for p_chunk in pinned_chunks:
+            p_key = evidence_key(p_chunk, paper_id=paper_id)
+            annotated = next(
+                (
+                    candidate
+                    for candidate in reranked + top_candidates
+                    if evidence_key(candidate, paper_id=paper_id) == p_key
+                ),
+                dict(p_chunk),
+            )
+            annotated_pinned_list.append(annotated)
+        rest = [
+            chunk
+            for chunk in reranked
+            if evidence_key(chunk, paper_id=paper_id) not in pinned_keys
+        ]
+        remaining_slots = max(limit - len(annotated_pinned_list), 0)
+        return annotated_pinned_list + rest[:remaining_slots]
 
     return reranked[:limit]
 

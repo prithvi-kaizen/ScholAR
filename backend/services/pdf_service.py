@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import ipaddress
 import json
+import os
 import re
 import socket
+import tempfile
 import unicodedata
 from pathlib import Path
 from typing import Any
@@ -12,6 +15,8 @@ from urllib.parse import urljoin, urlsplit
 
 import fitz
 import httpx
+
+from backend.services.network_policy_service import NetworkPolicyService
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -32,10 +37,47 @@ def read_json(path: Path) -> Any:
         return json.load(handle)
 
 
-def write_json(path: Path, payload: Any) -> None:
+def _fsync_directory(path: Path) -> None:
+    """Best-effort directory sync so a completed replace survives a crash."""
+    try:
+        directory_fd = os.open(str(path), os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(directory_fd)
+    except OSError:
+        pass
+    finally:
+        os.close(directory_fd)
+
+
+def atomic_write_bytes(path: Path, payload: bytes) -> None:
+    """Atomically replace ``path`` with bytes written and fsynced beside it."""
+    path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2, ensure_ascii=False)
+    file_descriptor, temp_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent)
+    )
+    temp_path = Path(temp_name)
+    try:
+        with os.fdopen(file_descriptor, "wb") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_path, path)
+        _fsync_directory(path.parent)
+    except BaseException:
+        try:
+            os.close(file_descriptor)
+        except OSError:
+            pass
+        temp_path.unlink(missing_ok=True)
+        raise
+
+
+def write_json(path: Path, payload: Any) -> None:
+    serialized = json.dumps(payload, indent=2, ensure_ascii=False).encode("utf-8")
+    atomic_write_bytes(path, serialized)
 
 
 _PDF_HEADERS = {
@@ -154,6 +196,7 @@ async def download_pdf(pdf_url: str, destination: Path) -> None:
     if not pdf_url:
         raise RuntimeError("Paper is missing a PDF URL")
 
+    NetworkPolicyService.require_acquisition("download-paper", pdf_url)
     destination.parent.mkdir(parents=True, exist_ok=True)
 
     urls_to_try = _arxiv_url_candidates(pdf_url)
@@ -168,7 +211,7 @@ async def download_pdf(pdf_url: str, destination: Path) -> None:
                     await asyncio.sleep(2.0 * attempt)
                 content, content_type = await _fetch_pdf_bytes(client, url)
                 if "pdf" in content_type.lower() or content.startswith(b"%PDF"):
-                    destination.write_bytes(content)
+                    atomic_write_bytes(destination, content)
                     return
                 # Not a PDF — try next candidate
             except httpx.HTTPStatusError as exc:
@@ -200,6 +243,48 @@ def extract_pages(pdf_path: Path) -> list[dict[str, Any]]:
             text = re.sub(r"\s+", " ", page.get_text("text")).strip()
             pages.append({"page": index, "text": text})
     return pages
+
+
+def render_page_visual_units(
+    pdf_path: Path,
+    output_dir: Path,
+    document_id: str,
+    zoom: float = 1.6,
+) -> list[dict[str, Any]]:
+    """Persist one bounded full-page PNG and canonical record per PDF page."""
+    from backend.schemas.visual_document import VisualDocumentUnit, VisualUnitType
+
+    if not pdf_path.is_file():
+        raise RuntimeError("Local PDF does not exist")
+    safe_zoom = min(max(float(zoom), 1.0), 2.0)
+    page_images_dir = output_dir / "page_images"
+    page_images_dir.mkdir(parents=True, exist_ok=True)
+    records: list[dict[str, Any]] = []
+    with fitz.open(pdf_path) as document:
+        for page_number, page in enumerate(document, start=1):
+            pixmap = page.get_pixmap(
+                matrix=fitz.Matrix(safe_zoom, safe_zoom),
+                alpha=False,
+            )
+            payload = pixmap.tobytes("png")
+            image_name = f"page_{page_number:04d}.png"
+            image_path = page_images_dir / image_name
+            atomic_write_bytes(image_path, payload)
+            record = VisualDocumentUnit(
+                visual_id=f"page_{page_number:04d}",
+                document_id=document_id,
+                source_paper_id=document_id,
+                page=page_number,
+                unit_type=VisualUnitType.PAGE,
+                image_relpath=(Path("page_images") / image_name).as_posix(),
+                image_sha256=hashlib.sha256(payload).hexdigest(),
+                width_px=pixmap.width,
+                height_px=pixmap.height,
+                bbox_norm=[0.0, 0.0, 1.0, 1.0],
+                label=f"Page {page_number}",
+            )
+            records.append(record.model_dump(mode="json"))
+    return records
 
 
 # ---------------------------------------------------------------------------
@@ -305,7 +390,7 @@ def extract_figures(
                 fig_counter += 1
                 fig_id = f"fig_{page_num:02d}_{fig_counter:03d}"
                 rel_filename = f"{fig_id}.png"
-                (figures_dir / rel_filename).write_bytes(png_bytes)
+                atomic_write_bytes(figures_dir / rel_filename, png_bytes)
 
                 bbox_dict = {
                     "x0": round(clip.x0, 1),

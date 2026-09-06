@@ -35,7 +35,7 @@ import numpy as np
 # the LLM judge can. Kept opt-in so the fast cosine path stays the default for retrieval-support.
 _USE_LLM_JUDGE = os.getenv("FAITH_JUDGE", "").lower() == "llm"
 
-# ── Embedder injection (set by run_faithfulness_eval.py) ──────────────
+# Embedder injection used by the evaluation runners.
 # We do NOT self-load here to avoid double model instantiation.
 _EMBEDDER = None
 

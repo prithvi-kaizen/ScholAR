@@ -1,7 +1,7 @@
 """Cross-Encoder Reranking Service for ScholAR.
 
 Scores query-evidence candidate pairs using a local cross-encoder model:
-- Takes top-N pooled candidates from Tri-Channel RRF
+- Takes top-N candidates pooled from the active retrieval channels
 - Evaluates joint token attention across (query, candidate_evidence)
 - Normalizes scores into calibrated relevance probabilities in [0.0, 1.0]
 - Provides deterministic lexical-semantic fallback for offline/low-compute environments
@@ -10,6 +10,7 @@ Scores query-evidence candidate pairs using a local cross-encoder model:
 from __future__ import annotations
 
 import logging
+import math
 import os
 import re
 from typing import Any
@@ -59,6 +60,52 @@ class RerankerService:
             cls._fallback_mode = True
             cls._is_initialized = True
 
+    @staticmethod
+    def _image_rank_boost(candidate: dict[str, Any]) -> float:
+        """Apply a bounded prior only to score-qualified, corroborated image hits."""
+        if (
+            candidate.get("image_embedding_eligible") is not True
+            or candidate.get("image_embedding_corroborated") is not True
+        ):
+            return 0.0
+        rank = candidate.get("image_embedding_rank")
+        score = candidate.get("image_embedding_score")
+        threshold = candidate.get("image_embedding_threshold")
+        if (
+            type(rank) is not int
+            or rank <= 0
+            or not isinstance(score, (int, float))
+            or isinstance(score, bool)
+            or not isinstance(threshold, (int, float))
+            or isinstance(threshold, bool)
+            or float(score) < float(threshold)
+        ):
+            return 0.0
+        return min(0.12, 0.12 / math.sqrt(rank))
+
+    @staticmethod
+    def _page_rank_boost(candidate: dict[str, Any]) -> float:
+        """Give a small prior only when page pixels agree with same-page text."""
+        if (
+            candidate.get("page_image_eligible") is not True
+            or candidate.get("page_image_corroborated") is not True
+        ):
+            return 0.0
+        rank = candidate.get("page_image_rank")
+        score = candidate.get("page_image_score")
+        threshold = candidate.get("page_image_threshold")
+        if (
+            type(rank) is not int
+            or rank <= 0
+            or not isinstance(score, (int, float))
+            or isinstance(score, bool)
+            or not isinstance(threshold, (int, float))
+            or isinstance(threshold, bool)
+            or float(score) < float(threshold)
+        ):
+            return 0.0
+        return min(0.10, 0.10 / math.sqrt(rank))
+
     @classmethod
     def rerank(
         cls,
@@ -107,7 +154,13 @@ class RerankerService:
                 c_copy = dict(candidate)
                 effective_score = float(score)
                 if candidate.get("is_bridged_visual"):
-                    effective_score = min(1.0, effective_score + 0.35)
+                    effective_score += 0.35
+                effective_score = min(
+                    1.0,
+                    effective_score
+                    + cls._image_rank_boost(candidate)
+                    + cls._page_rank_boost(candidate),
+                )
                 c_copy["rerank_score"] = round(effective_score, 4)
                 scored_candidates.append(c_copy)
 
@@ -141,6 +194,8 @@ class RerankerService:
                 modality_boost += 0.2
             elif ("figure" in query.lower() or "plot" in query.lower()) and candidate.get("is_figure_chunk"):
                 modality_boost += 0.2
+            modality_boost += cls._image_rank_boost(candidate)
+            modality_boost += cls._page_rank_boost(candidate)
 
             if is_comparative:
                 is_result_sec = candidate.get("chunk_type") in ("result", "experiment") or any(term in text for term in ("result", "observation", "evaluation", "discussion", "scaling"))

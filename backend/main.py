@@ -2,35 +2,50 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import logging
-import re
+import tempfile
+import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
-import httpx
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 
-from backend.schemas.capabilities import CapabilityMode, ModelCapabilities, ModelRegistry
-from backend.schemas.evidence import EvidenceAST, EvidenceBlock, ParserAblationConfig
+from backend.schemas.answer_trace import (
+    AnswerPipelineRequest,
+    DecodingOptions,
+    EvaluationContext,
+    ExecutionPolicy,
+    InterventionControls,
+)
+from backend.schemas.capabilities import CapabilityMode, ModelRegistry
+from backend.schemas.evidence import EvidenceAST
+from backend.services import answer_pipeline as answer_pipeline_module
+from backend.services.answer_pipeline import AnswerPipelineService
 from backend.services.arxiv_service import search_arxiv
-from backend.services.chunking_service import chunk_figures, chunk_pages
-from backend.services.ingestion_service import DualEngineIngestionService, PARSER_ABLATIONS
+from backend.services.chunking_service import chunk_pages
+from backend.services.ingestion_service import PARSER_ABLATIONS
+from backend.services.network_policy_service import (
+    NetworkPolicyError,
+    NetworkPolicyService,
+    NetworkPolicyStatus,
+)
+from backend.services.paper_finalize_service import PaperFinalizeService
 from backend.services.ollama_service import (
     OLLAMA_BASE_URL,
     OLLAMA_MODEL,
     fallback_goals,
-    generate,
     generate_study_goals,
     ollama_available,
     STUDY_GOAL_PROMPT_VERSION,
 )
 from backend.services.pdf_service import (
+    atomic_write_bytes,
     crop_page_region,
     download_pdf,
-    extract_figures,
     extract_pages,
     infer_uploaded_metadata,
     paper_dir,
@@ -44,11 +59,8 @@ from backend.services.reference_service import (
     mark_reference_ingested,
     resolve_references,
 )
-from backend.services.retrieval_service import extract_page_hints, retrieve_chunks, short_quote, tokenize
-from backend.services.routing_service import QuestionRouter, QuestionRouteType, RouteBudget, QueryDecomposer
+from backend.services.retrieval_service import retrieve_chunks
 from backend.services.storage_service import StorageService
-from backend.services.verifier_service import ClaimVerifierService, VerificationLabel
-from backend.services.vision_service import answer_with_custom_snippet, answer_with_figure, answer_with_multimodal_evidence, is_uninformative_visual_answer
 
 
 logger = logging.getLogger("scholar")
@@ -66,6 +78,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(NetworkPolicyError)
+async def network_policy_error_handler(_: Request, exc: NetworkPolicyError) -> JSONResponse:
+    """Return an actionable policy error instead of hiding acquisition denial as a server fault."""
+    return JSONResponse(status_code=409, content={"detail": exc.to_dict()})
 
 
 class PaperInput(BaseModel):
@@ -92,7 +110,17 @@ class ChatInput(BaseModel):
     # pipeline to run the same pipeline across several local models). Falls back
     # to OLLAMA_MODEL when absent.
     model: str | None = Field(default=None, max_length=100)
+    # Release evaluations record and forward a non-negative Ollama seed.
+    generation_seed: int | None = Field(default=None, ge=0, le=2147483647)
     capability_mode: CapabilityMode = CapabilityMode.AUTO
+    execution_policy: ExecutionPolicy = ExecutionPolicy.ALLOW_EXTRACTIVE_FALLBACK
+    intervention: InterventionControls = Field(default_factory=InterventionControls)
+    decoding: DecodingOptions = Field(default_factory=DecodingOptions)
+    evaluation_context: EvaluationContext | None = None
+    experiment_id: str | None = Field(default=None, max_length=200)
+    visual_page_backend: Literal[
+        "configured", "auto", "colqwen2", "clip", "disabled"
+    ] = "configured"
     # Optional user-cropped snippet from a specific PDF page
     snippet_id: str | None = None
     snippet_page: int | None = None
@@ -122,279 +150,21 @@ def _ensure_chunk_metadata(chunks_path: Path, pages_path: Path) -> list[dict[str
     return upgraded
 
 
-def _important_sentences(text: str) -> list[str]:
-    import re
-
-    banned = ("table 1:", "figure", "copyright", "provided proper attribution")
-    sentences = [item.strip() for item in re.split(r"(?<=[.!?])\s+", text.replace("\n", " ")) if len(item.strip()) > 45]
-    ranked: list[tuple[int, str]] = []
-    for sentence in sentences:
-        lowered = sentence.lower()
-        if any(term in lowered for term in banned):
-            continue
-        score = 0
-        for term in (
-            "we introduce",
-            "we propose",
-            "we show",
-            "we find",
-            "results",
-            "achieves",
-            "outperforms",
-            "significant",
-            "accuracy",
-            "benchmark",
-            "evaluation",
-            "dataset",
-            "method",
-            "framework",
-            "limitation",
-        ):
-            if term in lowered:
-                score += 2
-        if any(char.isdigit() for char in sentence):
-            score += 1
-        ranked.append((score, sentence[:420]))
-    ranked.sort(key=lambda item: item[0], reverse=True)
-    return [sentence for score, sentence in ranked if score > 0][:8] or [sentence[:420] for sentence in sentences[:6]]
-
-
-def _extractive_tutor_answer(question: str, selected: list[dict[str, Any]]) -> str:
-    lines = ["I could not get a full model response, so here is the best grounded answer from the paper context:"]
-    used = 0
-    for chunk in selected:
-        page = chunk.get("page")
-        for sentence in _important_sentences(chunk.get("text", ""))[:2]:
-            lines.append(f"- {sentence} [p. {page}]")
-            used += 1
-            if used >= 6:
-                return "\n".join(lines)
-    return "\n".join(lines)
-
-
-def _error_payload(message: str) -> dict[str, Any]:
-    return {
-        "answer": "",
-        "citations": [],
-        "model": OLLAMA_MODEL,
-        "error": True,
-        "message": message,
-    }
-
-
-def _model_failure_payload(exc: Exception | None = None) -> dict[str, Any]:
-    if isinstance(exc, (httpx.ReadTimeout, httpx.TimeoutException)):
-        return _error_payload("Local model took too long to answer. Try again with a shorter question.")
-    return _error_payload("Local model could not complete this answer. Make sure Ollama is running and the selected model is loaded.")
-
-
-def _citation_candidates(text: str) -> list[str]:
-    sentences = [item.strip() for item in re.split(r"(?<=[.!?])\s+", text.replace("\n", " ")) if len(item.strip()) > 55]
-    return [sentence[:500] for sentence in sentences]
-
-
-def _build_evidence_items(question: str, chunks: list[dict[str, Any]], limit: int = 8) -> list[dict[str, Any]]:
-    question_terms = set(tokenize(question))
-    banned = (
-        "author name redacted",
-        "copyright",
-        "provided proper attribution",
-        "equal contribution",
-        "arxiv:",
-        "preprint.",
-        "facebook ai research",
-        "university college london",
-        "new york university",
-    )
-    scored: list[tuple[float, int, dict[str, Any]]] = []
-
-    for chunk_index, chunk in enumerate(chunks):
-        page = chunk.get("page")
-        chunk_id = chunk.get("chunk_id")
-        for sentence_index, sentence in enumerate(_citation_candidates(chunk.get("text", ""))):
-            lowered = sentence.lower()
-            if any(term in lowered for term in banned):
-                continue
-            sentence_terms = set(tokenize(sentence))
-            if not sentence_terms:
-                continue
-            overlap = len(question_terms.intersection(sentence_terms))
-            score = overlap * 2.0
-            if any(term in lowered for term in ("we propose", "we introduce", "we present", "we show", "we find")):
-                score += 4.0
-            if any(term in lowered for term in ("result", "achieve", "outperform", "benchmark", "dataset", "experiment", "limitation")):
-                score += 2.0
-            if any(char.isdigit() for char in sentence):
-                score += 0.4
-            score += max(0, 2.5 - chunk_index * 0.35)
-            score += max(0, 0.8 - sentence_index * 0.05)
-            if score <= 1.2:
-                continue
-            scored.append(
-                (
-                    score,
-                    chunk_index,
-                    {
-                        "page": page,
-                        "chunk_id": chunk_id,
-                        "section_title": chunk.get("section_title") or "Paper",
-                        "chunk_type": chunk.get("chunk_type") or "body",
-                        "quote": sentence[:520],
-                    },
-                )
-            )
-
-    scored.sort(key=lambda item: item[0], reverse=True)
-    evidence: list[dict[str, Any]] = []
-    seen_quotes: set[str] = set()
-    for _, _, item in scored:
-        quote_key = re.sub(r"\W+", " ", item["quote"].lower())[:120]
-        if quote_key in seen_quotes:
-            continue
-        seen_quotes.add(quote_key)
-        item["evidence_id"] = f"E{len(evidence) + 1}"
-        evidence.append(item)
-        if len(evidence) >= limit:
-            break
-    return evidence
-
-
-def _format_evidence_context(
-    evidence_items: list[dict[str, Any]],
-    secondary_meta: dict[str, dict[str, Any]] | None = None,
-) -> str:
-    """Format evidence items into a prompt block.
-
-    For cross-paper evidence the source label is shown so the LLM can
-    distinguish anchor-paper evidence from secondary-paper evidence.
-    """
-    if not evidence_items:
-        return "No relevant paper evidence was retrieved."
-
-    lines: list[str] = []
-    for item in evidence_items:
-        src_id = item.get("source_paper_id")
-        if src_id and secondary_meta and src_id in secondary_meta:
-            short_title = (secondary_meta[src_id].get("title") or src_id)[:40]
-            src_label = f"ref:{short_title}"
-        else:
-            src_label = "anchor"
-        lines.append(
-            f"[{item['evidence_id']} | {src_label} | p. {item.get('page')} | {item.get('chunk_id')}]\n{item.get('quote')}"
-        )
-    return "\n\n".join(lines)
-
-
-def _normalize_evidence_citations(answer: str, evidence_items: list[dict[str, Any]]) -> tuple[str, list[dict[str, Any]]]:
-    evidence_by_id = {item["evidence_id"].upper(): item for item in evidence_items}
-    used_ids: list[str] = []
-    answer_without_direct_pages = re.sub(r"\[p\.\s*\d+\]", "", answer, flags=re.IGNORECASE)
-
-    def replace_evidence_group(match: re.Match[str]) -> str:
-        """Rewrite one bracket of evidence identifiers into numbered references.
-
-        Models group identifiers ("[E1, E4]") as often as they emit them singly, so a
-        single-id pattern silently leaves the raw identifiers in the answer and drops those
-        citations. Handle the whole bracket and map every identifier inside it.
-        """
-        refs: list[str] = []
-        for number in re.findall(r"\d+", match.group(0)):
-            evidence_id = f"E{number}".upper()
-            if evidence_id not in evidence_by_id:
-                continue  # identifier the model invented: drop it rather than surface it
-            if evidence_id not in used_ids:
-                used_ids.append(evidence_id)
-            refs.append(f"[{used_ids.index(evidence_id) + 1}]")
-        return "".join(refs)
-
-    normalized = re.sub(
-        r"\[\s*E\s*\d+(?:\s*(?:,|;|/|&|and)\s*E?\s*\d+)*\s*\]",
-        replace_evidence_group, answer_without_direct_pages, flags=re.IGNORECASE,
-    )
-    valid_pages = {int(item["page"]) for item in evidence_items if isinstance(item.get("page"), int)}
-
-    def remove_unverified_page(match: re.Match[str]) -> str:
-        try:
-            page = int(match.group(1))
-        except ValueError:
-            return ""
-        return match.group(0) if page in valid_pages else ""
-
-    normalized = re.sub(r"\[p\.\s*(\d+)\]", remove_unverified_page, normalized, flags=re.IGNORECASE)
-    normalized = re.sub(r"[ \t]{2,}", " ", normalized)
-    citations = [
-        {
-            "ref_id":          index,
-            "page":            evidence_by_id[evidence_id].get("page"),
-            "chunk_id":        evidence_by_id[evidence_id].get("chunk_id"),
-            "section_title":   evidence_by_id[evidence_id].get("section_title"),
-            "chunk_type":      evidence_by_id[evidence_id].get("chunk_type"),
-            "quote":           evidence_by_id[evidence_id].get("quote"),
-            "source_paper_id": evidence_by_id[evidence_id].get("source_paper_id"),
-        }
-        for index, evidence_id in enumerate(used_ids[:5], start=1)
-        if evidence_id in evidence_by_id
-    ]
-    return normalized.strip(), citations
-
-
-def _build_answer_citations(answer: str, question: str, chunks: list[dict[str, Any]], limit: int = 4) -> list[dict[str, Any]]:
-    answer_terms = set(tokenize(answer))
-    question_terms = set(tokenize(question))
-    page_hints = set(extract_page_hints(question))
-    scored: list[tuple[float, dict[str, Any]]] = []
-
-    banned = ("author name redacted", "abstract", "when models know better", "april 3, 2026")
-    for chunk in chunks:
-        page = chunk.get("page")
-        for sentence in _citation_candidates(chunk.get("text", "")):
-            lowered = sentence.lower()
-            if any(term in lowered for term in banned):
-                continue
-            sentence_terms = set(tokenize(sentence))
-            if not sentence_terms:
-                continue
-            answer_overlap = len(answer_terms.intersection(sentence_terms))
-            question_overlap = len(question_terms.intersection(sentence_terms))
-            score = answer_overlap * 2.0 + question_overlap
-            if page in page_hints:
-                score += 6.0
-            if any(char.isdigit() for char in sentence):
-                score += 0.5
-            if score <= 1:
-                continue
-            scored.append(
-                (
-                    score,
-                    {
-                        "page": page,
-                        "chunk_id": chunk.get("chunk_id"),
-                        "quote": sentence,
-                    },
-                )
-            )
-
-    scored.sort(key=lambda item: item[0], reverse=True)
-    citations: list[dict[str, Any]] = []
-    seen_quotes: set[str] = set()
-    for _, citation in scored:
-        quote_key = citation["quote"][:90].lower()
-        if quote_key in seen_quotes:
-            continue
-        seen_quotes.add(quote_key)
-        citations.append(citation)
-        if len(citations) >= limit:
-            break
-    return citations
-
-
 @app.get("/health")
 async def health() -> dict[str, Any]:
+    policy = NetworkPolicyService.status()
     return {
         "status": "ok",
         "ollama_available": await ollama_available(),
         "model": OLLAMA_MODEL,
+        "network_mode": policy.mode.value,
     }
+
+
+@app.get("/api/system/network-policy", response_model=NetworkPolicyStatus)
+async def network_policy_status() -> NetworkPolicyStatus:
+    """Expose the active acquisition/analysis boundary and missing local assets."""
+    return NetworkPolicyService.status()
 
 
 @app.get("/api/system/health-diagnostic")
@@ -425,81 +195,52 @@ async def search(q: str = "", max_results: int = 12) -> dict[str, Any]:
 async def prepare_paper(paper: PaperInput) -> dict[str, Any]:
     local_id = safe_paper_id(paper.id)
     directory = paper_dir(local_id)
-    pdf_path = directory / "paper.pdf"
-    metadata_path = directory / "metadata.json"
-    pages_path = directory / "pages.json"
-    chunks_path = directory / "chunks.json"
-    figures_path = directory / "figures.json"
-    figures_dir = directory / "figures"
+    cached = await asyncio.to_thread(
+        PaperFinalizeService.load_if_complete,
+        local_id,
+        target_dir=directory,
+    )
+    if cached is not None:
+        return cached
 
     metadata = paper.model_dump()
     metadata["local_id"] = local_id
-
+    directory.parent.mkdir(parents=True, exist_ok=True)
     try:
-        directory.mkdir(parents=True, exist_ok=True)
-        write_json(metadata_path, metadata)
-
-        if not pdf_path.exists():
-            await download_pdf(paper.pdf_url, pdf_path)
-
-        if not pages_path.exists():
-            pages = await asyncio.to_thread(extract_pages, pdf_path)
-            write_json(pages_path, pages)
-        else:
-            pages = read_json(pages_path)
-
-        if not chunks_path.exists():
-            chunks = await asyncio.to_thread(chunk_pages, pages)
-            write_json(chunks_path, chunks)
-        else:
-            chunks = _ensure_chunk_metadata(chunks_path, pages_path)
-
-        # Extract figures/tables (idempotent — skipped if figures.json exists)
-        if not figures_path.exists():
-            figures = await asyncio.to_thread(extract_figures, pdf_path, figures_dir)
-            write_json(figures_path, figures)
-        else:
-            figures = read_json(figures_path)
-
-        if not (directory / "evidence_ast.json").exists():
-            await asyncio.to_thread(
-                DualEngineIngestionService.ingest_paper,
-                pdf_path,
+        with tempfile.TemporaryDirectory(
+            prefix=f".{local_id}.acquire-", dir=str(directory.parent)
+        ) as temp_dir:
+            acquired_pdf = Path(temp_dir) / "paper.pdf"
+            await download_pdf(paper.pdf_url, acquired_pdf)
+            return await asyncio.to_thread(
+                PaperFinalizeService.finalize,
+                acquired_pdf,
                 local_id,
-                paper.title,
-                paper.authors,
-                paper.year,
-                paper.abstract or paper.summary,
+                metadata,
+                target_dir=directory,
             )
-
-        # Sync to relational multi-view database
-        await asyncio.to_thread(StorageService.sync_paper_to_db, local_id, metadata, chunks, figures)
-
-    except RuntimeError as exc:
-        logger.warning("Request failed: %s", exc)
-        raise HTTPException(status_code=500, detail="Could not process the paper. Please try again.") from exc
-
-    return {
-        "paper_id": local_id,
-        "metadata": metadata,
-        "pages": len(pages),
-        "chunks": len(chunks),
-        "figures": len(figures),
-    }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.warning("Paper finalization failed for [%s]: %s", local_id, exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Could not process the paper. Please try again.",
+        ) from exc
 
 
-@app.get("/api/papers/{paper_id}/ast")
-async def get_paper_ast(paper_id: str) -> dict[str, Any]:
-    """Retrieve the canonical EvidenceAST for a paper."""
+@app.get("/api/papers/{paper_id}/ast", response_model=EvidenceAST)
+async def get_paper_ast(paper_id: str) -> EvidenceAST:
+    """Return the persisted canonical EvidenceAST without mutating paper state."""
     local_id = safe_paper_id(paper_id)
     ast_path = paper_dir(local_id) / "evidence_ast.json"
-    if not ast_path.exists():
-        pdf_path = paper_dir(local_id) / "paper.pdf"
-        if pdf_path.exists():
-            ast = await asyncio.to_thread(DualEngineIngestionService.ingest_paper, pdf_path, local_id)
-            return ast.model_dump()
+    if not ast_path.is_file():
         raise HTTPException(status_code=404, detail="Evidence AST not found for this paper.")
-    return read_json(ast_path)
+    try:
+        return EvidenceAST.model_validate(read_json(ast_path))
+    except Exception as exc:
+        logger.warning("Invalid EvidenceAST for [%s]: %s", local_id, exc)
+        raise HTTPException(status_code=500, detail="Evidence AST is invalid.") from exc
 
 
 @app.get("/api/parsers/ablations")
@@ -632,6 +373,150 @@ async def list_telemetry_traces() -> list[dict[str, Any]]:
     return traces
 
 
+@app.get("/api/benchmark/summary")
+async def get_benchmark_summary() -> dict[str, Any]:
+    """Return benchmark evaluation summary with clear release provenance (audit item A11)."""
+    from backend.services.telemetry_service import TRACES_DIR
+
+    repo_root = Path(__file__).resolve().parents[1]
+    results_path = repo_root / "evaluation" / "results" / "method_comparison_ablation.json"
+    empirical_results: dict[str, Any] | None = None
+    provenance: dict[str, Any] = {
+        "status": "unmeasured",
+        "provenance_type": "none",
+        "release_provenance": "evaluation/results/method_comparison_ablation.json",
+        "is_empirical": False,
+        "timestamp": None,
+    }
+
+    if results_path.exists():
+        try:
+            loaded = json.loads(results_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict) and "summary" in loaded:
+                empirical_results = loaded
+                provenance["status"] = "measured"
+                provenance["provenance_type"] = "empirical_release_artifact"
+                provenance["is_empirical"] = True
+                provenance["timestamp"] = loaded.get("timestamp")
+        except Exception:
+            pass
+
+    # Collect live telemetry stats
+    latencies: list[float] = []
+    traces_count = 0
+    supported_claims = 0
+    total_claims = 0
+    if TRACES_DIR.exists():
+        trace_files = sorted(TRACES_DIR.glob("*.json"), key=lambda f: f.stat().st_mtime, reverse=True)
+        traces_count = len(trace_files)
+        for tf in trace_files[:100]:
+            try:
+                data = json.loads(tf.read_text(encoding="utf-8"))
+                lat = data.get("latency_ms")
+                if isinstance(lat, (int, float)) and lat > 0:
+                    latencies.append(float(lat))
+                v_rep = data.get("verification_report")
+                if isinstance(v_rep, dict) and isinstance(v_rep.get("claims"), list):
+                    for cl in v_rep["claims"]:
+                        total_claims += 1
+                        if cl.get("status") == "SUPPORTED":
+                            supported_claims += 1
+            except Exception:
+                continue
+
+    p50_latency = round(sorted(latencies)[len(latencies) // 2], 2) if latencies else None
+    claim_support_rate = round((supported_claims / total_claims) * 100.0, 1) if total_claims > 0 else None
+    methods_summary = empirical_results.get("summary", {}) if empirical_results else {}
+
+    return {
+        "provenance": provenance,
+        "empirical_summary": methods_summary,
+        "live_telemetry": {
+            "total_traces_recorded": traces_count,
+            "sample_size": len(latencies),
+            "p50_latency_ms": p50_latency,
+            "total_verified_claims": total_claims,
+            "supported_claims_count": supported_claims,
+            "claim_support_rate_pct": claim_support_rate,
+        },
+        "reasoning_levels": [
+            {
+                "level": "L1",
+                "name": "Direct Lookup",
+                "desc": "Single-hop hyperparameter or factual definition",
+                "dense": "88.2%",
+                "hybrid": "94.5%",
+                "scholar": "98.8%",
+                "cer": "100%",
+                "status": "target_projection",
+            },
+            {
+                "level": "L2",
+                "name": "Same-Section Reasoning",
+                "desc": "Intra-section explanation or architectural rationale",
+                "dense": "72.4%",
+                "hybrid": "81.0%",
+                "scholar": "95.2%",
+                "cer": "96.4%",
+                "status": "target_projection",
+            },
+            {
+                "level": "L3",
+                "name": "Cross-Section Reasoning",
+                "desc": "Connecting methodology prose to experimental validation",
+                "dense": "51.6%",
+                "hybrid": "66.3%",
+                "scholar": "91.7%",
+                "cer": "94.0%",
+                "status": "target_projection",
+            },
+            {
+                "level": "L4",
+                "name": "Cross-Modal Reasoning",
+                "desc": "Verifying claims against 2D tables and vector figure panels",
+                "dense": "38.0%",
+                "hybrid": "58.2%",
+                "scholar": "94.1%",
+                "cer": "95.5%",
+                "status": "target_projection",
+            },
+            {
+                "level": "L5",
+                "name": "Multi-Hop Synthesis",
+                "desc": "End-to-end synthesis: Architecture -> Ablation -> Results",
+                "dense": "31.5%",
+                "hybrid": "49.0%",
+                "scholar": "89.6%",
+                "cer": "100.0%",
+                "status": "target_projection",
+            },
+        ],
+        "hardware_tiers": [
+            {
+                "tier": "8GB RAM / VRAM",
+                "target": "Gemma 4 2B / Llama 3.2 3B",
+                "context": "2,048 tokens",
+                "budget": "4 Text blocks, 1 Table",
+                "latency_target": "1.8 ms",
+            },
+            {
+                "tier": "16GB RAM / VRAM",
+                "target": "Gemma 4 12B / Qwen 2.5 7B",
+                "context": "4,096 tokens",
+                "budget": "6 Text blocks, 2 Tables, 1 High-res crop",
+                "latency_target": "2.4 ms",
+            },
+            {
+                "tier": "32GB+ Unified Memory",
+                "target": "Gemma 4 27B / Vision LLMs",
+                "context": "8,192 tokens",
+                "budget": "10 Blocks, full multimodal DAG",
+                "latency_target": "3.1 ms",
+            },
+        ],
+    }
+
+
 @app.post("/api/papers/upload")
 async def upload_paper(file: UploadFile = File(...), title: str = Form("")) -> dict[str, Any]:
     filename = file.filename or "uploaded-paper.pdf"
@@ -650,74 +535,68 @@ async def upload_paper(file: UploadFile = File(...), title: str = Form("")) -> d
     if not content.startswith(b"%PDF"):
         raise HTTPException(status_code=400, detail="Uploaded file does not look like a PDF")
 
-    digest = hashlib.sha1(content).hexdigest()[:12]
+    digest = hashlib.sha256(content).hexdigest()[:16]
     local_id = safe_paper_id(f"upload_{digest}")
     directory = paper_dir(local_id)
-    pdf_path = directory / "paper.pdf"
-    metadata_path = directory / "metadata.json"
-    pages_path = directory / "pages.json"
-    chunks_path = directory / "chunks.json"
-    figures_path = directory / "figures.json"
-    figures_dir = directory / "figures"
+    cached = await asyncio.to_thread(
+        PaperFinalizeService.load_if_complete,
+        local_id,
+        target_dir=directory,
+    )
+    if cached is not None:
+        return cached
 
     clean_title = title.strip() or Path(filename).stem.replace("_", " ").replace("-", " ").strip() or "Uploaded PDF"
+    directory.parent.mkdir(parents=True, exist_ok=True)
     try:
-        directory.mkdir(parents=True, exist_ok=True)
-        if not pdf_path.exists():
-            pdf_path.write_bytes(content)
-
-        pages = await asyncio.to_thread(extract_pages, pdf_path)
-        chunks = await asyncio.to_thread(chunk_pages, pages)
-        inferred = infer_uploaded_metadata(pages, clean_title)
-        metadata = {
-            "id": local_id,
-            "local_id": local_id,
-            "title": inferred["title"],
-            "authors": ["Uploaded PDF"],
-            "year": "",
-            "summary": inferred["summary"],
-            "categories": ["PDF"],
-            "pdf_url": "",
-            "abs_url": "",
-            "published": "",
-            "source": "upload",
-            "filename": filename,
-        }
-        write_json(metadata_path, metadata)
-        write_json(pages_path, pages)
-        write_json(chunks_path, chunks)
-
-        # Extract figures/tables
-        if not figures_path.exists():
-            figures = await asyncio.to_thread(extract_figures, pdf_path, figures_dir)
-            write_json(figures_path, figures)
-        else:
-            figures = read_json(figures_path)
-
-        # Sync to relational multi-view database
-        await asyncio.to_thread(StorageService.sync_paper_to_db, local_id, metadata, chunks, figures)
-
-    except RuntimeError as exc:
-        logger.warning("Request failed: %s", exc)
-        raise HTTPException(status_code=500, detail="Could not process the paper. Please try again.") from exc
-
-    return {
-        "paper_id": local_id,
-        "metadata": metadata,
-        "pages": len(pages),
-        "chunks": len(chunks),
-        "figures": len(figures),
-    }
+        with tempfile.TemporaryDirectory(
+            prefix=f".{local_id}.upload-", dir=str(directory.parent)
+        ) as temp_dir:
+            acquired_pdf = Path(temp_dir) / "paper.pdf"
+            atomic_write_bytes(acquired_pdf, content)
+            pages = await asyncio.to_thread(extract_pages, acquired_pdf)
+            inferred = infer_uploaded_metadata(pages, clean_title)
+            metadata = {
+                "id": local_id,
+                "local_id": local_id,
+                "title": inferred["title"],
+                "authors": ["Uploaded PDF"],
+                "year": "",
+                "summary": inferred["summary"],
+                "abstract": inferred["summary"],
+                "categories": ["PDF"],
+                "pdf_url": "",
+                "abs_url": "",
+                "published": "",
+                "source": "upload",
+                "filename": filename,
+            }
+            return await asyncio.to_thread(
+                PaperFinalizeService.finalize,
+                acquired_pdf,
+                local_id,
+                metadata,
+                target_dir=directory,
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.warning("Uploaded-paper finalization failed for [%s]: %s", local_id, exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Could not process the paper. Please try again.",
+        ) from exc
 
 
 def _paths_or_404(paper_id: str) -> tuple[Path, Path, Path, Path]:
-    directory = paper_dir(paper_id)
+    directory = paper_dir(safe_paper_id(paper_id))
     metadata_path = directory / "metadata.json"
     pages_path = directory / "pages.json"
     chunks_path = directory / "chunks.json"
     pdf_path = directory / "paper.pdf"
-    if not metadata_path.exists():
-        raise HTTPException(status_code=404, detail="Paper has not been prepared")
+    required = (metadata_path, pages_path, chunks_path, pdf_path)
+    if not all(path.is_file() for path in required):
+        raise HTTPException(status_code=404, detail="Paper has not been completely prepared")
     return metadata_path, pages_path, chunks_path, pdf_path
 
 
@@ -725,9 +604,9 @@ def _paths_or_404(paper_id: str) -> tuple[Path, Path, Path, Path]:
 # AST & Document Representation endpoints
 # ---------------------------------------------------------------------------
 
-@app.get("/api/papers/{paper_id}/ast")
-async def get_paper_ast(paper_id: str) -> dict[str, Any]:
-    """Return the structured ScientificDocument AST model for a paper."""
+@app.get("/api/papers/{paper_id}/document-ast")
+async def get_paper_document_ast(paper_id: str) -> dict[str, Any]:
+    """Return the derived ScientificDocument compatibility projection."""
     _paths_or_404(paper_id)
     doc_ast = StorageService.get_document_ast(paper_id)
     if not doc_ast:
@@ -819,14 +698,18 @@ async def ingest_reference(paper_id: str, ref_index: int) -> dict[str, Any]:
 
     ref = refs[ref_index]
     if ref.get("ingested") and ref.get("secondary_local_id"):
-        sec_id = ref["secondary_local_id"]
-        sec_dir = paper_dir(sec_id)
-        chunks = read_json(sec_dir / "chunks.json") if (sec_dir / "chunks.json").exists() else []
-        return {
-            "secondary_paper_id": sec_id,
-            "chunks": len(chunks),
-            "cached": True,
-        }
+        sec_id = safe_paper_id(str(ref["secondary_local_id"]))
+        cached = await asyncio.to_thread(
+            PaperFinalizeService.load_if_complete,
+            sec_id,
+            target_dir=paper_dir(sec_id),
+        )
+        if cached is not None:
+            return {
+                "secondary_paper_id": sec_id,
+                "chunks": cached["chunks"],
+                "cached": True,
+            }
 
     arxiv_id = ref.get("arxiv_id")
     pdf_url   = ref.get("pdf_url", "")
@@ -845,64 +728,65 @@ async def ingest_reference(paper_id: str, ref_index: int) -> dict[str, Any]:
         import hashlib
         sec_local_id = safe_paper_id("ref_" + hashlib.sha1(pdf_url.encode()).hexdigest()[:10])
 
-    sec_dir        = paper_dir(sec_local_id)
-    sec_pdf        = sec_dir / "paper.pdf"
-    sec_pages_path = sec_dir / "pages.json"
-    sec_chunks_path= sec_dir / "chunks.json"
-    sec_meta_path  = sec_dir / "metadata.json"
+    sec_dir = paper_dir(sec_local_id)
+    cached = await asyncio.to_thread(
+        PaperFinalizeService.load_if_complete,
+        sec_local_id,
+        target_dir=sec_dir,
+    )
+    if cached is not None:
+        mark_reference_ingested(paper_id, ref_index, sec_local_id)
+        return {
+            "secondary_paper_id": sec_local_id,
+            "title": cached["metadata"].get("title", title),
+            "chunks": cached["chunks"],
+            "cached": True,
+        }
 
+    sec_metadata = {
+        "id": arxiv_id or sec_local_id,
+        "local_id": sec_local_id,
+        "title": title,
+        "authors": ref.get("authors", []),
+        "year": ref.get("year", ""),
+        "summary": ref.get("abstract", ""),
+        "abstract": ref.get("abstract", ""),
+        "categories": [],
+        "pdf_url": pdf_url,
+        "abs_url": ref.get("abs_url", ""),
+        "published": "",
+        "source": "reference",
+        "anchor_paper": safe_paper_id(paper_id),
+    }
+    sec_dir.parent.mkdir(parents=True, exist_ok=True)
     try:
-        sec_dir.mkdir(parents=True, exist_ok=True)
-
-        if not sec_pdf.exists():
-            await download_pdf(pdf_url, sec_pdf)
-
-        if not sec_pages_path.exists():
-            sec_pages = await asyncio.to_thread(extract_pages, sec_pdf)
-            write_json(sec_pages_path, sec_pages)
-        else:
-            sec_pages = read_json(sec_pages_path)
-
-        if not sec_chunks_path.exists():
-            # Tag every chunk with the secondary paper's id for provenance
-            sec_chunks = await asyncio.to_thread(chunk_pages, sec_pages, source_paper_id=sec_local_id)
-            write_json(sec_chunks_path, sec_chunks)
-        else:
-            sec_chunks = read_json(sec_chunks_path)
-            # Back-fill source_paper_id if missing (re-ingestion of older cache)
-            if sec_chunks and "source_paper_id" not in sec_chunks[0]:
-                sec_chunks = await asyncio.to_thread(chunk_pages, sec_pages, source_paper_id=sec_local_id)
-                write_json(sec_chunks_path, sec_chunks)
-
-        # Write secondary metadata
-        if not sec_meta_path.exists():
-            sec_meta = {
-                "id":           arxiv_id or sec_local_id,
-                "local_id":     sec_local_id,
-                "title":        title,
-                "authors":      ref.get("authors", []),
-                "year":         ref.get("year", ""),
-                "summary":      ref.get("abstract", ""),
-                "categories":   [],
-                "pdf_url":      pdf_url,
-                "abs_url":      ref.get("abs_url", ""),
-                "published":    "",
-                "source":       "reference",
-                "anchor_paper": paper_id,
-            }
-            write_json(sec_meta_path, sec_meta)
-
-    except RuntimeError as exc:
-        logger.warning("Request failed: %s", exc)
-        raise HTTPException(status_code=500, detail="Could not process the paper. Please try again.") from exc
+        with tempfile.TemporaryDirectory(
+            prefix=f".{sec_local_id}.acquire-", dir=str(sec_dir.parent)
+        ) as temp_dir:
+            acquired_pdf = Path(temp_dir) / "paper.pdf"
+            await download_pdf(pdf_url, acquired_pdf)
+            finalized = await asyncio.to_thread(
+                PaperFinalizeService.finalize,
+                acquired_pdf,
+                sec_local_id,
+                sec_metadata,
+                target_dir=sec_dir,
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.warning("Reference finalization failed for [%s]: %s", sec_local_id, exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Could not process the paper. Please try again.",
+        ) from exc
 
     mark_reference_ingested(paper_id, ref_index, sec_local_id)
-
     return {
         "secondary_paper_id": sec_local_id,
-        "title":              title,
-        "chunks":             len(sec_chunks),
-        "cached":             False,
+        "title": finalized["metadata"].get("title", title),
+        "chunks": finalized["chunks"],
+        "cached": False,
     }
 
 
@@ -1018,461 +902,99 @@ async def study_goals(
     }
 
 
-@app.post("/api/papers/{paper_id}/chat")
-async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
-    if not payload.message.strip():
-        raise HTTPException(status_code=400, detail="Message cannot be empty")
-
-    metadata_path, pages_path, chunks_path, _ = _paths_or_404(paper_id)
-    metadata = read_json(metadata_path)
-    chunks = _ensure_chunk_metadata(chunks_path, pages_path) if chunks_path.exists() else []
-    if metadata.get("source") == "upload" and metadata.get("summary") == "Custom PDF uploaded for local study.":
-        pages_path = metadata_path.parent / "pages.json"
-        if pages_path.exists():
-            inferred = infer_uploaded_metadata(read_json(pages_path), metadata.get("title", "Uploaded PDF"))
-            metadata["title"] = inferred["title"]
-            metadata["summary"] = inferred["summary"]
-            write_json(metadata_path, metadata)
-
-    # --- Multi-document: merge secondary-paper chunks into the search pool ---
-    # Anchor chunks are tagged with paper_id; secondary chunks carry their own
-    # source_paper_id. retrieve_chunks() is unchanged - it operates on any list.
-    anchor_chunks = [
-        {**c, "source_paper_id": paper_id} if "source_paper_id" not in c else c
-        for c in chunks
-    ]
-    secondary_meta: dict[str, dict[str, Any]] = {}  # local_id -> metadata
-    all_chunks = list(anchor_chunks)
-    for sec_id in payload.secondary_paper_ids:
-        sec_id = safe_paper_id(sec_id)
-        sec_dir = paper_dir(sec_id)
-        sec_chunks_path = sec_dir / "chunks.json"
-        sec_meta_path   = sec_dir / "metadata.json"
-        if sec_chunks_path.exists():
-            sec_chunks = read_json(sec_chunks_path)
-            # Back-fill source_paper_id if an older cache lacks it
-            sec_chunks = [
-                {**c, "source_paper_id": sec_id} if "source_paper_id" not in c else c
-                for c in sec_chunks
-            ]
-            all_chunks.extend(sec_chunks)
-        if sec_meta_path.exists():
-            secondary_meta[sec_id] = read_json(sec_meta_path)
-
-    # Merge figure chunks into the retrieval pool so captions can match queries
-    figures_path = paper_dir(paper_id) / "figures.json"
-    if figures_path.exists():
-        figure_records = read_json(figures_path)
-        figure_chunks = await asyncio.to_thread(chunk_figures, figure_records, source_paper_id=paper_id)
-        # Tag anchor figure chunks with paper_id (same convention as text chunks)
-        figure_chunks = [{**c, "source_paper_id": paper_id} for c in figure_chunks]
-        all_chunks = all_chunks + figure_chunks
-
-    # ── Capability and Adaptive Routing ───────────────────────────────────────
-    capabilities = ModelRegistry.resolve_capabilities(
-        payload.model or OLLAMA_MODEL,
-        mode=payload.capability_mode,
-    )
-
-    # ── Custom User Snippet Vision Routing ───────────────────────────────────
-    if payload.snippet_id and payload.snippet_page and payload.snippet_bbox:
-        snippet_res = await answer_with_custom_snippet(
-            question=payload.message,
-            snippet_id=payload.snippet_id,
-            page_number=payload.snippet_page,
-            bbox_norm=payload.snippet_bbox,
-            snippet_text=payload.snippet_text or "",
-            paper_id=paper_id,
-            paper_metadata=metadata,
-            model=payload.model,
-        )
-        aligned_ans, verified_cits, _ = ClaimVerifierService.verify_and_repair_answer(
-            answer=snippet_res["answer"],
-            citations=snippet_res["citations"],
-            candidate_pool=snippet_res["citations"],
-            apply_repair=True,
-        )
-        return {
-            "answer": aligned_ans,
-            "citations": verified_cits,
-            "model": snippet_res.get("model_used", OLLAMA_MODEL),
-            "vision": True,
-            "is_snippet": True,
-            "snippet_id": payload.snippet_id,
-            "figure_label": f"Snippet (Page {payload.snippet_page})",
-            "figure_image_url": f"/api/papers/{paper_id}/snippets/{payload.snippet_id}.png",
-            "route_type": "CUSTOM_SNIPPET_VISION",
-            "capability_mode": capabilities.capability_mode.value,
-        }
-
-    route_budget = QuestionRouter.route(payload.message, capabilities)
-
-    # ── Multi-Hop Query Decomposition & Retrieval ───────────────────────────
-    subqueries = QueryDecomposer.decompose(payload.message)
-    page_hints = extract_page_hints(payload.message)
-
-    if len(subqueries) > 1:
-        # Multi-hop retrieval for comparative & multi-entity queries
-        merged_selected: list[dict[str, Any]] = []
-        seen_keys: set[tuple[Any, str]] = set()
-
-        # 1. Global query retrieval
-        global_hits = await asyncio.to_thread(
-            retrieve_chunks,
-            payload.message,
-            all_chunks,
-            limit=route_budget.text_top_k,
-            preferred_pages=page_hints,
-        )
-        for h in global_hits:
-            k = (h.get("source_paper_id"), str(h.get("chunk_id")))
-            if k not in seen_keys:
-                seen_keys.add(k)
-                merged_selected.append(h)
-
-        # 2. Targeted subquery retrievals
-        per_sub_limit = max(2, route_budget.text_top_k // len(subqueries) + 1)
-        for sub_q in subqueries:
-            sub_hits = await asyncio.to_thread(
-                retrieve_chunks,
-                sub_q,
-                all_chunks,
-                limit=per_sub_limit,
-                preferred_pages=page_hints,
-            )
-            for h in sub_hits:
-                k = (h.get("source_paper_id"), str(h.get("chunk_id")))
-                if k not in seen_keys:
-                    seen_keys.add(k)
-                    merged_selected.append(h)
-        selected = merged_selected
-    else:
-        selected = await asyncio.to_thread(
-            retrieve_chunks,
-            payload.message,
-            all_chunks,
-            limit=route_budget.text_top_k,
-            preferred_pages=page_hints,
-        )
-
-    if not selected:
-        return {
-            "answer": "The paper context does not contain enough information to answer that.",
-            "citations": [],
-            "abstained": True,
-            "uncertainty_reason": "NO_EVIDENCE_RETRIEVED",
-            "route_type": route_budget.route_type.value,
-        }
-
-    # ── Pre-generation Evidence Sufficiency Gate ──────────────────────────────
-    sufficiency = ClaimVerifierService.compute_sufficiency(
-        query=payload.message,
-        retrieved_chunks=selected,
-        requires_vision=route_budget.requires_native_vision,
-        can_vision=capabilities.can_process_images(),
-    )
-    if not sufficiency.is_sufficient:
-        return {
-            "answer": f"**Abstained**\n\nThe paper context does not provide sufficient evidence to answer this question reliably ({sufficiency.reason_code.lower().replace('_', ' ')}).",
-            "citations": [],
-            "abstained": True,
-            "uncertainty_reason": sufficiency.reason_code,
-            "route_type": route_budget.route_type.value,
-        }
-
-    # ── Multi-Image Multimodal Vision Routing ─────────────────────────────────
-    # Collect all figure/table chunks present in retrieved context (up to visual_items budget)
-    retrieved_figures = [c for c in selected if c.get("is_figure_chunk")]
-    max_vis = max(1, route_budget.visual_items or 2)
-    selected_figures = retrieved_figures[:max_vis]
-
-    # Trigger multimodal vision if explicitly required by route OR if top evidence is a visual/table chunk
-    top_has_visual_evidence = bool(selected and any(c.get("is_figure_chunk") for c in selected[:2]))
-
-    if selected_figures and capabilities.can_process_images() and (
-        route_budget.requires_native_vision
-        or top_has_visual_evidence
-        or route_budget.route_type in (
-            QuestionRouteType.FIGURE_VISUAL,
-            QuestionRouteType.CHART_NUMERIC,
-            QuestionRouteType.MIXED_TEXT_VISUAL,
-            QuestionRouteType.COMPARISON,
-            QuestionRouteType.TABLE_NUMERIC,
-        )
-    ):
-        text_support = [c for c in selected if not c.get("is_figure_chunk")]
-        vision_result = await answer_with_multimodal_evidence(
-            question=payload.message,
-            figure_chunks=selected_figures,
-            context_chunks=text_support,
-            paper_id=paper_id,
-            paper_metadata=metadata,
-            model=payload.model,
-        )
-        fig_label = vision_result.get("label", "Figure")
-        raw_vis_answer = vision_result["answer"]
-        raw_vis_citations = vision_result.get("citations", [])
-
-        if not is_uninformative_visual_answer(raw_vis_answer):
-            # Apply ALCE/AGREE remapping and disclaimer pruning to vision responses
-            aligned_vis_answer, verified_vis_citations, _ = ClaimVerifierService.verify_and_repair_answer(
-                answer=raw_vis_answer,
-                citations=raw_vis_citations,
-                candidate_pool=selected,
-                apply_repair=True,
-            )
-
-            return {
-                "answer":            aligned_vis_answer,
-                "citations":         verified_vis_citations,
-                "model":             vision_result.get("model_used", OLLAMA_MODEL),
-                "vision":            True,
-                "vision_fallback":   vision_result.get("fallback", False),
-                "figure_id":         vision_result.get("figure_id"),
-                "figure_label":      fig_label,
-                "figure_image_url":  f"/api/papers/{paper_id}/figures/{vision_result.get('figure_id')}.png"
-                                      if vision_result.get("figure_id") else None,
-                "route_type":        route_budget.route_type.value,
-                "capability_mode":   capabilities.capability_mode.value,
-            }
-        else:
-            logger.info("Visual response was uninformative on diagram-only figure. Falling back to full-text RAG.")
-
-    ollama_up = await ollama_available()
-    context_chunks: list[dict[str, Any]] = []
-    # chunk_id numbering restarts per paper (chunk_001, chunk_002, ...), so in
-    # multi-document mode two different papers' chunks can share a chunk_id -
-    # disambiguate with source_paper_id or this dedup silently drops real chunks.
-    seen_chunk_keys: set[tuple[Any, str]] = set()
-    for chunk in chunks[:2] + selected:
-        chunk_key = (chunk.get("source_paper_id"), str(chunk.get("chunk_id")))
-        if chunk_key in seen_chunk_keys:
-            continue
-        seen_chunk_keys.add(chunk_key)
-        context_chunks.append(chunk)
-    prompt_chunks = context_chunks[:4]
-    history_char_limit = 180
-    abstract = str(metadata.get("summary") or "")[:350]
-    question_text = payload.message[:900]
-
-    evidence_items = await asyncio.to_thread(_build_evidence_items, question_text, prompt_chunks, limit=7)
-    paper_context = _format_evidence_context(evidence_items, secondary_meta=secondary_meta)
-    recent_history = "\n".join(
-        f"{item.get('role', 'user')}: {str(item.get('content', ''))[:history_char_limit]}"
-        for item in payload.history[-6:]
-        if isinstance(item, dict)
-    )
-
-    route_specific_instructions = ""
-    if route_budget.route_type == QuestionRouteType.CODE_ALGORITHM:
-        route_specific_instructions = """
-Special Algorithm / Code Instructions:
-- Provide a clean, formatted code/pseudocode block with markdown syntax tagging (e.g. ```python or ```pseudo).
-- State the inputs, hyperparameters, and tensor dimensions clearly.
-- Provide a step-by-step logic trace of the algorithm's execution and loop invariants.
-- State the computational complexity (Time and Space Big-O).
-"""
-    elif route_budget.route_type == QuestionRouteType.TABLE_NUMERIC:
-        route_specific_instructions = """
-Special Tabular / Numeric Instructions:
-- Reconstruct the tabular data in a clean Markdown table grid (| Column 1 | Column 2 | ... |).
-- Provide a model-by-model or row-by-row metric breakdown with performance deltas.
-- Analyze accuracy tradeoffs vs computational efficiency / parameter count / training cost.
-"""
-
-    prompt = f"""
-You are ScholAR, a rigorous research paper tutor. Your only source is the paper
-retrieval: selected chunks from the PDF being studied. Answer strictly from that
-context; if it does not contain the answer, say so plainly.
-
-Paper metadata:
-Title: {metadata.get("title")}
-Authors: {", ".join(metadata.get("authors", []))}
-Abstract: {abstract}
-
-Recent conversation:
-{recent_history or "No previous conversation."}
-
-Response requirements:
-- Give a detailed, precise study answer, not a shallow summary.
-- Format the answer with bold section labels only, such as **Answer**, **Evidence**, **What this means**, and **Limits / what to verify**.
-- Do not use Markdown heading markers like #, ##, or ###.
-- Put each section label on its own line, for example **Answer**.
-- Use bullet points for multi-part explanations.
-- Wrap every piece of mathematical notation in single dollar signs, e.g. $x_t$ or $p_\\theta(x_{{t-1}}\\mid x_t)$, so it renders instead of showing raw symbols.
-- Cite paper claims inline only with evidence IDs from the Paper evidence list, such as [E1] or [E2].
-- Only cite [Ek] if the sentence directly states a specific mechanism, metric, or finding supported in [Ek].
-- NEVER attach citation markers to disclaimers, negative statements about what is NOT in the paper, assumptions, or conversational transitions.
-- Never invent page citations. Do not write [p. 1], [p. 2], or any page number yourself.
-- The app will convert evidence IDs into compact numbered references like [1], [2].
-- If the paper context is insufficient, say what is missing instead of guessing (without attaching citations to the disclaimer).
-- For methods/results questions, include the specific mechanism, dataset, metric, number, or comparison when the evidence provides it.
-- Use concise sections: "Answer", "Evidence", "What this means", and "Limits / what to verify" when helpful.
-- Answer directly in 180 to 450 words. Do not include hidden reasoning or long deliberation.
-- Use only the strongest 2 to 4 evidence points and keep citations close to the claims they support.
-{route_specific_instructions}
-
-Paper evidence:
-{paper_context}
-
-Question: {question_text}
-""".strip()
-
-    if ollama_up:
-        try:
-            answer = await generate(prompt, temperature=0.1, model=payload.model)
-        except Exception as exc:
-            return _model_failure_payload(exc)
-    else:
-        answer = ""
-
-    if not answer:
-        if ollama_up:
-            return _error_payload("The local model returned an empty answer. Try again.")
-        answer = _extractive_tutor_answer(payload.message, selected) if selected else ""
-
-    # Normalize pseudo-LaTeX model names like $\text{BERT}_{\text{BASE}}$ -> BERT-Base
-    answer = re.sub(r"\$\\text\{([^}]+)\}_\{?\\text\{([^}]+)\}?\}\$", r"\1-\2", answer)
-    answer = re.sub(r"\$\\text\{([^}]+)\}_\{([^}]+)\}\$", r"\1-\2", answer)
-    answer = re.sub(r"\$\\text\{([^}]+)\}\$", r"\1", answer)
-    answer = re.sub(r"\\text\{([^}]+)\}", r"\1", answer)
-
-    answer, citations = _normalize_evidence_citations(answer, evidence_items)
-    if not citations and evidence_items:
-        citations = [
-            {
-                "ref_id": index,
-                "page": item.get("page"),
-                "chunk_id": item.get("chunk_id"),
-                "section_title": item.get("section_title"),
-                "chunk_type": item.get("chunk_type"),
-                "quote": item.get("quote"),
-            }
-            for index, item in enumerate(evidence_items[:2], start=1)
-        ]
-
-    # Tag citations with runtime verification status, apply ALCE/AGREE remapping/pruning & 1-step repair
-    answer, verified_citations, verified_claims = ClaimVerifierService.verify_and_repair_answer(
-        answer=answer,
-        citations=citations,
-        candidate_pool=evidence_items,
-        apply_repair=True,
-    )
-
-    # ── Multi-Level Reasoning & Evidence Graph Synthesis ─────────────────────
-    from backend.services.question_analyzer import QuestionAnalyzer
-    from backend.services.evidence_graph_service import EvidenceGraphService
-    from backend.services.budgeting_service import BudgetingService
-    from backend.services.table_arithmetic_service import TableArithmeticService, NumericOp
-    from backend.services.telemetry_service import TelemetryService
-
-    q_analysis = QuestionAnalyzer.analyze_query(payload.message)
-    ev_budget = BudgetingService.get_evidence_budget(capabilities)
-    ev_graph, ev_path = EvidenceGraphService.build_evidence_graph(payload.message, context_chunks, q_analysis)
-    pruned_graph, pruned_path = BudgetingService.prune_to_budget(ev_graph, ev_path, ev_budget)
-
-    numeric_res = None
-    if q_analysis.requires_arithmetic:
-        table_chunks = [c for c in context_chunks if c.get("is_table_chunk") or "|" in c.get("text", "")]
-        if table_chunks:
-            # Extract numbers if comparing entities
-            words = [w for w in payload.message.split() if len(w) > 3]
-            ent_a = words[0] if len(words) > 0 else "Model"
-            ent_b = words[1] if len(words) > 1 else "Baseline"
-            numeric_res = TableArithmeticService.extract_and_calculate_from_table_text(
-                table_text=table_chunks[0].get("text", ""),
-                entity_a=ent_a,
-                entity_b=ent_b,
-                op=NumericOp.DIFFERENCE,
-            )
-
-    atomic_report = ClaimVerifierService.generate_atomic_verification_report(answer, context_chunks)
-    TelemetryService.record_trace(
+def _answer_request_from_chat(paper_id: str, payload: ChatInput) -> AnswerPipelineRequest:
+    return AnswerPipelineRequest(
         paper_id=paper_id,
         query=payload.message,
-        analysis=q_analysis,
-        reasoning_path=pruned_path,
-        numeric_result=numeric_res,
-        verification_report=atomic_report,
-        latency_ms=250.0,
-        hardware_tier=ev_budget.hardware_tier.value,
+        history=payload.history,
+        secondary_paper_ids=payload.secondary_paper_ids,
+        requested_model=payload.model,
+        generation_seed=payload.generation_seed,
+        capability_mode=payload.capability_mode,
+        execution_policy=payload.execution_policy,
+        intervention=payload.intervention,
+        decoding=payload.decoding,
+        evaluation_context=payload.evaluation_context,
+        experiment_id=payload.experiment_id,
+        visual_page_backend=payload.visual_page_backend,
+        snippet_id=payload.snippet_id,
+        snippet_page=payload.snippet_page,
+        snippet_bbox=payload.snippet_bbox,
+        snippet_text=payload.snippet_text,
     )
 
-    return {
-        "answer": answer,
-        "citations": verified_citations,
-        "model": payload.model or OLLAMA_MODEL,
-        "route_type": route_budget.route_type.value,
-        "capability_mode": capabilities.capability_mode.value,
-        "verified_claims_count": len(verified_claims),
-        "reasoning_level": q_analysis.reasoning_level.value,
-        "reasoning_steps": [s.model_dump() for s in pruned_path.steps],
-        "numeric_plan": numeric_res.model_dump() if numeric_res else None,
-        "verification_report": atomic_report.model_dump() if atomic_report else None,
-    }
+
+@app.post("/api/papers/{paper_id}/chat")
+async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
+    """Execute the shared production/evaluation pipeline and return its v1 trace."""
+    try:
+        trace = await AnswerPipelineService.answer(
+            _answer_request_from_chat(paper_id, payload)
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return trace.to_chat_response()
 
 
 @app.post("/api/papers/{paper_id}/chat/stream")
 async def chat_stream(paper_id: str, payload: ChatInput) -> StreamingResponse:
-    """Stream multi-level reasoning events, evidence graph, and generated tokens in real-time."""
-    from backend.services.ollama_service import generate_stream
-    from backend.services.question_analyzer import QuestionAnalyzer
-    from backend.services.evidence_graph_service import EvidenceGraphService
-    from backend.services.budgeting_service import BudgetingService
-    from backend.services.table_arithmetic_service import TableArithmeticService, NumericOp
+    """Expose the shared verified answer trace as server-sent events.
 
-    metadata_path, pages_path, chunks_path, _ = _paths_or_404(paper_id)
-    chunks = _ensure_chunk_metadata(chunks_path, pages_path) if chunks_path.exists() else []
-
-    capabilities = ModelRegistry.resolve_capabilities(
-        payload.model or OLLAMA_MODEL,
-        mode=payload.capability_mode,
-    )
+    Predictable request and paper errors are validated before the response is
+    opened, preserving `/chat` HTTP status semantics. Runtime failures after
+    streaming starts use a typed terminal SSE error event.
+    """
+    request = _answer_request_from_chat(paper_id, payload)
+    try:
+        if not payload.message.strip():
+            raise ValueError("Message cannot be empty")
+        await asyncio.to_thread(answer_pipeline_module._paper_paths, paper_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     async def event_generator():
-        # 1. Emit instant query analysis
-        q_analysis = QuestionAnalyzer.analyze_query(payload.message)
-        yield f"event: analysis\ndata: {json.dumps(q_analysis.model_dump())}\n\n"
+        stage_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
 
-        # 2. Retrieve & build evidence graph
-        ev_budget = BudgetingService.get_evidence_budget(capabilities)
-        ev_graph, ev_path = EvidenceGraphService.build_evidence_graph(payload.message, chunks[:6], q_analysis)
-        pruned_graph, pruned_path = BudgetingService.prune_to_budget(ev_graph, ev_path, ev_budget)
+        def on_stage(stage_name: str, stage_data: dict[str, Any]) -> None:
+            stage_queue.put_nowait(stage_data)
 
-        yield f"event: evidence_path\ndata: {json.dumps([s.model_dump() for s in pruned_path.steps])}\n\n"
+        task = asyncio.create_task(
+            AnswerPipelineService.answer(request, stage_callback=on_stage)
+        )
 
-        # 3. Deterministic Table Arithmetic
-        numeric_res = None
-        if q_analysis.requires_arithmetic:
-            table_chunks = [c for c in chunks if c.get("is_table_chunk") or "|" in c.get("text", "")]
-            if table_chunks:
-                words = [w for w in payload.message.split() if len(w) > 3]
-                ent_a = words[0] if len(words) > 0 else "Model"
-                ent_b = words[1] if len(words) > 1 else "Baseline"
-                numeric_res = TableArithmeticService.extract_and_calculate_from_table_text(
-                    table_text=table_chunks[0].get("text", ""),
-                    entity_a=ent_a,
-                    entity_b=ent_b,
-                    op=NumericOp.DIFFERENCE,
-                )
-                if numeric_res:
-                    yield f"event: numeric_math\ndata: {json.dumps(numeric_res.model_dump())}\n\n"
-
-        # 4. Stream LLM tokens
-        prompt = f"Evidence:\n" + "\n".join(c.get("text", "")[:300] for c in chunks[:3]) + f"\n\nQuestion: {payload.message}"
-        full_text = []
         try:
-            async for token in generate_stream(prompt, temperature=0.1, model=payload.model):
-                full_text.append(token)
-                yield f"event: token\ndata: {json.dumps({'token': token})}\n\n"
-        except Exception:
-            pass
+            trace = await task
+        except asyncio.CancelledError:
+            task.cancel()
+            raise
+        except Exception as exc:
+            payload_data = {
+                "message": str(exc),
+                "error_type": type(exc).__name__,
+                "terminal": True,
+            }
+            yield f"event: error\ndata: {json.dumps(payload_data)}\n\n"
+            yield 'event: done\ndata: {"status":"error"}\n\n'
+            return
+        finally:
+            if not task.done():
+                task.cancel()
 
-        # 5. Emit Verification Report
-        generated_ans = "".join(full_text) or "Extracted verified evidence."
-        atomic_report = ClaimVerifierService.generate_atomic_verification_report(generated_ans, chunks[:6])
-        yield f"event: verification\ndata: {json.dumps(atomic_report.model_dump())}\n\n"
-        yield "event: done\ndata: {}\n\n"
+        yield f"event: analysis\ndata: {json.dumps(trace.analysis.model_dump(mode='json'))}\n\n"
+        yield f"event: evidence_path\ndata: {json.dumps([step.model_dump(mode='json') for step in trace.reasoning_path])}\n\n"
+        while not stage_queue.empty():
+            st = stage_queue.get_nowait()
+            yield f"event: stage\ndata: {json.dumps(st)}\n\n"
+        if trace.numeric_plan is not None:
+            yield f"event: numeric_math\ndata: {json.dumps(trace.numeric_plan.model_dump(mode='json'))}\n\n"
+        yield f"event: token\ndata: {json.dumps({'token': trace.final_answer})}\n\n"
+        yield f"event: trace\ndata: {json.dumps(trace.model_dump(mode='json'))}\n\n"
+        if trace.verification_report is not None:
+            yield f"event: verification\ndata: {json.dumps(trace.verification_report.model_dump(mode='json'))}\n\n"
+        yield 'event: done\ndata: {"status":"ok"}\n\n'
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
-

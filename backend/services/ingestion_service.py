@@ -12,6 +12,7 @@ Features:
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 import time
@@ -35,9 +36,11 @@ from backend.services.pdf_service import (
     extract_pages,
     paper_dir,
     read_json,
+    render_page_visual_units,
     safe_paper_id,
     write_json,
 )
+from backend.schemas.visual_document import VisualDocumentUnit, VisualUnitType
 
 logger = logging.getLogger("scholar.ingestion")
 
@@ -96,19 +99,46 @@ class DualEngineIngestionService:
         document_id: str,
         title: str = "",
         authors: list[str] | None = None,
-        year: int = 0,
+        year: int | str = 0,
         abstract: str = "",
         config: ParserAblationConfig | None = None,
+        target_dir: Path | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> EvidenceAST:
-        """Execute dual-engine ingestion and build the canonical EvidenceAST."""
-        target_dir = paper_dir(document_id)
-        target_dir.mkdir(parents=True, exist_ok=True)
+        """Execute dual-engine ingestion and build the canonical EvidenceAST.
+
+        ``target_dir`` makes the complete derivation suitable for a sibling staging
+        directory. When omitted, artifacts continue to be written to the paper's
+        established storage directory.
+        """
+        output_dir = Path(target_dir) if target_dir is not None else paper_dir(document_id)
+        output_dir.mkdir(parents=True, exist_ok=True)
         config = config or PARSER_ABLATIONS["P4"]
 
+        preserved_metadata: dict[str, Any] = {}
+        existing_metadata_path = output_dir / "metadata.json"
+        if existing_metadata_path.exists():
+            existing_metadata = read_json(existing_metadata_path)
+            if isinstance(existing_metadata, dict):
+                preserved_metadata.update(existing_metadata)
+        if metadata:
+            preserved_metadata.update(metadata)
+
+        resolved_title = title or str(preserved_metadata.get("title", ""))
+        resolved_authors = authors if authors is not None else list(preserved_metadata.get("authors", []))
+        resolved_abstract = abstract or str(
+            preserved_metadata.get("abstract") or preserved_metadata.get("summary") or ""
+        )
+        raw_year = year if year not in (None, "", 0, "0") else preserved_metadata.get("year", 0)
+        try:
+            resolved_year = int(raw_year or 0)
+        except (TypeError, ValueError):
+            year_match = re.search(r"\d{4}", str(raw_year))
+            resolved_year = int(year_match.group(0)) if year_match else 0
+
         # Step 1: Open PyMuPDF document for geometric and page metrics
-        doc = fitz.open(str(pdf_path))
-        num_pages = len(doc)
-        doc.close()
+        with fitz.open(str(pdf_path)) as doc:
+            num_pages = len(doc)
 
         # Step 2: Try Docling semantic parse if config allows (P2, P3, P4)
         docling_result = None
@@ -129,25 +159,39 @@ class DualEngineIngestionService:
             degraded_mode = True if config.config_id == "P4" else False
 
         # Step 4: Extract figures and tables geometry via PyMuPDF
-        figures_dir = target_dir / "figures"
+        figures_dir = output_dir / "figures"
         figures = extract_figures(pdf_path, figures_dir)
-        write_json(target_dir / "figures.json", figures)
+        write_json(output_dir / "figures.json", figures)
 
         # Merge visual blocks into AST if not already present
         existing_fig_ids = {b.figure_id for b in blocks if b.figure_id}
         for fig in figures:
             fig_id = fig.get("figure_id", "")
             if fig_id not in existing_fig_ids:
+                raw_bbox = fig.get("bbox_normalized") or fig.get("bbox_norm")
+                if isinstance(raw_bbox, dict):
+                    bbox = [
+                        float(raw_bbox.get("x0", 0.0)),
+                        float(raw_bbox.get("y0", 0.0)),
+                        float(raw_bbox.get("x1", 1.0)),
+                        float(raw_bbox.get("y1", 1.0)),
+                    ]
+                elif isinstance(raw_bbox, (list, tuple)) and len(raw_bbox) >= 4:
+                    bbox = [float(value) for value in raw_bbox[:4]]
+                else:
+                    bbox = [0.0, 0.0, 1.0, 1.0]
+                image_file = fig.get("image_file") or fig.get("image_path")
+                figure_path = str(Path("figures") / image_file) if image_file else None
                 blocks.append(EvidenceBlock(
                     evidence_id=f"VIS_{fig_id.upper()}",
                     document_id=document_id,
                     page=fig.get("page", 1),
                     section_path=fig.get("section_path", []),
                     modality=EvidenceModality.VISUAL,
-                    bbox=fig.get("bbox_norm", [0.0, 0.0, 1.0, 1.0]),
-                    text=fig.get("caption", f"Figure {fig_id}"),
+                    bbox=bbox,
+                    text=fig.get("caption") or fig.get("label") or f"Figure {fig_id}",
                     figure_id=fig_id,
-                    figure_path=fig.get("image_path"),
+                    figure_path=figure_path,
                 ))
 
         # Assign neighboring blocks for local context
@@ -162,10 +206,10 @@ class DualEngineIngestionService:
         # Construct Canonical EvidenceAST
         ast = EvidenceAST(
             document_id=document_id,
-            title=title,
-            authors=authors or [],
-            year=year,
-            abstract=abstract,
+            title=resolved_title,
+            authors=resolved_authors,
+            year=resolved_year,
+            abstract=resolved_abstract,
             page_count=num_pages,
             blocks=blocks,
             sections=sections,
@@ -175,31 +219,88 @@ class DualEngineIngestionService:
         )
 
         # Write canonical evidence AST to disk
-        write_json(target_dir / "evidence_ast.json", ast.model_dump())
+        write_json(output_dir / "evidence_ast.json", ast.model_dump())
 
         # Write backwards-compatible pages.json & chunks.json
         pages_data = extract_pages(pdf_path)
-        write_json(target_dir / "pages.json", pages_data)
+        write_json(output_dir / "pages.json", pages_data)
+
+        # Full-page visual units are primary ingestion artifacts. They guarantee
+        # that a diagram/table remains retrievable even when caption-based figure
+        # extraction misses it.
+        page_visual_units = render_page_visual_units(
+            pdf_path,
+            output_dir,
+            document_id,
+        )
+        visual_units = list(page_visual_units)
+        for figure in figures:
+            image_file = str(figure.get("image_file") or "")
+            image_path = output_dir / "figures" / image_file
+            if not image_file or not image_path.is_file():
+                continue
+            raw_bbox = figure.get("bbox_normalized") or figure.get("bbox_norm") or {}
+            if isinstance(raw_bbox, dict):
+                bbox_norm = [
+                    float(raw_bbox.get("x0", 0.0)),
+                    float(raw_bbox.get("y0", 0.0)),
+                    float(raw_bbox.get("x1", 1.0)),
+                    float(raw_bbox.get("y1", 1.0)),
+                ]
+            elif isinstance(raw_bbox, (list, tuple)) and len(raw_bbox) >= 4:
+                bbox_norm = [float(item) for item in raw_bbox[:4]]
+            else:
+                bbox_norm = [0.0, 0.0, 1.0, 1.0]
+            unit_type = (
+                VisualUnitType.TABLE
+                if str(figure.get("figure_type") or "").lower() == "table"
+                else VisualUnitType.FIGURE
+            )
+            unit = VisualDocumentUnit(
+                visual_id=str(figure.get("figure_id") or image_path.stem),
+                document_id=document_id,
+                source_paper_id=document_id,
+                page=int(figure.get("page") or 1),
+                unit_type=unit_type,
+                image_relpath=(Path("figures") / image_file).as_posix(),
+                image_sha256=hashlib.sha256(image_path.read_bytes()).hexdigest(),
+                width_px=int(figure.get("width_px") or 1),
+                height_px=int(figure.get("height_px") or 1),
+                bbox_norm=bbox_norm,
+                parent_visual_id=f"page_{int(figure.get('page') or 1):04d}",
+                label=str(figure.get("label") or ""),
+                caption=str(figure.get("caption") or ""),
+            )
+            visual_units.append(unit.model_dump(mode="json"))
+        write_json(output_dir / "visual_units.json", visual_units)
 
         chunks_data = cls._generate_chunks_from_ast(ast, config)
-        write_json(target_dir / "chunks.json", chunks_data)
+        write_json(output_dir / "chunks.json", chunks_data)
 
-        # Write metadata
-        meta = {
-            "id": document_id,
-            "title": title,
-            "authors": authors or [],
-            "year": year,
-            "abstract": abstract,
+        # Preserve source metadata while normalizing compatibility aliases and counts.
+        meta = dict(preserved_metadata)
+        meta.update({
+            "id": meta.get("id") or document_id,
+            "local_id": meta.get("local_id") or document_id,
+            "document_id": document_id,
+            "title": resolved_title,
+            "authors": resolved_authors,
+            "year": meta.get("year", resolved_year),
+            "abstract": resolved_abstract,
+            "summary": meta.get("summary") or resolved_abstract,
             "page_count": num_pages,
+            "pages": num_pages,
             "chunk_count": len(chunks_data),
+            "chunks": len(chunks_data),
             "figure_count": len(figures),
+            "figures": len(figures),
+            "visual_unit_count": len(visual_units),
             "parser_engine": parser_engine,
             "degraded_mode": degraded_mode,
             "ablation_config": config.config_id,
             "ingested_at": time.time(),
-        }
-        write_json(target_dir / "metadata.json", meta)
+        })
+        write_json(output_dir / "metadata.json", meta)
 
         logger.info(
             "Ingestion complete for [%s]: %d blocks, %d chunks, degraded_mode=%s",
@@ -277,20 +378,43 @@ class DualEngineIngestionService:
         chunk_idx = 1
 
         for block in ast.blocks:
+            section_title = block.section_path[-1] if block.section_path else "Body"
+            section_prefix = " > ".join(block.section_path)
+            original_text = block.text
+            retrieval_text = f"{section_prefix}. {original_text}" if section_prefix else original_text
+            if block.modality == EvidenceModality.VISUAL:
+                chunk_type = "figure"
+            elif block.modality == EvidenceModality.TABLE:
+                chunk_type = "table"
+            elif "abstract" in section_title.lower():
+                chunk_type = "abstract"
+            else:
+                chunk_type = "body"
+            char_start = int(block.char_start or 0)
+            char_end = int(block.char_end or 0) or (char_start + len(original_text))
             chunk_dict = {
                 "chunk_id": f"chunk_{chunk_idx:03d}",
                 "evidence_id": block.evidence_id,
                 "document_id": ast.document_id,
+                "source_paper_id": ast.document_id,
                 "page": block.page,
-                "section": block.section_path[-1] if block.section_path else "",
+                "section": section_title,
+                "section_title": section_title,
                 "section_path": block.section_path,
                 "modality": block.modality.value,
-                "text": block.text,
+                "chunk_type": chunk_type,
+                "text": original_text,
+                "original_text": original_text,
+                "retrieval_text": retrieval_text,
+                "paragraph_text": original_text[:500],
+                "char_start": char_start,
+                "char_end": char_end,
                 "bbox_norm": block.bbox,
                 "is_figure_chunk": block.modality == EvidenceModality.VISUAL,
                 "is_table_chunk": block.modality == EvidenceModality.TABLE,
                 "figure_id": block.figure_id,
-                "label": f"Figure {block.figure_id}" if block.figure_id else (f"Table" if block.modality == EvidenceModality.TABLE else ""),
+                "image_file": Path(block.figure_path).name if block.figure_path else None,
+                "label": f"Figure {block.figure_id}" if block.figure_id else ("Table" if block.modality == EvidenceModality.TABLE else ""),
             }
             chunks.append(chunk_dict)
             chunk_idx += 1

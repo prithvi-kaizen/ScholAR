@@ -27,6 +27,12 @@ import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+PROJECT_ROOT = HERE.parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(PROJECT_ROOT / "evaluation"))
+
+from scholar_runner import run_scholar_http  # noqa: E402
+
 CASES = HERE / "cases.json"
 OUT = HERE / "answers.json"
 
@@ -133,18 +139,22 @@ def main() -> None:
             continue
         print(f"\n=== model {model} ({len(todo)} cases) --- loading; other models stay unloaded ===")
         for case in todo:
-            body = {
-                "message": case["question"],
-                "history": [],
-                "web_search": False,
-                "secondary_paper_ids": case.get("secondary_paper_ids", []),
-                "model": model,
-            }
             t0 = time.monotonic()
+            trace = None
             try:
-                resp = post_chat(args.backend, case["paper_id"], body)
-                answer = resp.get("answer", "")
-                citations = resp.get("citations", [])
+                result = run_scholar_http(
+                    args.backend,
+                    case["paper_id"],
+                    case["question"],
+                    model,
+                    require_local_model=True,
+                    secondary_paper_ids=case.get("secondary_paper_ids", []),
+                    experiment_id="human-eval-v1",
+                )
+                resp = result.response
+                trace = result.trace
+                answer = result.answer
+                citations = result.citations
                 err = None
             except Exception as exc:
                 resp, answer, citations, err = {}, "", [], f"{type(exc).__name__}: {exc}"
@@ -160,6 +170,10 @@ def main() -> None:
                 "answer": answer,
                 "citations": citations,
                 "vision": bool(resp.get("vision")) if not err else False,
+                "trace_id": trace.trace_id if trace else None,
+                "trace_schema_version": trace.schema_version if trace else None,
+                "pipeline_version": trace.run_identity.pipeline_version if trace else None,
+                "generation_mode": trace.generation.mode.value if trace else None,
                 "error": err,
             }
             OUT.write_text(json.dumps(list(by_key.values()), indent=2, ensure_ascii=False), encoding="utf-8")

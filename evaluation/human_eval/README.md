@@ -8,9 +8,7 @@ the evaluator-facing instructions are in `rubric.md`.
 
 The 100 cases span **25 papers** and three query types: 50 text, 25 mathematical, and
 25 figure/table questions. They were mined from the prepared corpus by a local model and
-every gold answer was verified to appear in its source passage (`mine_cases.py` at the
-`evaluation/` root). The earlier 3-paper curated set is preserved as
-`cases_curated_3paper.json`.
+their source checks are implemented in `mine_cases.py` at the `evaluation/` root.
 
 ## Files
 
@@ -19,7 +17,6 @@ every gold answer was verified to appear in its source passage (`mine_cases.py` 
 | `HUMAN_EVAL_DESIGN.md` | The design: instrument, 4-model structure, metrics, grounded in SciRAG/OpenScholar/PaperQA2 |
 | `rubric.md` | The guideline handed to each human evaluator (Q1-Q7, anchors, worked examples) |
 | `cases.json` | The 100 evaluation cases (50 text, 25 math, 25 figure) across 25 papers |
-| `cases_curated_3paper.json` | Provenance: the earlier hand-curated 3-paper set (superseded) |
 | `../mine_cases.py` | Mines and source-verifies the diverse cases from the corpus |
 | `generate_answers.py` | Runs every case through each model via the live backend, writes `answers.json` |
 | `_build_score_sheet.py` | Builds the self-contained `score_sheet.html` from cases + answers (blinded, randomized) |
@@ -34,7 +31,7 @@ TEXT_MODELS   = qwen3.5:9b, gemma4:12b, llama3.1:8b, mistral:7b
 VISION_MODELS = qwen3.5:9b, gemma4:12b
 ```
 
-`qwen3.5:9b` and `gemma4:12b` are already pulled. Before a full run:
+Before a full run, install every selected model locally. For example:
 
 ```
 ollama pull llama3.1:8b mistral:7b
@@ -79,6 +76,6 @@ inter-annotator agreement when two or more evaluator files are present, and corr
 human faithfulness and citation support with the generated-answer entailment judge on the
 same case and model outputs. A non-significant model difference is not proof of equivalence.
 
-`answers.json` is committed as the frozen set to annotate. `score_sheet.html` and evaluator
-exports are generated locally. Commit only de-identified aggregate results after a real run;
-never commit evaluator names or raw files that could identify them.
+`answers.json`, `score_sheet.html`, and evaluator exports are generated locally and ignored.
+Only de-identified, release-validated aggregates should become research evidence; never
+commit evaluator names or raw files that could identify them.

@@ -10,6 +10,8 @@ from typing import Any
 
 import httpx
 
+from backend.services.network_policy_service import NetworkPolicyService
+
 
 ARXIV_API_URL = "https://export.arxiv.org/api/query"
 ATOM_NS = {"atom": "http://www.w3.org/2005/Atom"}
@@ -241,6 +243,7 @@ def _merge_unique(primary: list[dict[str, Any]], secondary: list[dict[str, Any]]
 
 
 async def _rate_limited_get(params: dict[str, Any]) -> httpx.Response:
+    NetworkPolicyService.require_acquisition("search-arxiv", ARXIV_API_URL)
     global _last_request_at
 
     async with _request_lock:

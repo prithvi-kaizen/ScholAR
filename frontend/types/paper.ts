@@ -37,11 +37,18 @@ export type StudyGoal = {
   status: "not_started" | "in_progress" | "done";
 };
 
+export type VerificationLabel =
+  | "SUPPORTED"
+  | "PARTIAL"
+  | "PARTIALLY_SUPPORTED" // accepted only for legacy persisted traces
+  | "UNSUPPORTED"
+  | "CONTRADICTED";
+
 export type VisualSubregion = {
   region_id?: string;
   role?: string;
   bbox: { x0: number; y0: number; x1: number; y1: number };
-  verification?: "SUPPORTED" | "PARTIALLY_SUPPORTED" | "UNSUPPORTED" | "CONTRADICTED";
+  verification?: VerificationLabel;
 };
 
 export type Citation = {
@@ -51,18 +58,128 @@ export type Citation = {
   section_title?: string;
   chunk_type?: string;
   quote: string;
-  /** For multi-document mode: the local_id of the paper this chunk came from */
+  /** Source-scoped provenance for multi-document evidence. */
   source_paper_id?: string;
-  /** Figure/table grounding fields */
+  document_id?: string;
+  source_evidence_id?: string;
+  /** Figure/table grounding fields. */
   is_figure?: boolean;
   figure_id?: string;
   image_file?: string;
+  image_relpath?: string;
+  image_url?: string;
+  is_page_visual?: boolean;
   label?: string;
   caption?: string;
-  verification?: "SUPPORTED" | "PARTIALLY_SUPPORTED" | "UNSUPPORTED" | "CONTRADICTED";
+  verification?: VerificationLabel;
   confidence?: number;
   bbox_normalized?: { x0: number; y0: number; x1: number; y1: number };
   subregions?: VisualSubregion[];
+};
+
+export type ReasoningPathStep = {
+  step_index: number;
+  evidence_id: string;
+  section?: string;
+  page: number;
+  modality: string;
+  role: string;
+  reasoning_mode?: string;
+  subgoal?: string;
+  claim_contribution: string;
+  source_paper_id?: string;
+  document_id?: string;
+  source_evidence_id?: string;
+};
+
+export type NumericExecutionResult = {
+  operation: string;
+  computed_value: number;
+  formatted_value: string;
+  formatted_statement: string;
+  is_exact: boolean;
+  evidence_ids?: string[];
+};
+
+export type CitationSpan = {
+  start: number;
+  end: number;
+  marker: string;
+  reference_ids: string[];
+  evidence_ids: string[];
+};
+
+export type EvidenceProvenance = {
+  evidence_id: string;
+  ref_id?: number | null;
+  source_paper_id?: string | null;
+  document_id?: string | null;
+  page?: number | null;
+  region?: Record<string, unknown> | number[] | null;
+};
+
+export type RepairAction =
+  | "none"
+  | "citation_remap"
+  | "claim_narrowing"
+  | "numeric_correction"
+  | "claim_deletion"
+  | "abstain";
+
+export type ClaimRepairRecord = {
+  claim_id: string;
+  action: RepairAction;
+  original_start: number;
+  original_end: number;
+  original_text: string;
+  replacement_text: string;
+  initial_status: Exclude<VerificationLabel, "PARTIALLY_SUPPORTED">;
+  second_pass_status?: Exclude<VerificationLabel, "PARTIALLY_SUPPORTED"> | null;
+  original_evidence_ids: string[];
+  resolved_evidence_ids: string[];
+  remap_attempted: boolean;
+};
+
+export type AtomicClaim = {
+  claim_id: string;
+  text: string;
+  cited_evidence_ids: string[];
+  entailment_status: VerificationLabel;
+  confidence_score: number;
+  rationale: string;
+  repaired_text?: string | null;
+  repair_action: RepairAction;
+  start?: number | null;
+  end?: number | null;
+  citation_spans?: CitationSpan[];
+  normalized_text?: string;
+  claim_type?: string;
+  resolved_evidence?: EvidenceProvenance[];
+  first_pass_status?: VerificationLabel | null;
+  second_pass_status?: VerificationLabel | null;
+  final_start?: number | null;
+  final_end?: number | null;
+};
+
+export type VerificationReport = {
+  claims?: AtomicClaim[];
+  overall_supported: boolean;
+  supported_count: number;
+  partial_count?: number;
+  unsupported_count: number;
+  contradicted_count: number;
+  has_abstained: boolean;
+  abstention_reason?: string | null;
+  final_verified_response?: string;
+  edits?: ClaimRepairRecord[];
+  second_pass_completed?: boolean;
+  scorer?: {
+    backend: string;
+    version: string;
+    thresholds_calibrated: boolean;
+    supported_threshold: number;
+    partial_threshold: number;
+  };
 };
 
 export type ModelCapability = {
@@ -92,7 +209,7 @@ export type ChatMessage = {
   uncertainty_reason?: string;
   route_type?: string;
   capability_mode?: string;
-  /** Vision grounding fields: set when the answer was generated from a figure or snippet */
+  /** Vision grounding fields: set when the answer was generated from a figure or snippet. */
   vision?: boolean;
   vision_fallback?: boolean;
   is_snippet?: boolean;
@@ -100,33 +217,10 @@ export type ChatMessage = {
   figure_id?: string;
   figure_label?: string;
   figure_image_url?: string;
-  /** Which model produced the response, e.g. "qwen3.5:9b" */
+  /** Which model produced the response, e.g. "qwen3.5:9b". */
   model?: string;
-  /** Multi-Level Reasoning fields */
   reasoning_level?: string;
-  reasoning_steps?: {
-    step_index: number;
-    evidence_id: string;
-    section?: string;
-    page: number;
-    modality: string;
-    role: string;
-    claim_contribution: string;
-  }[];
-  numeric_plan?: {
-    operation: string;
-    computed_value: number;
-    formatted_value: string;
-    formatted_statement: string;
-    is_exact: boolean;
-  };
-  verification_report?: {
-    overall_supported: boolean;
-    supported_count: number;
-    unsupported_count: number;
-    contradicted_count: number;
-    has_abstained: boolean;
-    abstention_reason?: string;
-  };
+  reasoning_steps?: ReasoningPathStep[];
+  numeric_plan?: NumericExecutionResult;
+  verification_report?: VerificationReport;
 };
-

@@ -1,0 +1,121 @@
+{
+  "schema_version": "1.0",
+  "release_id": "eacl_industry_v1",
+  "run_id": "BLOCKED_UNTIL_EXTERNAL_GATES_CLEAR",
+  "study_status": "NOT_READY",
+  "output_dir": "evaluation/releases/eacl_industry_v1",
+  "dataset": {
+    "name": "ScholAR EACL Industry held-out evaluation",
+    "version": "NOT_FROZEN",
+    "cases_path": "evaluation/releases/eacl_industry_v1/data_cards/heldout_cases.json",
+    "sha256": null,
+    "corpus_sha256": "2acc1c3c948ce029f8e069601d09491a664b7d2ad82df382a1a184d03e009fe3",
+    "evidence_class": "measured",
+    "claim_status": "current",
+    "paper_disjoint_from_development": false
+  },
+  "systems": [
+    {
+      "name": "scholar_no_repair_v1",
+      "runner": "scholar_http",
+      "description": "Production AnswerPipelineService with verification recorded but no answer mutation.",
+      "options": {
+        "execution_policy": "REQUIRE_LOCAL_MODEL",
+        "intervention": {
+          "repair_mode": "NONE",
+          "abstain_on_no_supported_claims": false
+        },
+        "decoding": {
+          "temperature": 0.1,
+          "top_p": 0.9,
+          "num_ctx": 16000,
+          "num_predict": 1650
+        }
+      }
+    },
+    {
+      "name": "scholar_selective_repair_v2",
+      "runner": "scholar_http",
+      "description": "Production AnswerPipelineService with deterministic selective repair.",
+      "options": {
+        "execution_policy": "REQUIRE_LOCAL_MODEL",
+        "intervention": {
+          "repair_mode": "SELECTIVE",
+          "abstain_on_no_supported_claims": true
+        },
+        "decoding": {
+          "temperature": 0.1,
+          "top_p": 0.9,
+          "num_ctx": 16000,
+          "num_predict": 1650
+        }
+      }
+    }
+  ],
+  "models": [
+    {
+      "tag": "qwen3.5:9b",
+      "digest": null,
+      "quantization": null
+    }
+  ],
+  "seeds": [11, 29, 47],
+  "metrics": [
+    {
+      "name": "success_rate",
+      "source": "success_rate",
+      "denominator": "all_expected",
+      "on_error": 0.0,
+      "on_abstained": 0.0,
+      "description": "Fraction of expected generations returning a non-abstained answer."
+    },
+    {
+      "name": "abstention_rate",
+      "source": "abstention_rate",
+      "denominator": "all_expected",
+      "on_error": 0.0,
+      "on_abstained": 1.0,
+      "description": "Fraction of expected generations ending in explicit abstention."
+    },
+    {
+      "name": "error_rate",
+      "source": "error_rate",
+      "denominator": "all_expected",
+      "on_error": 1.0,
+      "on_abstained": 0.0,
+      "description": "Fraction of expected generations ending in an immutable error row."
+    },
+    {
+      "name": "supported_claim_rate",
+      "source": "supported_claim_rate",
+      "denominator": "all_expected",
+      "on_error": 0.0,
+      "on_abstained": 0.0,
+      "description": "Lexical verifier support outcome; not human-validated entailment."
+    },
+    {
+      "name": "retained_claim_rate",
+      "source": "retained_claim_rate",
+      "denominator": "all_expected",
+      "on_error": 0.0,
+      "on_abstained": 0.0,
+      "description": "Final claim count divided by initial claim count."
+    },
+    {
+      "name": "latency_ms",
+      "source": "latency_ms",
+      "denominator": "eligible_only",
+      "on_error": null,
+      "on_abstained": null,
+      "description": "Observed end-to-end latency for rows with a trace."
+    }
+  ],
+  "backend_url": "http://127.0.0.1:8000",
+  "command": [
+    ".venv/bin/python",
+    "evaluation/run_release_suite.py",
+    "--config",
+    "evaluation/configs/eacl_industry_v1.json"
+  ],
+  "prompt_hashes": {}
+}

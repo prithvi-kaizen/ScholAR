@@ -23,7 +23,6 @@ import asyncio
 import json
 import statistics
 import sys
-import time
 from datetime import datetime
 from pathlib import Path
 
@@ -32,43 +31,17 @@ import httpx
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from backend.services.retrieval_service import retrieve_chunks  # noqa: E402
-from backend.services.ollama_service import (  # noqa: E402
-    OLLAMA_BASE_URL, OLLAMA_MODEL, _ollama_options,
-)
+from backend.services.network_policy_service import NetworkPolicyService  # noqa: E402
+from backend.services.ollama_service import OLLAMA_BASE_URL, OLLAMA_MODEL  # noqa: E402
+from scholar_runner import run_scholar_http  # noqa: E402
 
-DATA_DIR = PROJECT_ROOT / "backend" / "data" / "papers"
 CASES = PROJECT_ROOT / "evaluation" / "human_eval" / "cases.json"
 OUT = PROJECT_ROOT / "evaluation" / "results" / "efficiency_results.json"
-TOP_K = 4  # matches the answering path in run_comparison_eval.py
-
-INDIRECT_RULES = (
-    "Answer the question using ONLY the evidence below. Keep it under 180 words. "
-    "After each factual claim, cite the supporting evidence by its identifier like [E1]. "
-    "Cite only evidence identifiers that appear in the list; never write a page number yourself."
-)
-
-
-def evidence_block(chunks: list[dict]) -> str:
-    return "\n".join(
-        f"[E{i+1}] (p. {c.get('page')}): {c.get('text','')[:600]}" for i, c in enumerate(chunks)
-    )
-
-
-async def ollama_generate(prompt: str, model: str) -> dict:
-    """Call /api/generate directly and keep Ollama's timing metadata (durations in ns)."""
-    payload = {
-        "model": model, "prompt": prompt, "stream": False, "think": False,
-        "options": _ollama_options(0.1),
-    }
-    async with httpx.AsyncClient(timeout=300.0, trust_env=False) as client:
-        r = await client.post(f"{OLLAMA_BASE_URL}/api/generate", json=payload)
-        r.raise_for_status()
-        return r.json()
 
 
 async def loaded_footprint(model: str) -> dict:
     """Model size on disk (/api/tags) and loaded size incl. KV cache (/api/ps)."""
+    NetworkPolicyService.require_local_endpoint(OLLAMA_BASE_URL, "Ollama")
     out = {"disk_gb": None, "loaded_gb": None}
     async with httpx.AsyncClient(timeout=30.0, trust_env=False) as client:
         try:
@@ -85,40 +58,64 @@ async def loaded_footprint(model: str) -> dict:
     return out
 
 
-async def measure(model: str, n: int) -> dict:
+async def measure(model: str, n: int, backend: str) -> dict:
     cases = json.loads(CASES.read_text(encoding="utf-8"))[:n]
+    if not cases:
+        return {"per_case": [], "footprint": await loaded_footprint(model), "n": 0}
     per_case = []
-    # warm-up (load weights into memory; excluded from stats)
-    c0 = cases[0]
-    chunks0 = json.loads((DATA_DIR / c0["paper_id"] / "chunks.json").read_text())
-    await ollama_generate(
-        f"{INDIRECT_RULES}\n\nEvidence:\n{evidence_block(retrieve_chunks(c0['question'], chunks0, limit=TOP_K))}"
-        f"\n\nQuestion: {c0['question']}", model)
 
-    for i, c in enumerate(cases, 1):
-        chunks = json.loads((DATA_DIR / c["paper_id"] / "chunks.json").read_text())
-        t0 = time.perf_counter()
-        ctx = retrieve_chunks(c["question"], chunks, limit=TOP_K)
-        retr_ms = (time.perf_counter() - t0) * 1000
-        prompt = f"{INDIRECT_RULES}\n\nEvidence:\n{evidence_block(ctx)}\n\nQuestion: {c['question']}"
-        t1 = time.perf_counter()
-        data = await ollama_generate(prompt, model)
-        gen_wall_s = time.perf_counter() - t1
-        eval_count = data.get("eval_count", 0)
-        eval_dur_s = data.get("eval_duration", 0) / 1e9
+    # Warm up the exact production path; excluded from statistics.
+    first = cases[0]
+    await asyncio.to_thread(
+        run_scholar_http,
+        backend,
+        first["paper_id"],
+        first["question"],
+        model,
+        require_local_model=True,
+        experiment_id="efficiency-warmup-v1",
+    )
+
+    for index, case in enumerate(cases, 1):
+        result = await asyncio.to_thread(
+            run_scholar_http,
+            backend,
+            case["paper_id"],
+            case["question"],
+            model,
+            require_local_model=True,
+            experiment_id="efficiency-v1",
+        )
+        trace = result.trace
+        retrieval_ms = sum(
+            timing.duration_ms for timing in trace.timings if timing.stage == "retrieval"
+        )
+        generation_ms = sum(
+            timing.duration_ms for timing in trace.timings if timing.stage == "generation"
+        )
+        eval_count = trace.generation.eval_count or 0
+        eval_duration_s = (trace.generation.eval_duration_ns or 0) / 1e9
         per_case.append({
-            "case_id": c["case_id"],
-            "retr_ms": round(retr_ms, 2),
-            "gen_wall_s": round(gen_wall_s, 3),
-            "e2e_s": round(retr_ms / 1000 + gen_wall_s, 3),
-            "prompt_tokens": data.get("prompt_eval_count", 0),
+            "case_id": case["case_id"],
+            "trace_id": trace.trace_id,
+            "trace_schema_version": trace.schema_version,
+            "pipeline_version": trace.run_identity.pipeline_version,
+            "generation_mode": trace.generation.mode.value,
+            "retr_ms": round(retrieval_ms, 2),
+            "gen_wall_s": round(generation_ms / 1000.0, 3),
+            "e2e_s": round(trace.latency_ms / 1000.0, 3),
+            "stage_timings": [timing.model_dump() for timing in trace.timings],
+            "prompt_tokens": trace.generation.prompt_eval_count or 0,
             "gen_tokens": eval_count,
-            "tok_per_s": round(eval_count / eval_dur_s, 1) if eval_dur_s else None,
+            "tok_per_s": round(eval_count / eval_duration_s, 1) if eval_duration_s else None,
         })
-        print(f"[{model}] [{i}/{len(cases)}] e2e {per_case[-1]['e2e_s']}s  {per_case[-1]['tok_per_s']} tok/s")
+        print(
+            f"[{model}] [{index}/{len(cases)}] e2e {per_case[-1]['e2e_s']}s  "
+            f"{per_case[-1]['tok_per_s']} tok/s"
+        )
 
-    fp = await loaded_footprint(model)
-    return {"per_case": per_case, "footprint": fp, "n": len(per_case)}
+    footprint = await loaded_footprint(model)
+    return {"per_case": per_case, "footprint": footprint, "n": len(per_case)}
 
 
 def _mean(xs): return round(statistics.mean(xs), 3) if xs else None
@@ -144,10 +141,11 @@ def summarize(m: dict) -> dict:
 async def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default=OLLAMA_MODEL)
+    ap.add_argument("--backend", default="http://127.0.0.1:8000")
     ap.add_argument("--n", type=int, default=20, help="number of questions to time")
     args = ap.parse_args()
 
-    raw = await measure(args.model, args.n)
+    raw = await measure(args.model, args.n, args.backend)
 
     blob = {"generated_at": datetime.now().isoformat(timespec="seconds"), "summary": {}, "raw": {}}
     if OUT.exists():

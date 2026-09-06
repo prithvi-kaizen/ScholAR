@@ -1,0 +1,70 @@
+{
+  "schema_version": "1.0",
+  "release_id": "eacl_industry_v1",
+  "status": "BLOCKED",
+  "gates": [
+    {
+      "id": "development_claim_labels",
+      "phase": "PRE_GENERATION",
+      "status": "PENDING",
+      "evidence": [],
+      "reason": "Development-only expert labels have not been collected."
+    },
+    {
+      "id": "verifier_threshold_calibration",
+      "phase": "PRE_GENERATION",
+      "status": "PENDING",
+      "evidence": [],
+      "reason": "Verifier thresholds have not been calibrated on development-only labels."
+    },
+    {
+      "id": "paper_disjoint_heldout_test",
+      "phase": "PRE_GENERATION",
+      "status": "PENDING",
+      "evidence": [],
+      "reason": "The paper-disjoint held-out case set is not frozen."
+    },
+    {
+      "id": "judge_validation_annotations",
+      "phase": "PRE_SCORING",
+      "status": "PENDING",
+      "evidence": [],
+      "reason": "Independent judge-validation annotations do not yet exist."
+    },
+    {
+      "id": "ethics_or_irb_determination",
+      "phase": "PRE_PAPER",
+      "status": "PENDING",
+      "evidence": [],
+      "reason": "No institutional ethics or IRB determination has been obtained."
+    },
+    {
+      "id": "researcher_pilot",
+      "phase": "PRE_PAPER",
+      "status": "PENDING",
+      "evidence": [],
+      "reason": "The intended-user researcher pilot has not been conducted."
+    },
+    {
+      "id": "model_backed_intervention_runs",
+      "phase": "PRE_PAPER",
+      "status": "PENDING",
+      "evidence": [],
+      "reason": "Final model-backed intervention repetitions have not been executed."
+    },
+    {
+      "id": "available_hardware_profiling",
+      "phase": "PRE_PAPER",
+      "status": "PENDING",
+      "evidence": [],
+      "reason": "Resource and reliability profiling on named available hardware is incomplete."
+    },
+    {
+      "id": "official_template_installed_and_reviewed",
+      "phase": "POST_BUILD",
+      "status": "PENDING",
+      "evidence": [],
+      "reason": "Official ACL style provenance and compiled-PDF review are pending."
+    }
+  ]
+}

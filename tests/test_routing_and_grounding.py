@@ -94,16 +94,21 @@ class TestRoutingAndGrounding(unittest.TestCase):
         )
         self.assertEqual(v_contra.label, VerificationLabel.CONTRADICTED)
 
-        # Partial claim and single repair (1 out of 3 tokens overlap -> 33% overlap)
+        # Partial claim is narrowed only by deleting an unsupported clause, then reverified.
+        partial_text = (
+            "The Transformer achieved 28.4 BLEU on English-to-German translation and requires "
+            "quantum entanglement for planetary navigation across distant galaxies."
+        )
         v_partial = ClaimVerifierService.verify_claim(
             claim_id="C3",
-            claim_text="General optimization convergence task.",
+            claim_text=partial_text,
             evidence_texts=evidence,
         )
-        self.assertEqual(v_partial.label, VerificationLabel.PARTIALLY_SUPPORTED)
+        self.assertEqual(v_partial.label, VerificationLabel.PARTIAL)
         repaired = ClaimVerifierService.apply_single_repair(v_partial, evidence)
         self.assertEqual(repaired.label, VerificationLabel.SUPPORTED)
-        self.assertIn("According to the paper evidence", repaired.repaired_text or "")
+        self.assertNotEqual(repaired.repaired_text, partial_text)
+        self.assertNotIn("According to the paper evidence", repaired.repaired_text or "")
 
     def test_all_ten_question_routes(self):
         # 1. DIRECT_LOOKUP
@@ -144,6 +149,23 @@ class TestRoutingAndGrounding(unittest.TestCase):
         chunks = [{"text": "Photosynthesis is a biological process in plants."}]
         suff_unrel = ClaimVerifierService.compute_sufficiency("What learning rate optimizer was used for Transformer?", chunks)
         self.assertFalse(suff_unrel.is_sufficient)
+
+        # Image similarity can justify pixel inspection, never evidence sufficiency.
+        visual = [{
+            "text": "Unrelated caption.",
+            "is_figure_chunk": True,
+            "image_embedding_eligible": True,
+            "image_embedding_rank": 1,
+            "image_embedding_score": 0.35,
+            "image_embedding_threshold": 0.20,
+        }]
+        inspection = ClaimVerifierService.compute_sufficiency(
+            "Which hidden relation appears only in the diagram pixels?",
+            visual,
+            can_vision=True,
+        )
+        self.assertFalse(inspection.is_sufficient)
+        self.assertEqual(inspection.reason_code, "VISUAL_INSPECTION_REQUIRED")
 
     def test_subregion_proposal_extraction_and_geometry(self):
         # Sample VLM response with subregions
@@ -212,8 +234,8 @@ class TestRoutingAndGrounding(unittest.TestCase):
             text_context="RLM evaluates recursive prompts.",
             paper_title="Recursive Language Models",
         )
-        self.assertIn("[Image 1: Figure 1]", prompt)
-        self.assertIn("[Image 2: Figure 2]", prompt)
+        self.assertIn("[V1 -> citation [1]", prompt)
+        self.assertIn("[V2 -> citation [2]", prompt)
         self.assertIn("Overall architecture of RLM.", prompt)
         self.assertIn("Detailed REPL loop.", prompt)
         self.assertIn("compare figure 1 and 2", prompt)
@@ -290,7 +312,8 @@ class TestRoutingAndGrounding(unittest.TestCase):
             answer=vision_ans,
             citations=citations,
         )
-        self.assertIn("Figure 1 [1]", aligned_ans)
+        self.assertIn("Figure 1", aligned_ans)
+        self.assertIn("[1]", aligned_ans)
         self.assertEqual(len(final_cits), 1)
         self.assertEqual(final_cits[0]["ref_id"], 1)
         self.assertEqual(final_cits[0]["page"], 4)

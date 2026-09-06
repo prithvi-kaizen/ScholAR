@@ -77,14 +77,28 @@ class TableArithmeticService:
                 is_exact=False,
             )
 
-        dec_values = [Decimal(str(op.parsed_value)) for op in operands]
+        dec_values = []
+        for op in operands:
+            if op.raw_text:
+                parsed = cls.clean_and_parse_number(op.raw_text)
+                if parsed is not None:
+                    dec_values.append(parsed)
+                    continue
+            dec_values.append(Decimal(str(op.parsed_value)))
+
         table_ids = list({op.table_id for op in operands if op.table_id})
 
         if plan.operation == NumericOp.DIFFERENCE:
             if len(dec_values) < 2:
-                diff = dec_values[0]
-            else:
-                diff = dec_values[0] - dec_values[1]
+                return NumericExecutionResult(
+                    operation=plan.operation,
+                    computed_value=float(dec_values[0]) if dec_values else 0.0,
+                    formatted_value="Error: Arity < 2",
+                    formatted_statement="Difference requires at least two operands.",
+                    is_exact=False,
+                    evidence_ids=table_ids,
+                )
+            diff = dec_values[0] - dec_values[1]
             diff_float = float(diff)
             sign = "+" if diff_float > 0 else ""
             fmt_val = f"{sign}{diff_float:.4g}"
@@ -99,10 +113,25 @@ class TableArithmeticService:
             )
 
         elif plan.operation == NumericOp.PERCENT_CHANGE:
-            if len(dec_values) < 2 or dec_values[1] == 0:
-                pct = Decimal(0)
-            else:
-                pct = ((dec_values[0] - dec_values[1]) / abs(dec_values[1])) * Decimal(100)
+            if len(dec_values) < 2:
+                return NumericExecutionResult(
+                    operation=plan.operation,
+                    computed_value=0.0,
+                    formatted_value="Error: Arity < 2",
+                    formatted_statement="Percent change requires at least two operands.",
+                    is_exact=False,
+                    evidence_ids=table_ids,
+                )
+            if dec_values[1] == 0:
+                return NumericExecutionResult(
+                    operation=plan.operation,
+                    computed_value=0.0,
+                    formatted_value="Undefined (division by zero)",
+                    formatted_statement=f"Cannot compute percent change: baseline ({operands[1].label or 'baseline'}) is zero.",
+                    is_exact=False,
+                    evidence_ids=table_ids,
+                )
+            pct = ((dec_values[0] - dec_values[1]) / abs(dec_values[1])) * Decimal(100)
             pct_float = float(pct)
             sign = "+" if pct_float > 0 else ""
             fmt_val = f"{sign}{pct_float:.3f}%"
@@ -117,10 +146,25 @@ class TableArithmeticService:
             )
 
         elif plan.operation == NumericOp.RATIO:
-            if len(dec_values) < 2 or dec_values[1] == 0:
-                ratio = Decimal(1)
-            else:
-                ratio = dec_values[0] / dec_values[1]
+            if len(dec_values) < 2:
+                return NumericExecutionResult(
+                    operation=plan.operation,
+                    computed_value=0.0,
+                    formatted_value="Error: Arity < 2",
+                    formatted_statement="Ratio requires at least two operands.",
+                    is_exact=False,
+                    evidence_ids=table_ids,
+                )
+            if dec_values[1] == 0:
+                return NumericExecutionResult(
+                    operation=plan.operation,
+                    computed_value=0.0,
+                    formatted_value="Undefined (division by zero)",
+                    formatted_statement=f"Cannot compute ratio: denominator ({operands[1].label or 'denominator'}) is zero.",
+                    is_exact=False,
+                    evidence_ids=table_ids,
+                )
+            ratio = dec_values[0] / dec_values[1]
             ratio_float = float(ratio)
             fmt_val = f"{ratio_float:.3f}x"
             stmt = f"The ratio of {operands[0].label or 'A'} to {operands[1].label or 'B'} is {fmt_val}."
@@ -147,8 +191,35 @@ class TableArithmeticService:
                 evidence_ids=table_ids,
             )
 
-        else:
-            # Default Sum
+        elif plan.operation == NumericOp.MIN:
+            min_val = min(dec_values)
+            min_float = float(min_val)
+            fmt_val = f"{min_float:.4g}"
+            stmt = f"The minimum {plan.target_metric or 'value'} across {len(dec_values)} entries is {fmt_val}."
+            return NumericExecutionResult(
+                operation=plan.operation,
+                computed_value=min_float,
+                formatted_value=fmt_val,
+                formatted_statement=stmt,
+                is_exact=True,
+                evidence_ids=table_ids,
+            )
+
+        elif plan.operation == NumericOp.MAX:
+            max_val = max(dec_values)
+            max_float = float(max_val)
+            fmt_val = f"{max_float:.4g}"
+            stmt = f"The maximum {plan.target_metric or 'value'} across {len(dec_values)} entries is {fmt_val}."
+            return NumericExecutionResult(
+                operation=plan.operation,
+                computed_value=max_float,
+                formatted_value=fmt_val,
+                formatted_statement=stmt,
+                is_exact=True,
+                evidence_ids=table_ids,
+            )
+
+        elif plan.operation == NumericOp.SUM:
             sum_val = sum(dec_values)
             sum_float = float(sum_val)
             fmt_val = f"{sum_float:.4g}"
@@ -159,6 +230,16 @@ class TableArithmeticService:
                 formatted_value=fmt_val,
                 formatted_statement=stmt,
                 is_exact=True,
+                evidence_ids=table_ids,
+            )
+
+        else:
+            return NumericExecutionResult(
+                operation=plan.operation,
+                computed_value=0.0,
+                formatted_value="Unsupported",
+                formatted_statement=f"Unsupported operation: {plan.operation}",
+                is_exact=False,
                 evidence_ids=table_ids,
             )
 

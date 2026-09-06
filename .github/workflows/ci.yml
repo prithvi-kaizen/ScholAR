@@ -11,11 +11,18 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  SCHOLAR_NETWORK_MODE: strict-local
+  HF_HUB_OFFLINE: "1"
+  HF_DATASETS_OFFLINE: "1"
+  TRANSFORMERS_OFFLINE: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+
 jobs:
-  clean-setup-and-build:
-    name: Clean setup and build
+  clean-non-model-suite:
+    name: Clean strict-local non-model suite
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -23,19 +30,21 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements/locks/base-py312.txt
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - name: Run the documented clean setup
+      - name: Install the documented locked base environment
         run: make setup
-      - name: Diagnose the installed environment
+      - name: Diagnose the installed environment and active policy
         run: make doctor
-      - name: Compile Python and typecheck frontend
-        run: make check
-      - name: Build the production frontend
-        run: make frontend-build
-      - name: Import the API application
+      - name: Run backend tests, route/fixture regressions, typecheck, build, and artifact policy
+        run: make ci
+      - name: Run portable evaluator self-checks through the public reproduction entry point
+        run: ./run_experiments.sh smoke
+      - name: Verify API import explicitly
         run: .venv/bin/python -c "from backend.main import app; assert app.title == 'ScholAR API'"

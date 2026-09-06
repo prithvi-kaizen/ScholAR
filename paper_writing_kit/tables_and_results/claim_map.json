@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "paper": "paper/eacl_industry/main.tex",
+  "claims": [
+    {
+      "claim_id": "SYS-001",
+      "text": "Production and release evaluation use the same non-streaming AnswerPipelineService path.",
+      "claim_type": "software",
+      "status": "SUPPORTED",
+      "sources": ["backend/main.py", "backend/services/answer_pipeline.py", "evaluation/scholar_runner.py"]
+    },
+    {
+      "claim_id": "SYS-002",
+      "text": "Canonical ingestion validates and atomically publishes PDF, AST, page, chunk, figure, metadata, SQLite, and manifest artifacts.",
+      "claim_type": "software",
+      "status": "SUPPORTED",
+      "sources": ["backend/services/paper_finalize_service.py", "tests/test_paper_finalize_service.py"]
+    },
+    {
+      "claim_id": "SYS-003",
+      "text": "Strict-local analysis rejects public acquisition branches and permits prepared files plus loopback model services.",
+      "claim_type": "software",
+      "status": "SUPPORTED",
+      "sources": ["backend/services/network_policy_service.py", "tests/test_network_policy.py", "tests/test_offline_strict.py"]
+    },
+    {
+      "claim_id": "SYS-004",
+      "text": "Selective repair performs deterministic text mutation and a second verification pass.",
+      "claim_type": "software",
+      "status": "SUPPORTED",
+      "sources": ["backend/services/verifier_service.py", "tests/test_verifier_and_repair.py"]
+    },
+    {
+      "claim_id": "EMP-001",
+      "text": "Selective repair improves independently judged supported-claim rate under the predeclared coverage bound.",
+      "claim_type": "empirical",
+      "status": "PENDING",
+      "sources": []
+    },
+    {
+      "claim_id": "EMP-002",
+      "text": "The system improves researcher task outcomes or time to verified answers.",
+      "claim_type": "empirical",
+      "status": "PENDING",
+      "sources": []
+    },
+    {
+      "claim_id": "EMP-003",
+      "text": "The final production configuration has a measured resource and reliability envelope on named available hardware.",
+      "claim_type": "empirical",
+      "status": "PENDING",
+      "sources": []
+    }
+  ]
+}

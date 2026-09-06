@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "template",
+  "study_status": "NOT_STARTED",
+  "contains_completed_data": false,
+  "records": [],
+  "instrument_id": "ethics_v1",
+  "purpose": "Placeholder for a real institutional ethics or IRB determination."
+}

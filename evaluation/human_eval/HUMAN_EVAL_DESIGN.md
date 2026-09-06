@@ -97,13 +97,13 @@ The raw label distribution (percent Supported / Partial / Unsupported) is also r
 
 ## 7. The 100 curated cases
 
-The set spans 25 papers and three query types, mined from the prepared corpus by a local model and source-verified (every gold fact was checked to appear verbatim in its source passage) by `evaluation/mine_cases.py`. The earlier hand-curated 3-paper set is preserved as `cases_curated_3paper.json`.
+The set spans 25 papers and three query types, mined from the prepared corpus by a local model and checked against its source passages by `evaluation/mine_cases.py`.
 
 | Capability | Count | Models that answer | Source pattern |
 |---|---|---|---|
 | Single-document text QA | 50 | all 4 | Body-level factual questions mined and source-verified across the 25-paper corpus |
 | Mathematical | 25 | all 4 | Questions over equations, derivations, and numerical results |
-| Visual grounding | 25 | 2 multimodal (qwen, gemma) | Figure and table questions, in the style of `visual_benchmark.json` |
+| Visual grounding | 25 | 2 multimodal (qwen, gemma) | Figure and table questions over source-scoped visual evidence |
 
 ### Case schema (JSON)
 

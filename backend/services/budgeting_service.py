@@ -60,8 +60,8 @@ class BudgetingService:
                 max_context_tokens=2048,
                 max_evidence_blocks=4,
                 max_table_blocks=1,
-                max_visual_crops=0,
-                allow_vision_pixels=False,
+                max_visual_crops=1 if can_vision else 0,
+                allow_vision_pixels=can_vision,
             )
         elif tier == HardwareTier.TIER_16GB:
             return EvidenceBudget(
@@ -69,7 +69,7 @@ class BudgetingService:
                 max_context_tokens=4096,
                 max_evidence_blocks=6,
                 max_table_blocks=2,
-                max_visual_crops=1 if can_vision else 0,
+                max_visual_crops=2 if can_vision else 0,
                 allow_vision_pixels=can_vision,
             )
         else:
@@ -78,7 +78,7 @@ class BudgetingService:
                 max_context_tokens=8192,
                 max_evidence_blocks=10,
                 max_table_blocks=4,
-                max_visual_crops=3 if can_vision else 0,
+                max_visual_crops=4 if can_vision else 0,
                 allow_vision_pixels=can_vision,
             )
 
@@ -90,7 +90,14 @@ class BudgetingService:
         budget: EvidenceBudget,
     ) -> tuple[EvidenceGraph, ReasoningPath]:
         """Prune EvidenceGraph and ReasoningPath to fit strictly within the hardware budget."""
-        if len(graph.nodes) <= budget.max_evidence_blocks:
+        # Check if total nodes AND sublimits are already satisfied
+        tables = [n for n in graph.nodes if n.modality == "table"]
+        visuals = [n for n in graph.nodes if n.modality in ("visual", "figure", "image")]
+        if (
+            len(graph.nodes) <= budget.max_evidence_blocks
+            and len(tables) <= budget.max_table_blocks
+            and len(visuals) <= budget.max_visual_crops
+        ):
             return graph, path
 
         # Priority score: Bridge nodes in reasoning roles are highest priority
@@ -116,11 +123,14 @@ class BudgetingService:
         for node in sorted_nodes:
             if len(selected_nodes) >= budget.max_evidence_blocks:
                 break
-            if node.modality == "table":
+            is_table = node.modality == "table"
+            is_visual = node.modality in ("visual", "figure", "image")
+
+            if is_table:
                 if table_count >= budget.max_table_blocks:
                     continue
                 table_count += 1
-            elif node.modality == "visual":
+            elif is_visual:
                 if visual_count >= budget.max_visual_crops:
                     continue
                 visual_count += 1

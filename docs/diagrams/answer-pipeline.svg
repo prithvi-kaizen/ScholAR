@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120" role="img" aria-labelledby="title desc">
+  <title id="title">ScholAR answer and image-understanding pipeline</title>
+  <desc id="desc">A question is analyzed and searched through five retrieval channels. Results are fused and reranked, checked for sufficiency, then sent through either text generation or two-pass visual generation. Citations are normalized, claims verified, and a trace persisted.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#070f1d"/><stop offset="1" stop-color="#14263d"/></linearGradient>
+    <filter id="sh"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#020617" flood-opacity=".42"/></filter>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#7dd3fc"/></marker>
+    <marker id="v" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#c084fc"/></marker>
+    <style>.ttl{font:700 34px Inter,system-ui;fill:#f8fafc}.sub{font:400 16px Inter,system-ui;fill:#bdcce0}.box{rx:17;stroke-width:2;filter:url(#sh)}.h{font:700 18px Inter,system-ui;fill:#f8fafc}.t{font:400 13px Inter,system-ui;fill:#dce7f4}.s{font:500 11.5px Inter,system-ui;fill:#b9c9db}.line{fill:none;stroke:#7dd3fc;stroke-width:2.8;marker-end:url(#a)}.vis{fill:none;stroke:#c084fc;stroke-width:3;marker-end:url(#v)}.dash{stroke-dasharray:7 6}.label{font:700 11px Inter,system-ui;fill:#f8fafc}</style>
+  </defs>
+  <rect width="1600" height="1120" fill="url(#bg)"/>
+  <text x="55" y="54" class="ttl">Question → multimodal evidence → verified answer trace</text>
+  <text x="55" y="83" class="sub">Image retrieval is always attempted when local visuals exist; explicit words like “figure” are not required.</text>
+
+  <rect x="55" y="125" width="220" height="105" class="box" fill="#173252" stroke="#60a5fa"/>
+  <text x="165" y="163" text-anchor="middle" class="h">User question</text><text x="165" y="192" text-anchor="middle" class="t">anchor paper + optional sources</text><text x="165" y="214" text-anchor="middle" class="s">model, seed, fallback, repair controls</text>
+  <rect x="345" y="125" width="300" height="105" class="box" fill="#143e52" stroke="#22d3ee"/>
+  <text x="495" y="158" text-anchor="middle" class="h">Analyze and budget</text><text x="495" y="184" text-anchor="middle" class="t">L1–L5 + up to 3 subqueries</text><text x="495" y="207" text-anchor="middle" class="t">10 routes + hardware/model capability</text>
+  <rect x="715" y="125" width="330" height="105" class="box" fill="#20385c" stroke="#818cf8"/>
+  <text x="880" y="158" text-anchor="middle" class="h">Load source-scoped evidence</text><text x="880" y="184" text-anchor="middle" class="t">chunks + figures + optional papers</text><text x="880" y="207" text-anchor="middle" class="s">source :: ID kind :: local ID</text>
+  <path d="M275 178H345" class="line"/><path d="M645 178H715" class="line"/>
+
+  <text x="55" y="290" class="h">Five retrieval channels run per original question and subquery</text>
+  <rect x="55" y="320" width="270" height="145" class="box" fill="#173652" stroke="#38bdf8"/>
+  <text x="190" y="355" text-anchor="middle" class="h">A · BM25</text><text x="190" y="383" text-anchor="middle" class="t">scientific tokens + camelCase</text><text x="190" y="407" text-anchor="middle" class="t">k1 1.4 · b 0.72</text><text x="190" y="432" text-anchor="middle" class="s">explicit labels may pin a chunk</text>
+  <rect x="360" y="320" width="270" height="145" class="box" fill="#174535" stroke="#34d399"/>
+  <text x="495" y="355" text-anchor="middle" class="h">B · Dense text</text><text x="495" y="383" text-anchor="middle" class="t">MiniLM · mean pool · L2</text><text x="495" y="407" text-anchor="middle" class="t">exact cosine search</text><text x="495" y="432" text-anchor="middle" class="s">384-D deterministic fallback</text>
+  <rect x="665" y="320" width="270" height="145" class="box" fill="#433017" stroke="#fbbf24"/>
+  <text x="800" y="355" text-anchor="middle" class="h">C · Modality</text><text x="800" y="383" text-anchor="middle" class="t">table / result / method cues</text><text x="800" y="407" text-anchor="middle" class="t">page hints + label bridges</text><text x="800" y="432" text-anchor="middle" class="s">deterministic routing score</text>
+  <rect x="970" y="320" width="270" height="145" class="box" fill="#3e2453" stroke="#c084fc"/>
+  <text x="1105" y="355" text-anchor="middle" class="h">D · Crop CLIP</text><text x="1105" y="383" text-anchor="middle" class="t">query ↔ figure/table image</text><text x="1105" y="407" text-anchor="middle" class="t">cosine floor 0.20</text><text x="1105" y="432" text-anchor="middle" class="s">cache-only · always attempted</text>
+  <rect x="1275" y="320" width="270" height="145" class="box" fill="#352354" stroke="#a78bfa"/>
+  <text x="1410" y="355" text-anchor="middle" class="h">E · Page MaxSim</text><text x="1410" y="383" text-anchor="middle" class="t">query tokens ↔ page patches</text><text x="1410" y="407" text-anchor="middle" class="t">whole page + 6 tiles · floor 0.12</text><text x="1410" y="432" text-anchor="middle" class="s">covers missed or implicit visuals</text>
+  <path d="M880 230V270H190V320" class="line"/><path d="M880 270H495V320" class="line"/><path d="M880 270H800V320" class="line"/><path d="M880 270H1105V320" class="vis"/><path d="M880 270H1410V320" class="vis"/>
+
+  <rect x="320" y="535" width="400" height="120" class="box" fill="#163b4a" stroke="#22d3ee"/>
+  <text x="520" y="571" text-anchor="middle" class="h">Reciprocal rank fusion</text><text x="520" y="600" text-anchor="middle" class="t">Σ 1 / (60 + channel rank)</text><text x="520" y="625" text-anchor="middle" class="s">deduplicate by source-scoped identity</text>
+  <rect x="880" y="535" width="400" height="120" class="box" fill="#25395b" stroke="#818cf8"/>
+  <text x="1080" y="571" text-anchor="middle" class="h">Cross-encoder rerank</text><text x="1080" y="600" text-anchor="middle" class="t">MS MARCO MiniLM or heuristic fallback</text><text x="1080" y="625" text-anchor="middle" class="s">visual priors require score floor + corroboration</text>
+  <path d="M190 465V500H520V535" class="line"/><path d="M495 465V535" class="line"/><path d="M800 465V500H520" class="line"/><path d="M1105 465V500H520" class="vis"/><path d="M1410 465V500H520" class="vis"/><path d="M720 595H880" class="line"/>
+
+  <rect x="590" y="710" width="420" height="105" class="box" fill="#4b2b19" stroke="#fb923c"/>
+  <text x="800" y="746" text-anchor="middle" class="h">Evidence sufficiency gate</text><text x="800" y="774" text-anchor="middle" class="t">text overlap, model capability, ranked visual candidate</text><text x="800" y="798" text-anchor="middle" class="s">no evidence → abstain · visual candidate → inspect pixels</text>
+  <path d="M1080 655V680H800V710" class="line"/>
+
+  <rect x="80" y="865" width="410" height="145" class="box" fill="#173d35" stroke="#34d399"/>
+  <text x="285" y="900" text-anchor="middle" class="h">Text generation path</text><text x="285" y="928" text-anchor="middle" class="t">up to 7 evidence sentences with E-IDs</text><text x="285" y="952" text-anchor="middle" class="t">local Ollama · temperature 0.1</text><text x="285" y="976" text-anchor="middle" class="s">extractive fallback is explicitly labeled</text>
+  <rect x="595" y="850" width="410" height="175" class="box" fill="#3d2553" stroke="#c084fc"/>
+  <text x="800" y="886" text-anchor="middle" class="h">Two-pass visual path</text><text x="800" y="914" text-anchor="middle" class="t">1 · source-keyed JSON pixel observation</text><text x="800" y="940" text-anchor="middle" class="t">2 · image + observation + nearby text synthesis</text><text x="800" y="966" text-anchor="middle" class="t">optional subregion → normalized page box</text><text x="800" y="994" text-anchor="middle" class="s">observation is model-generated, not ground truth</text>
+  <rect x="1110" y="865" width="410" height="145" class="box" fill="#3f242a" stroke="#fb7185"/>
+  <text x="1315" y="900" text-anchor="middle" class="h">Citation + claim verification</text><text x="1315" y="928" text-anchor="middle" class="t">map valid E-IDs to source-owned pages</text><text x="1315" y="952" text-anchor="middle" class="t">atomic lexical support + number checks</text><text x="1315" y="976" text-anchor="middle" class="s">selective repair, reverify, or abstain</text>
+
+  <path d="M720 815V835H285V865" class="line"/><path d="M880 815V850" class="vis"/><path d="M490 938H560V1045H1315V1010" class="line"/><path d="M1005 938H1110" class="vis"/>
+  <rect x="495" y="1055" width="610" height="48" rx="18" fill="#133f34" stroke="#4ade80" stroke-width="2"/>
+  <text x="800" y="1085" text-anchor="middle" class="h">Final answer + citations + complete AnswerTrace persisted atomically</text>
+  <path d="M1315 1010V1040H1105V1055" class="line"/>
+</svg>

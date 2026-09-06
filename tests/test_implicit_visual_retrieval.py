@@ -1,9 +1,11 @@
 """Unit tests for Implicit Visual & Tabular Context Retrieval."""
 
 import unittest
+from unittest.mock import patch
 from backend.schemas.capabilities import ModelCapabilities
 from backend.services.chunking_service import chunk_figures
 from backend.services.question_analyzer import QuestionAnalyzer
+from backend.services.reranker_service import RerankerService
 from backend.services.retrieval_service import (
     _is_implicit_visual_or_tabular_query,
     extract_figure_refs,
@@ -159,6 +161,100 @@ class TestImplicitVisualRetrieval(unittest.TestCase):
         chunk_ids = [c["chunk_id"] for c in retrieved]
         self.assertIn("chunk_010", chunk_ids)
         self.assertIn("fig_08_001", chunk_ids)
+
+    def test_image_channel_rejects_best_of_bad_similarity(self):
+        figure = {
+            "chunk_id": "fig_pixels_only",
+            "source_paper_id": "paper",
+            "page": 2,
+            "text": "Unrelated caption.",
+            "is_figure_chunk": True,
+            "is_table_chunk": False,
+            "image_file": "figure.png",
+        }
+
+        def keep_order(_query, candidates, top_k):
+            return candidates[:top_k]
+
+        with (
+            patch(
+                "backend.services.retrieval_service.DenseEmbeddingService.search_dense",
+                return_value=[],
+            ),
+            patch(
+                "backend.services.retrieval_service.RerankerService.rerank",
+                side_effect=keep_order,
+            ),
+            patch(
+                "backend.services.retrieval_service.VisualEmbeddingService.search_visual",
+                return_value=[(figure, -0.1)],
+            ),
+        ):
+            weak = retrieve_chunks(
+                "nebula quasar",
+                [figure],
+                limit=1,
+                paper_id="paper",
+            )
+        self.assertEqual(weak, [])
+
+        with (
+            patch(
+                "backend.services.retrieval_service.DenseEmbeddingService.search_dense",
+                return_value=[],
+            ),
+            patch(
+                "backend.services.retrieval_service.RerankerService.rerank",
+                side_effect=keep_order,
+            ),
+            patch(
+                "backend.services.retrieval_service.VisualEmbeddingService.search_visual",
+                return_value=[(figure, 0.35)],
+            ),
+        ):
+            strong = retrieve_chunks(
+                "nebula quasar",
+                [figure],
+                limit=1,
+                paper_id="paper",
+            )
+        self.assertEqual(strong[0]["chunk_id"], "fig_pixels_only")
+        self.assertTrue(strong[0]["image_embedding_eligible"])
+        self.assertGreaterEqual(
+            strong[0]["image_embedding_score"],
+            strong[0]["image_embedding_threshold"],
+        )
+        self.assertEqual(RerankerService._image_rank_boost(strong[0]), 0.0)
+        self.assertGreater(
+            RerankerService._image_rank_boost({
+                **strong[0],
+                "image_embedding_corroborated": True,
+            }),
+            0.0,
+        )
+
+        with (
+            patch(
+                "backend.services.retrieval_service.DenseEmbeddingService.search_dense",
+                return_value=[],
+            ),
+            patch(
+                "backend.services.retrieval_service.RerankerService.rerank",
+                return_value=[],
+            ),
+            patch(
+                "backend.services.retrieval_service.VisualEmbeddingService.search_visual",
+                return_value=[(figure, 0.35)],
+            ),
+        ):
+            inspection_only = retrieve_chunks(
+                "nebula quasar",
+                [figure],
+                limit=1,
+                paper_id="paper",
+            )
+        self.assertTrue(inspection_only[0]["visual_inspection_candidate"])
+        self.assertFalse(inspection_only[0]["image_embedding_corroborated"])
 
     def test_question_router_implicit_classification(self):
         """Verify that QuestionRouter correctly allocates visual budget for implicit queries."""

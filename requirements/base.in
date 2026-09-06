@@ -1,0 +1,10 @@
+# Direct, model-free ScholAR runtime dependencies. Model/parser stacks are extras.
+fastapi==0.115.6
+uvicorn==0.34.0
+httpx==0.28.1
+pymupdf==1.26.7
+python-dotenv==1.0.1
+pydantic==2.10.4
+python-multipart==0.0.20
+numpy==2.5.2
+psutil==7.2.2

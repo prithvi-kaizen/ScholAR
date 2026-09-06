@@ -1,6 +1,10 @@
 """Tests for Comparative Scaling & Joint Text-Vision Multimodal Fusion."""
 
+import asyncio
 import unittest
+from unittest.mock import AsyncMock, patch
+
+from backend.services.ollama_service import LocalGenerationResult
 from backend.services.retrieval_service import (
     _COMPARATIVE_SCALING_PATTERNS,
     _section_hints,
@@ -8,6 +12,9 @@ from backend.services.retrieval_service import (
 )
 from backend.services.vision_service import (
     _build_multi_vision_prompt,
+    _build_visual_observation_prompt,
+    _parse_visual_observations,
+    answer_with_multimodal_evidence,
     is_uninformative_visual_answer,
 )
 
@@ -99,6 +106,133 @@ class TestComparativeVisualTextFusion(unittest.TestCase):
         # The top retrieved chunk should be the empirical result (Observation 3 or Figure 1)
         top_chunk_ids = [c["chunk_id"] for c in ranked[:2]]
         self.assertTrue("chunk_sec4_obs3" in top_chunk_ids or "fig_01_scaling" in top_chunk_ids)
+
+    def test_visual_prompts_keep_image_and_source_provenance_separate(self):
+        figures = [
+            {
+                "_vision_evidence_id": "V1",
+                "_vision_ref_id": 1,
+                "source_paper_id": "paper-a",
+                "_source_title": "Anchor Study",
+                "label": "Figure 1",
+                "caption": "Alpha trend",
+            },
+            {
+                "_vision_evidence_id": "V2",
+                "_vision_ref_id": 2,
+                "source_paper_id": "paper-b",
+                "_source_title": "Reference Study",
+                "label": "Figure 1",
+                "caption": "Beta trend",
+            },
+        ]
+        observation_prompt = _build_visual_observation_prompt(
+            "Compare the trends",
+            figures,
+            {
+                "paper-a": {"title": "Anchor Study"},
+                "paper-b": {"title": "Reference Study"},
+            },
+        )
+        self.assertIn("V1 (citation [1], source_id='paper-a'", observation_prompt)
+        self.assertIn("V2 (citation [2], source_id='paper-b'", observation_prompt)
+
+        observations = _parse_visual_observations(
+            '{"observations": ['
+            '{"evidence_id":"V1","observation":"alpha only"},'
+            '{"evidence_id":"V2","observation":"beta only"}] }',
+            {"V1", "V2"},
+        )
+        self.assertEqual(observations, {"V1": "alpha only", "V2": "beta only"})
+        synthesis = _build_multi_vision_prompt(
+            question="Compare the trends",
+            figures=figures,
+            text_context="[T1 -> citation [3] | source_id=paper-b] supporting text",
+            paper_title="Anchor Study",
+            visual_observations=observations,
+            source_metadata={"paper-b": {"title": "Reference Study"}},
+        )
+        self.assertIn("V1 -> citation [1] | source_id=paper-a", synthesis)
+        self.assertIn("V2 -> citation [2] | source_id=paper-b", synthesis)
+        self.assertIn("alpha only", synthesis)
+        self.assertIn("beta only", synthesis)
+
+    def test_multimodal_answer_attaches_only_matching_source_observation(self):
+        figures = [
+            {
+                "chunk_id": "fig-a",
+                "figure_id": "1",
+                "source_paper_id": "paper-a",
+                "label": "Figure 1",
+                "caption": "Alpha caption",
+                "figure_type": "figure",
+                "image_file": "same.png",
+                "page": 2,
+            },
+            {
+                "chunk_id": "fig-b",
+                "figure_id": "1",
+                "source_paper_id": "paper-b",
+                "label": "Figure 1",
+                "caption": "Beta caption",
+                "figure_type": "figure",
+                "image_file": "same.png",
+                "page": 4,
+            },
+        ]
+        generations = [
+            LocalGenerationResult(
+                response=(
+                    '{"observations":['
+                    '{"evidence_id":"V1","observation":"alpha pixels"},'
+                    '{"evidence_id":"V2","observation":"beta pixels"}]}'
+                ),
+                requested_model="vision-test",
+                resolved_model="vision-test",
+            ),
+            LocalGenerationResult(
+                response="**Answer**\nAlpha [1] and beta [2] are distinct.",
+                requested_model="vision-test",
+                resolved_model="vision-test",
+            ),
+        ]
+        with (
+            patch(
+                "backend.services.vision_service.ollama_available",
+                AsyncMock(return_value=True),
+            ),
+            patch(
+                "backend.services.vision_service._load_figure_png",
+                side_effect=lambda source_id, _name: source_id.encode("utf-8"),
+            ) as load_image,
+            patch(
+                "backend.services.vision_service.generate_result",
+                AsyncMock(side_effect=generations),
+            ),
+        ):
+            result = asyncio.run(answer_with_multimodal_evidence(
+                question="Compare alpha and beta",
+                figure_chunks=figures,
+                context_chunks=[],
+                paper_id="paper-a",
+                paper_metadata={"title": "Anchor Study"},
+                source_metadata={
+                    "paper-a": {"title": "Anchor Study"},
+                    "paper-b": {"title": "Reference Study"},
+                },
+                model="vision-test",
+            ))
+
+        self.assertEqual(
+            [call.args[0] for call in load_image.call_args_list],
+            ["paper-a", "paper-b"],
+        )
+        image_citations = result["citations"][:2]
+        self.assertEqual(image_citations[0]["visual_observation"], "alpha pixels")
+        self.assertEqual(image_citations[1]["visual_observation"], "beta pixels")
+        self.assertNotIn("beta pixels", image_citations[0]["quote"])
+        self.assertEqual(image_citations[1]["source_paper_id"], "paper-b")
+        self.assertEqual(image_citations[1]["source_title"], "Reference Study")
 
     def test_build_multi_vision_prompt_synthesis_instructions(self):
         """Verify _build_multi_vision_prompt instructs joint text-vision synthesis."""

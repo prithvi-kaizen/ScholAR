@@ -13,9 +13,11 @@ Provides graceful fallback detection if Docling is not installed or encounters a
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
+from backend.services.network_policy_service import NetworkPolicyService
 from backend.schemas.evidence import (
     EvidenceBlock,
     EvidenceModality,
@@ -53,6 +55,16 @@ def parse_with_docling(pdf_path: Path, document_id: str) -> dict[str, Any] | Non
     if not is_docling_available():
         return None
 
+    artifacts_path: Path | None = None
+    if NetworkPolicyService.enforce_local_model_cache():
+        configured = os.getenv("DOCLING_ARTIFACTS_PATH", "").strip()
+        artifacts_path = Path(configured).expanduser() if configured else None
+        if artifacts_path is None or not artifacts_path.is_dir():
+            logger.info(
+                "Strict-local mode has no DOCLING_ARTIFACTS_PATH; using the labeled PyMuPDF fallback."
+            )
+            return None
+
     try:
         from docling.datamodel.base_models import InputFormat
         from docling.document_converter import DocumentConverter, PdfFormatOption
@@ -61,6 +73,8 @@ def parse_with_docling(pdf_path: Path, document_id: str) -> dict[str, Any] | Non
         pipeline_options = PdfPipelineOptions()
         pipeline_options.do_ocr = False
         pipeline_options.do_table_structure = True
+        if artifacts_path is not None:
+            pipeline_options.artifacts_path = artifacts_path
 
         converter = DocumentConverter(
             format_options={

@@ -1,0 +1,31 @@
+\section{Claim Support and Selective Repair}
+\subsection{Span-preserving claims}
+The verifier segments model-generated text into atomic factual claims while retaining zero-based, half-open character offsets $[s_c, e_c)$ into the exact generated text. Citation markers $[E_k]$ are parsed as distinct citation spans $[s_m, e_m)$, decoupling factual assertions from citation pointers. Each atomic claim records its textual span, associated citation IDs, resolved evidence references, first- and second-pass labels, confidence score, and repair action.
+
+\subsection{Support and contradiction scoring}
+The implemented scorer (\texttt{LexicalSupportScorer}) is a deterministic, reproducible baseline rather than an uncalibrated black-box language model. Let $T_{\text{claim}}$ denote the non-citation tokens of an atomic claim and $T_{\text{evidence}}$ denote the tokens of cited evidence chunks. The token overlap ratio is computed as:
+\begin{equation}
+\text{Overlap}(T_{\text{claim}}, T_{\text{evidence}}) = \frac{|T_{\text{claim}} \cap T_{\text{evidence}}|}{|T_{\text{claim}}|}
+\end{equation}
+
+To detect factual hallucinations, the verifier extracts numerical quantities, filtering out structural identifiers (e.g., ``Figure 1'', ``Table 2'', ``Equation 3'', ``page 4''). If the claim contains non-structural numbers $N_{\text{claim}}$ disjoint from evidence numbers $N_{\text{evidence}}$ ($N_{\text{claim}} \cap N_{\text{evidence}} = \emptyset$) and exhibits high topical lexical overlap ($\text{Overlap} > 0.40$), it is categorized as \textsc{Contradicted} ($\text{confidence} = 0.90$). Defining $\text{Ov} \equiv \text{Overlap}(T_{\text{claim}}, T_{\text{evidence}})$, the claim is otherwise classified by versioned thresholds:
+\begin{equation}
+\text{Label} = \begin{cases}
+\textsc{Supported}, & \text{Ov} \ge 0.50, \\
+\textsc{Partial}, & 0.25 \le \text{Ov} < 0.50, \\
+\textsc{Unsupported}, & \text{Ov} < 0.25.
+\end{cases}
+\end{equation}
+
+\subsection{Conservative deterministic repair actions}
+Rather than invoking unconstrained LLM regenerations that risk introducing secondary hallucinations, ScholAR executes deterministic, span-preserving text mutations from a bounded action vocabulary:
+\begin{itemize}
+    \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
+    \item \texttt{NONE}: \textsc{Supported} claims are preserved without modification.
+    \item \texttt{CLAIM\_}\allowbreak\texttt{NARROWING}: For \textsc{Partial} multi-clause claims, the verifier splits clauses and deletes unsupported sub-clauses, retaining only lexical spans supported by cited evidence.
+    \item \texttt{CITATION\_}\allowbreak\texttt{REMAP}: For an \textsc{Unsupported} claim, the engine attempts one remap to unused candidate evidence in the retrieved pool; if a candidate meets the $0.50$ threshold, citation markers are updated.
+    \item \texttt{NUMERIC\_}\allowbreak\texttt{CORRECTION} / \texttt{CLAIM\_}\allowbreak\texttt{DELETION}: Contradicted or stubbornly unsupported claims are excised entirely by deleting their span $[s_c, e_c)$.
+    \item \texttt{ABSTAIN}: If repair excises all factual claims, the entire answer is deterministically replaced by the canonical abstention string: \emph{``The paper does not provide sufficient evidence to answer this question.''}
+\end{itemize}
+
+Following repair, the text undergoes a second full verification pass. The trace records initial and final reports, exact character diffs, and verification metrics, ensuring complete operational auditability.

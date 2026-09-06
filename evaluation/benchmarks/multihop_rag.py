@@ -1,9 +1,54 @@
 from __future__ import annotations
 
 import json
+import re
+import string
+from collections import Counter
 from pathlib import Path
 from typing import Any
 from evaluation.benchmarks.base import GoldEvidence, QAExample
+
+
+def normalize_answer(s: str) -> str:
+    """Lower text and remove punctuation, articles, and extra whitespace."""
+    def remove_articles(text: str) -> str:
+        return re.sub(r"\b(a|an|the)\b", " ", text)
+
+    def white_space_fix(text: str) -> str:
+        return " ".join(text.split())
+
+    def remove_punc(text: str) -> str:
+        exclude = set(string.punctuation)
+        return "".join(ch for ch in text if ch not in exclude)
+
+    def lower(text: str) -> str:
+        return text.lower()
+
+    return white_space_fix(remove_articles(remove_punc(lower(str(s or "")))))
+
+
+def compute_exact_match(prediction: str, gold: str) -> float:
+    """Compute normalized SQuAD-standard Exact Match."""
+    norm_pred = normalize_answer(prediction)
+    norm_gold = normalize_answer(gold)
+    if not norm_pred or not norm_gold:
+        return 1.0 if norm_pred == norm_gold else 0.0
+    return 1.0 if norm_pred == norm_gold else 0.0
+
+
+def compute_token_f1(prediction: str, gold: str) -> float:
+    """Compute token-level F1 with multiset Counter overlap."""
+    pred_tokens = normalize_answer(prediction).split()
+    gold_tokens = normalize_answer(gold).split()
+    if not pred_tokens or not gold_tokens:
+        return 1.0 if pred_tokens == gold_tokens else 0.0
+    common = Counter(pred_tokens) & Counter(gold_tokens)
+    num_same = sum(common.values())
+    if num_same == 0:
+        return 0.0
+    precision = 1.0 * num_same / len(pred_tokens)
+    recall = 1.0 * num_same / len(gold_tokens)
+    return (2 * precision * recall) / (precision + recall)
 
 
 class MultiHopRAGAdapter:
@@ -60,54 +105,51 @@ class MultiHopRAGAdapter:
         em_total = 0.0
         f1_total = 0.0
         epr_total = 0.0
+        epr_supervised_count = 0
         abstention_correct = 0
         abstention_total = 0
 
         for pred in predictions:
             gold_answers = pred.get("gold_answers", [])
-            pred_answer = pred.get("prediction", "").strip().lower()
+            pred_answer = str(pred.get("prediction", "")).strip()
             answerable = pred.get("answerable", True)
 
             if not answerable:
                 abstention_total += 1
-                if pred.get("abstained", False) or "insufficient" in pred_answer or not pred_answer:
+                if pred.get("abstained", False) or "insufficient" in pred_answer.lower() or not pred_answer:
                     abstention_correct += 1
                 continue
 
             if not gold_answers:
                 continue
 
-            # Exact Match
-            em = max(float(g.lower() in pred_answer or pred_answer in g.lower()) for g in gold_answers)
+            # Exact Match (normalized SQuAD standard)
+            em = max(compute_exact_match(pred_answer, g) for g in gold_answers)
             em_total += em
 
-            # Token F1
-            pred_toks = set(pred_answer.split())
-            best_f1 = 0.0
-            for g in gold_answers:
-                gold_toks = set(g.lower().split())
-                common = pred_toks.intersection(gold_toks)
-                if not common:
-                    continue
-                p = len(common) / len(pred_toks)
-                r = len(common) / len(gold_toks)
-                f1 = 2 * p * r / (p + r)
-                best_f1 = max(best_f1, f1)
-            f1_total += best_f1
+            # Token F1 (multiset Counter overlap)
+            f1 = max(compute_token_f1(pred_answer, g) for g in gold_answers)
+            f1_total += f1
 
             # Evidence Path Recall (EPR): checks if evidence from all required papers was retrieved
-            gold_sources = {e.get("source_id", "") for e in pred.get("gold_evidence", [])}
-            retrieved_sources = set(pred.get("retrieved_sources", []))
+            gold_sources = {
+                e.get("source_id", "") for e in pred.get("gold_evidence", []) if e.get("source_id")
+            }
+            retrieved_sources = {
+                s for s in pred.get("retrieved_sources", []) if s
+            }
             if gold_sources:
                 epr = len(gold_sources.intersection(retrieved_sources)) / len(gold_sources)
+                epr_total += epr
+                epr_supervised_count += 1
             else:
-                epr = 1.0
-            epr_total += epr
+                pred["missing_supervision"] = True
 
         n_ans = max(1, len(predictions) - abstention_total)
         return {
             "multihop_exact_match": round(em_total / n_ans, 4),
             "multihop_f1": round(f1_total / n_ans, 4),
-            "evidence_path_recall": round(epr_total / n_ans, 4),
+            "evidence_path_recall": round(epr_total / max(1, epr_supervised_count), 4) if epr_supervised_count > 0 else 0.0,
             "abstention_accuracy": round(abstention_correct / max(1, abstention_total), 4) if abstention_total > 0 else 1.0,
         }
+

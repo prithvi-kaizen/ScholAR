@@ -1,0 +1,121 @@
+{
+  "artifacts": [
+    {
+      "bytes": 735,
+      "path": "expected_keys.json",
+      "sha256": "cb8bcd4f6af7b575d16eb83fb3ca72868057f209b1784e65c42a587c026cc74c"
+    },
+    {
+      "bytes": 2527,
+      "path": "configs/release_config.json",
+      "sha256": "29aa4e8b5b5109128cd968b0f22045d8a7531b1bb24170743dcf30a658025964"
+    },
+    {
+      "bytes": 21214,
+      "path": "raw/rows.jsonl",
+      "sha256": "ef9ba103557a310eee24ffb7ed4b5bad540bb6b4269aea3d670aef7b4c1192fe"
+    },
+    {
+      "bytes": 1590,
+      "path": "scored/rows.jsonl",
+      "sha256": "2f461b8755818d059beeff498b9ea4a6cf7234d572219b079c41fed472d8ce99"
+    },
+    {
+      "bytes": 2220,
+      "path": "aggregates/summary.json",
+      "sha256": "a1586467e0f65512a326fc7830f4bd69ee6b8765aac4d2842b6ee0f78fa584b8"
+    },
+    {
+      "bytes": 296,
+      "path": "tables/summary.csv",
+      "sha256": "96ffd3dae2c1e78c3d51e8426616e7544ecde0a3ffad437ba230bbe935182b27"
+    },
+    {
+      "bytes": 415,
+      "path": "tables/summary.tex",
+      "sha256": "c1315e736322fa89676dd697de0fbd2f21bac9a25914c1fe2519dd666db164db"
+    },
+    {
+      "bytes": 272,
+      "path": "tables/provenance.json",
+      "sha256": "6d6c1a344983f0bdc803ce963b7e6820ee7753a2e45d303f2a014ed43f01f2b0"
+    }
+  ],
+  "claim_status": "non_release",
+  "completed_at": "2026-08-30T07:23:48Z",
+  "dataset": {
+    "cases_path": "evaluation/fixtures/releases/release_v1_minimal/data_cards/cases.json",
+    "claim_status": "non_release",
+    "evidence_class": "toy",
+    "name": "Release pipeline toy fixture",
+    "paper_disjoint_from_development": false,
+    "sha256": "25ad03d7e9cbae5a6f792adb5c328ed36b393e160265c07d4a8986748abbf24e",
+    "version": "1.0"
+  },
+  "evidence_class": "toy",
+  "exact_command": [
+    ".venv/bin/python",
+    "evaluation/fixtures/releases/release_v1_minimal/build_fixture.py"
+  ],
+  "git_dirty": true,
+  "git_revision": "9abdaf81c2fc577f85b4a02f605371bcd7dc7bed",
+  "hardware": {
+    "logical_cpu_count": 11,
+    "machine": "arm64",
+    "memory_bytes": 19327352832,
+    "os": "Darwin",
+    "os_release": "25.6.0",
+    "processor": "arm"
+  },
+  "lifecycle_status": "VALIDATED",
+  "models": [
+    {
+      "digest": "sha256:fixture-model-v1",
+      "quantization": "none",
+      "tag": "fixture-model:1"
+    }
+  ],
+  "n_expected": 4,
+  "prompt_hashes": {
+    "fixture": "sha256:fixture-prompt-v1"
+  },
+  "release_id": "release_v1_minimal",
+  "run_id": "fixture-run-v1",
+  "schema_version": "1.0",
+  "seeds": [
+    11,
+    29
+  ],
+  "software": {
+    "platform": "macOS-26.6-arm64-arm-64bit",
+    "python": "3.12.4",
+    "python_implementation": "CPython"
+  },
+  "started_at": "2026-08-29T17:28:17Z",
+  "status_counts": {
+    "ABSTAINED": 1,
+    "ERROR": 1,
+    "SUCCESS": 2
+  },
+  "systems": [
+    {
+      "description": "Deterministic toy adapter; not a measured system.",
+      "name": "fixture_system",
+      "options": {
+        "decoding": {
+          "num_ctx": 16000,
+          "num_predict": 1650,
+          "temperature": 0.1,
+          "top_p": 0.9
+        },
+        "execution_policy": "REQUIRE_LOCAL_MODEL",
+        "intervention": {
+          "abstain_on_no_supported_claims": true,
+          "repair_mode": "SELECTIVE"
+        }
+      },
+      "runner": "fixture"
+    }
+  ],
+  "updated_at": "2026-08-30T07:23:48Z"
+}

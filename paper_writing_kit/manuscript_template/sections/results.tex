@@ -1,0 +1,10 @@
+\section{Results}
+\ifreleasetables
+  \input{../../evaluation/releases/eacl_industry_v1/tables/summary.tex}
+\else
+  \GatePending{The claim-bearing release does not yet exist. Development claim labels, frozen held-out cases, judge validation, ethics determination, researcher pilot, final model-backed intervention runs, and named-hardware profiling remain pending. No historical, simulated, toy, or development-only number is substituted here.}
+\fi
+
+The implemented artifact gates already enforce four reporting properties. First, a failed generation cannot disappear from the denominator. Second, an abstention remains distinct from an infrastructure or model error. Third, tables carry the hash of the aggregate JSON from which they were rendered. Fourth, the submission claim map cannot mark an empirical claim supported without a validated release source. These are reproducibility properties of the evaluation system, not findings about answer quality or user benefit.
+
+The final version of this section will report the paired repair comparison, support--coverage curve, human--judge agreement, user-task result, resource envelope, and failure taxonomy only after their gates clear. If a gate does not clear, the corresponding claim and table will be removed or reported as a null result rather than estimated from development artifacts.

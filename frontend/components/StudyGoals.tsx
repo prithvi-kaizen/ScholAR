@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   CheckCircle2, Circle, Loader2, Sparkles, Zap,
-  Clock, BookOpen, Layers, ChevronDown, ChevronUp, HelpCircle
+  Clock, BookOpen, ChevronDown, ChevronUp, HelpCircle
 } from "lucide-react";
 import type { StudyGoal } from "../types/paper";
 

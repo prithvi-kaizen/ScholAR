@@ -1,42 +1,81 @@
 import unittest
-from backend.services.retrieval_multimodal import MultimodalHybridRetriever
+from unittest.mock import patch
+
 from evaluation.benchmarks.qasper import QASPERAdapter
 from evaluation.benchmarks.peerqa import PeerQAAdapter
 from evaluation.benchmarks.scivqa import SciVQAAdapter
 from evaluation.interventions.perturbation import EvidencePerturbationRunner
+from evaluation.run_retrieval_eval import RETRIEVERS, evaluate_case, summarize
 
 
 class TestEvaluationAndRetrieval(unittest.TestCase):
 
-    def test_multimodal_hybrid_retriever(self):
-        chunks = [
+    def test_four_channel_rows_record_case_specific_visual_participation(self):
+        retriever_name = "four_channel_image_rrf_v1_with_page_hints"
+        hit = {
+            "chunk_id": "fig_1",
+            "page": 2,
+            "bm25_rank": 3,
+            "dense_rank": 2,
+            "image_embedding_rank": 1,
+            "image_embedding_eligible": True,
+        }
+        case = {
+            "id": "visual-case",
+            "paper_id": "paper",
+            "query": "What relation is shown?",
+            "relevant_chunk_ids": ["fig_1"],
+        }
+        with (
+            patch("evaluation.run_retrieval_eval.load_chunks", return_value=[hit]),
+            patch.dict(RETRIEVERS, {retriever_name: lambda *_args, **_kwargs: [hit]}),
+            patch(
+                "evaluation.run_retrieval_eval.VisualEmbeddingService.status",
+                return_value={
+                    "model_loaded": True,
+                    "active": True,
+                    "encoder_fingerprint": "a" * 64,
+                    "last_request_attempted": True,
+                    "last_request_succeeded": True,
+                    "last_request_hit_count": 1,
+                },
+            ),
+        ):
+            row = evaluate_case(case, retriever_name)
+
+        self.assertIn("image_embedding", row["active_channels"])
+        self.assertEqual(row["eligible_image_hits_in_top_k"], 1)
+        self.assertTrue(row["visual_embedding"]["condition_enabled"])
+        self.assertTrue(row["condition_eligible"])
+        self.assertTrue(row["visual_embedding"]["last_request_succeeded"])
+        self.assertEqual(row["visual_embedding"]["encoder_fingerprint"], "a" * 64)
+
+    def test_four_channel_summary_excludes_image_ineligible_rows(self):
+        name = "four_channel_image_rrf_v1_with_page_hints"
+        base = {
+            "retriever": name,
+            "recall_at_1": 1,
+            "recall_at_3": 1,
+            "recall_at_5": 1,
+            "reciprocal_rank": 1.0,
+            "ndcg_at_5": 1.0,
+        }
+        metrics = summarize([
+            {**base, "condition_eligible": True},
             {
-                "chunk_id": "chunk_01",
-                "text": "The Transformer relies entirely on self-attention mechanisms without recurrence.",
-                "retrieval_text": "Introduction. The Transformer relies entirely on self-attention mechanisms without recurrence.",
-                "page": 1,
-                "section_title": "Introduction",
-                "chunk_type": "paragraph",
-                "is_figure_chunk": False,
+                **base,
+                "condition_eligible": False,
+                "recall_at_1": 0,
+                "recall_at_3": 0,
+                "recall_at_5": 0,
+                "reciprocal_rank": 0.0,
+                "ndcg_at_5": 0.0,
             },
-            {
-                "chunk_id": "fig_01",
-                "text": "Figure 1: The Transformer model architecture with encoder and decoder stacks.",
-                "retrieval_text": "Figure > Figure 1: The Transformer model architecture with encoder and decoder stacks.",
-                "page": 3,
-                "section_title": "Figure",
-                "chunk_type": "figure",
-                "is_figure_chunk": True,
-                "figure_id": "fig_03_001",
-            },
-        ]
-        retriever = MultimodalHybridRetriever(rrf_k=60)
-        results = retriever.retrieve_hybrid("What is the architecture shown in Figure 1?", chunks, text_limit=1, visual_limit=1)
-        self.assertEqual(len(results), 2)
-        # Verify RRF score and rank are calculated
-        self.assertIn("rrf_score", results[0])
-        self.assertIn("dense_score", results[0])
-        self.assertIn("bm25_score", results[0])
+        ])[name]
+        self.assertEqual(metrics["cases"], 1)
+        self.assertEqual(metrics["total_cases"], 2)
+        self.assertEqual(metrics["excluded_no_image"], 1)
+        self.assertEqual(metrics["recall_at_1"], 1.0)
 
     def test_qasper_adapter(self):
         adapter = QASPERAdapter()

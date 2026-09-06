@@ -1,0 +1,25 @@
+\section{Release Artifact Contract}
+The evaluation release package contains: (1)~a frozen expected-key registry \texttt{expected\_}\allowbreak\texttt{keys.json}; (2)~raw execution JSONL traces and post-scoring JSONL evaluations; (3)~hierarchically aggregated results in \texttt{aggregate.json}; (4)~auto-rendered \LaTeX{} tables carrying SHA-256 provenance binds; (5)~an execution manifest logging code commit, invocation flags, dataset identity, model hashes, quantization settings, prompt hashes, random seeds, hardware specs, timestamp, and status counts; and (6)~a complete SHA-256 artifact manifest. The validator enforces strict key equality, rejects duplicate or truncated rows, verifies denominator preservation, checks table checksums against aggregate summaries, and audits for anonymity compliance.
+
+\section{Answer Trace Fields}
+Every query processed by \texttt{AnswerPipeline}\allowbreak\texttt{Service} produces a structured \texttt{AnswerTrace} recording:
+\begin{itemize}
+    \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
+    \item \textbf{Provenance:} Request ID, document ID, session ID, user question, random seed, model tag, prompt hash, and Git commit SHA.
+    \item \textbf{Retrieval Telemetry:} Per-chunk candidate scores and ranks across lexical (BM25), dense text, crop CLIP, full-page ColQwen2, and modality channels; RRF fused ranks; sufficiency decisions and reason codes.
+    \item \textbf{Prompts \& Completions:} Exact prompt text, evidence block content hashes, raw model completion, normalized text, and final post-repair text.
+    \item \textbf{Citation Metadata:} Source-scoped evidence identities, resolved document pages and bounding coordinates, and citation origins (\textsc{ModelEmitted}, \textsc{ApplicationImputed}, or \textsc{Remapped}).
+    \item \textbf{Verification \& Repair:} Pre- and post-repair atomic claims with character spans $[s_c, e_c)$, lexical overlap scores, numerical contradiction flags, support labels, concrete text diffs, and abstention codes.
+    \item \textbf{System Metrics:} Stage-by-stage execution latencies (retrieval, generation, verification, repair), token throughput, and hardware tier descriptor.
+\end{itemize}
+
+\section{Human-Evidence Safety}
+Template directories for claim calibration, judge validation, researcher pilots, and institutional ethics determinations begin with an explicit no-data banner. Machine envelopes enforce strict metadata guards:
+\begin{itemize}
+    \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
+    \item \texttt{artifact\_type}: \texttt{"template"}
+    \item \texttt{study\_status}: \texttt{"NOT\_STARTED"}
+    \item \texttt{contains\_completed\_data}: \texttt{false}
+    \item \texttt{records}: empty list \texttt{[]}
+\end{itemize}
+Continuous integration automatically fails if any template directory contains populated participant or outcome records, ensuring unreviewed or non-existent human empirical data cannot be merged or reported.

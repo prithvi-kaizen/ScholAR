@@ -7,6 +7,8 @@ import { Navbar } from "../components/Navbar";
 import { PaperCard } from "../components/PaperCard";
 import { PaperModal } from "../components/PaperModal";
 import { SearchBar } from "../components/SearchBar";
+import { useNetworkPolicy } from "../lib/networkPolicy";
+import { getApiErrorMessage } from "../types/api";
 import type { Paper } from "../types/paper";
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
@@ -265,6 +267,7 @@ export default function HomePage() {
   const [uploadStep, setUploadStep] = useState(0);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState("");
+  const { policy } = useNetworkPolicy();
 
   const uploadSteps = [
     "Uploading PDF",
@@ -335,8 +338,8 @@ export default function HomePage() {
         signal: timeoutController.signal
       });
       if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.detail ?? "Upload failed");
+        const payload: unknown = await response.json().catch(() => ({}));
+        throw new Error(getApiErrorMessage(payload, "Upload failed"));
       }
       setUploadStep(1);
       const payload = (await response.json()) as { paper_id: string; metadata: Paper };
@@ -370,8 +373,8 @@ export default function HomePage() {
     try {
       const response = await fetch(`${backendUrl}/api/search?q=${encodeURIComponent(trimmed)}&max_results=12`);
       if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.detail ?? "Search failed");
+        const payload: unknown = await response.json().catch(() => ({}));
+        throw new Error(getApiErrorMessage(payload, "Search failed"));
       }
       const payload = (await response.json()) as { papers: Paper[] };
       setPapers(payload.papers ?? []);
@@ -391,6 +394,13 @@ export default function HomePage() {
       <section className="mx-auto w-full max-w-7xl px-5 py-8">
         <div className="mb-8">
           <SearchBar onSearch={search} loading={loading} />
+          {policy ? (
+            <p className="mt-2 text-xs text-zinc-400">
+              {policy.mode === "strict-local"
+                ? "Strict-local mode: search returns prepared local matches only; arXiv search and uncached PDF acquisition are blocked."
+                : "Acquisition-enabled mode: search and uncached paper preparation may contact arXiv or the paper host."}
+            </p>
+          ) : null}
         </div>
 
         <div className="mb-8">

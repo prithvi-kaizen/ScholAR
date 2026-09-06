@@ -1,0 +1,16 @@
+[
+  {
+    "case_id": "case_alpha",
+    "paper_id": "fixture_paper",
+    "query": "What behavior does the fixture exercise?",
+    "secondary_paper_ids": [],
+    "metadata": {"answerable": true}
+  },
+  {
+    "case_id": "case_beta",
+    "paper_id": "fixture_paper",
+    "query": "What happens when evidence is insufficient?",
+    "secondary_paper_ids": [],
+    "metadata": {"answerable": false}
+  }
+]

@@ -241,9 +241,25 @@ class QueryDecomposer:
             if len(nums) >= 2:
                 return [f"Table {n}" for n in nums[:4]]
 
-        # 3. Explicit "compare X and/with/vs Y" or "difference between X and Y"
+        # 3. Multi-clause compound scientific questions joined by conjunctions:
+        # e.g., "<Clause 1 asking about metrics/ablation>, and <Clause 2 asking about mechanism/diagram>?"
+        clause_split = re.split(
+            r"\s*,\s*(?:and|while|whereas)\s+(?:what|how|why|does|which|where)\s+",
+            q,
+            flags=re.IGNORECASE,
+        )
+        if len(clause_split) >= 2:
+            parts: list[str] = []
+            for piece in clause_split[:3]:
+                clean_p = re.sub(r"^(?:how does|what is|why does|how do|what are)\s+", "", piece.strip(), flags=re.IGNORECASE).rstrip("?. ")
+                if len(clean_p) > 10:
+                    parts.append(clean_p)
+            if len(parts) >= 2:
+                return parts
+
+        # 4. Explicit "compare X and/with/vs Y" or "difference between X and Y" (single-clause)
         comp_match = re.search(
-            r"(?:compare|comparison between|difference between|tradeoff between|versus|vs\.?)\s+(.+?)\s+(?:and|with|versus|vs\.?)\s+(.+?)(?:\?|\.|$)",
+            r"(?:compare|comparison between|difference between|tradeoff between|versus|vs\.?)\s+([^,]+?)\s+(?:and|with|versus|vs\.?)\s+([^,?.!]+)(?:\?|\.|$)",
             q,
             re.IGNORECASE,
         )
@@ -256,7 +272,21 @@ class QueryDecomposer:
             if sub_a and sub_b and len(sub_a) > 1 and len(sub_b) > 1:
                 return [sub_a, sub_b]
 
-        # 4. Multi-item numbered entities: e.g. "methodology 1 and methodology 2", "approach A and approach B"
+        # 5. "How does X compare to/with Y [in terms of Z]"
+        compare_to_match = re.search(
+            r"(?:how does|how do)\s+(.+?)\s+compare\s+(?:to|with)\s+(.+?)(?:\s+in terms of\s+([^,?.!]+))?(?:,\s*(?:and|while|whereas|\?|\.|$)|$)",
+            q,
+            re.IGNORECASE,
+        )
+        if compare_to_match:
+            entity_a = compare_to_match.group(1).strip()
+            entity_b = compare_to_match.group(2).strip()
+            aspect = (compare_to_match.group(3) or "").strip()
+            aspect_suffix = f" {aspect}" if aspect else ""
+            comp_query = f"{entity_a} vs {entity_b}{aspect_suffix}".strip()
+            return [f"{entity_a}{aspect_suffix}", f"{entity_b}{aspect_suffix}"]
+
+        # 6. Multi-item numbered entities: e.g. "methodology 1 and methodology 2", "approach A and approach B"
         entity_match = re.search(
             r"\b([a-zA-Z_]+)\s+(\d+|[A-Z])\s+(?:and|vs\.?|with)\s+(?:\1\s+)?(\d+|[A-Z])\b",
             q,

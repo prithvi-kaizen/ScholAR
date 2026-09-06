@@ -1,0 +1,33 @@
+{
+  "dataset_sha256": "25ad03d7e9cbae5a6f792adb5c328ed36b393e160265c07d4a8986748abbf24e",
+  "keys": [
+    {
+      "case_id": "case_alpha",
+      "model": "fixture-model:1",
+      "seed": 11,
+      "system": "fixture_system"
+    },
+    {
+      "case_id": "case_beta",
+      "model": "fixture-model:1",
+      "seed": 11,
+      "system": "fixture_system"
+    },
+    {
+      "case_id": "case_alpha",
+      "model": "fixture-model:1",
+      "seed": 29,
+      "system": "fixture_system"
+    },
+    {
+      "case_id": "case_beta",
+      "model": "fixture-model:1",
+      "seed": 29,
+      "system": "fixture_system"
+    }
+  ],
+  "n_expected": 4,
+  "release_id": "release_v1_minimal",
+  "run_id": "fixture-run-v1",
+  "schema_version": "1.0"
+}

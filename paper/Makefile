@@ -1,27 +1,15 @@
-# -----------------------------------------------------------------------
-# Makefile for the venue-neutral ScholAR manuscript
-# Usage:
-#   make        -> compile to PDF (full 3-pass)
-#   make clean  -> remove build artifacts
-#   make open   -> open the compiled PDF
-# -----------------------------------------------------------------------
+.PHONY: all verify draft submission clean
 
-MAIN = manuscript
-LATEX = pdflatex
-BIBTEX = bibtex
+all: draft
 
-.PHONY: all clean open
+verify:
+	$(MAKE) -C eacl_industry verify
 
-all:
-	$(LATEX) $(MAIN).tex
-	$(BIBTEX) $(MAIN)
-	$(LATEX) $(MAIN).tex
-	$(LATEX) $(MAIN).tex
+draft:
+	$(MAKE) -C eacl_industry draft
+
+submission:
+	$(MAKE) -C eacl_industry submission
 
 clean:
-	rm -f $(MAIN).aux $(MAIN).bbl $(MAIN).blg $(MAIN).log \
-	       $(MAIN).out $(MAIN).toc $(MAIN).lof $(MAIN).lot \
-	       $(MAIN).synctex.gz missfont.log
-
-open:
-	open $(MAIN).pdf
+	$(MAKE) -C eacl_industry clean

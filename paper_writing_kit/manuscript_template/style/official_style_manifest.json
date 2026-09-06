@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "official_acl_style_manifest",
+  "status": "INSTALLED",
+  "repository": "https://github.com/acl-org/acl-style-files",
+  "upstream_commit": "d5adc823ff0f80f98c80405ca0ab66c68e684409",
+  "modified": false,
+  "files": [
+    {
+      "path": "style/acl.sty",
+      "sha256": "19dfeddc2c0e448f3926a0bef048a9db3f3611b46265b760caabd7ada4f361de",
+      "bytes": 11615
+    },
+    {
+      "path": "style/acl_natbib.bst",
+      "sha256": "6fbb306202290f4b68e74ac1460a8b27398500cb6dfeb4492e74c457eae7cd1e",
+      "bytes": 45442
+    }
+  ]
+}

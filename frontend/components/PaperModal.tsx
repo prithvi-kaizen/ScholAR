@@ -3,7 +3,9 @@
 import { ExternalLink, Sparkles, Star, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { getApiErrorMessage } from "../types/api";
 import type { Paper } from "../types/paper";
+import { useNetworkPolicy } from "../lib/networkPolicy";
 import { Badge } from "./Badge";
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
@@ -29,6 +31,7 @@ export function PaperModal({ paper, onClose, onBookmark, isBookmarked, onViewed 
   const [preparing, setPreparing] = useState(false);
   const [prepareStep, setPrepareStep] = useState(0);
   const [error, setError] = useState("");
+  const { policy } = useNetworkPolicy();
 
   if (!paper) return null;
   const currentPaper = paper;
@@ -49,8 +52,8 @@ export function PaperModal({ paper, onClose, onBookmark, isBookmarked, onViewed 
         signal: timeoutController.signal
       });
       if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.detail ?? "Could not prepare paper");
+        const payload: unknown = await response.json().catch(() => ({}));
+        throw new Error(getApiErrorMessage(payload, "Could not prepare paper"));
       }
       setPrepareStep(2);
       const payload = (await response.json()) as { paper_id: string };
@@ -131,6 +134,17 @@ export function PaperModal({ paper, onClose, onBookmark, isBookmarked, onViewed 
         <div className="space-y-5 p-5">
           <p className="text-sm leading-7 text-zinc-300">{currentPaper.summary}</p>
           {error ? <p className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p> : null}
+          {policy ? (
+            <p className={`rounded-md border px-3 py-2 text-xs ${
+              policy.mode === "strict-local"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                : "border-amber-500/30 bg-amber-500/10 text-amber-200"
+            }`}>
+              {policy.mode === "strict-local"
+                ? "Strict-local: prepared papers open locally; an uncached paper requires a separate acquisition-enabled session."
+                : "Acquisition-enabled: preparing an uncached paper may download its PDF from the listed external source."}
+            </p>
+          ) : null}
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => onBookmark(currentPaper)}

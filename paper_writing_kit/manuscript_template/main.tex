@@ -1,0 +1,42 @@
+\documentclass[11pt]{article}
+\usepackage[review]{style/acl}
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{url}
+
+\title{ScholAR: Deploying a Local, Auditable Scientific Document Assistant on Consumer Hardware}
+\author{Anonymous submission}
+
+\newcommand{\GatePending}[1]{\par\noindent\fbox{\parbox{0.94\columnwidth}{\textbf{Evidence gate pending.} #1}}\par}
+\newif\ifreleasetables
+\releasetablesfalse
+\InputIfFileExists{build/release_table_gate.tex}{}{}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+Scientific-document assistants must connect generated statements to inspectable source regions while respecting document privacy and modest hardware budgets. We present ScholAR, a local-first assistant whose ingestion, retrieval, generation, citation mapping, claim verification, and selective repair stages share a versioned execution trace. The system separates acquisition-enabled operation from strict-local analysis, assigns source-scoped identities to evidence, distinguishes model-emitted from application-added citations, and applies deterministic keep, narrow, remap, delete, or abstain actions followed by verification. We also introduce a release protocol that freezes the expected case universe before generation, retains errors and abstentions in denominators, and reconstructs tables from immutable raw traces. This artifact-gated manuscript reports no human-study or model-effectiveness result until independent labels, a paper-disjoint test set, ethics review, a researcher pilot, and final hardware runs are complete. The resulting design exposes a practical lesson for deployed retrieval-augmented systems: provenance, support assessment, and failure policy are separate contracts and must be evaluated separately.
+\end{abstract}
+
+\input{sections/introduction}
+\input{sections/system}
+\input{sections/method}
+\input{sections/evaluation}
+\input{sections/results}
+\input{sections/deployment}
+
+\section{Conclusion}
+ScholAR makes local scientific-document assistance auditable by joining canonical document artifacts, globally scoped evidence identity, local generation, claim-level support records, deterministic repair, and explicit selective failure in one trace. The implementation establishes these software contracts; it does not by itself establish that the verifier is calibrated, that repair improves human-judged support, or that the workflow benefits researchers. The release and manuscript therefore fail closed until those empirical and governance gates are supported by real artifacts.
+\label{content:end}
+
+\input{limitations}
+\input{ethics}
+
+\bibliography{references}
+
+\appendix
+\input{appendix}
+\end{document}

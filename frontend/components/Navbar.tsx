@@ -6,15 +6,20 @@ import { usePathname } from "next/navigation";
 import { HelpCircle, GitCompare, BarChart3, Activity, ShieldCheck } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { ShortcutsModal } from "./ShortcutsModal";
+import { useNetworkPolicy } from "../lib/networkPolicy";
 
 export function Navbar() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const pathname = usePathname();
+  const { policy, loading: policyLoading, error: policyError } = useNetworkPolicy();
+
+  const policyTitle = policy
+    ? `${policy.mode}; missing assets: ${policy.missing_assets.join(", ") || "none"}; external-network actions: ${policy.actions.filter((action) => action.requires_external_network).map((action) => action.action).join(", ")}`
+    : policyError ?? "Loading network policy";
 
   const isCompare = pathname === "/compare";
   const isBenchmark = pathname === "/benchmark";
   const isTelemetry = pathname === "/telemetry";
-  const isHome = pathname === "/";
 
   return (
     <>
@@ -40,11 +45,27 @@ export function Navbar() {
             </div>
           </Link>
 
-          <div className="hidden lg:flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-950/30 px-2.5 py-1 text-[11px] font-medium text-emerald-400">
-            <ShieldCheck size={13} className="text-emerald-400" />
-            <span>100% Local Compute</span>
-            <span className="text-emerald-500/60">·</span>
-            <span className="text-[10px] text-emerald-300/80">Zero Egress</span>
+          <div
+            className={`hidden lg:flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+              policy?.mode === "strict-local"
+                ? "border-emerald-500/20 bg-emerald-950/30 text-emerald-400"
+                : "border-amber-500/20 bg-amber-950/30 text-amber-300"
+            }`}
+            title={policyTitle}
+          >
+            <ShieldCheck size={13} />
+            <span>
+              {policyLoading
+                ? "Checking network policy"
+                : policy?.mode === "strict-local"
+                  ? "Strict-local analysis"
+                  : policy?.mode === "acquisition-enabled"
+                    ? "Acquisition enabled"
+                    : "Policy unavailable"}
+            </span>
+            {policy && policy.missing_assets.length > 0 ? (
+              <span className="text-[10px] opacity-75">· {policy.missing_assets.length} assets missing</span>
+            ) : null}
           </div>
         </div>
 
