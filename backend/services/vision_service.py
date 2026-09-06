@@ -294,22 +294,28 @@ def _build_multi_vision_prompt(
         for f in figures
     ) or "figure" in question.lower() or "diagram" in question.lower() or "relate" in question.lower() or "mechanism" in question.lower()
 
-    if has_table and has_diagram_or_multiple:
+    q_lower = question.lower()
+    wants_full_table = any(kw in q_lower for kw in [
+        "full table", "all rows", "reconstruct the table", "reconstruct table",
+        "entire table", "show the table", "structured table", "list all models",
+        "list all rows", "tabular summary of all", "row-by-row", "every row"
+    ])
+
+    if has_table and wants_full_table:
         parts.extend([
             "Supporting text context from the paper:",
             text_context or "(no additional text context available)",
             "",
-            "CRITICAL INSTRUCTIONS FOR HYBRID TABULAR + ARCHITECTURAL MULTIMODAL SYNTHESIS:",
-            "1. Read the numbers and text from the table image and architectural diagram images with extreme precision.",
+            "CRITICAL INSTRUCTIONS FOR FULL TABULAR RECONSTRUCTION:",
+            "1. Read the numbers and text from the table image with extreme precision.",
             "2. Reconstruct the table as a clean, complete Markdown table with all columns and rows faithfully from the visual evidence.",
-            "3. Provide a row-by-row / model-by-model analysis detailing metric differences, gains, and tradeoffs.",
-            "4. Explicitly explain the relationship between the empirical table findings and the structural mechanism shown in the diagram figure(s) (e.g. how parallel attention heads, projection dimensions, and linear layers depicted in the figure explain the metrics in the table).",
-            "5. Cite every table claim and figure claim with that visual item's exact assigned numeric citation marker (e.g. [1] for Figure, [2] for Table). Put citation markers directly inside bullet points.",
-            "6. Format model names, configurations, and abbreviations naturally as clean readable text (e.g. BERT-Base, Transformer-Base). Use single dollar signs ONLY for actual mathematical notation (e.g. $h=8$, $d_k=64$).",
+            "3. Provide a concise row-by-row / model-by-model analysis detailing metric differences, gains, and tradeoffs.",
+            "4. Cite every table claim with that table's exact assigned numeric citation marker (e.g. [1]).",
+            "5. Format model names and abbreviations naturally as clean readable text (e.g. BERT-Base, Transformer-Big).",
             "",
-            "Use the exact format:",
+            "Use the format:",
             "**Answer**",
-            "<high-level overview synthesizing the table findings and the architectural figure with exact citations>",
+            "<high-level overview of what the table evaluates and main conclusions with exact citations>",
             "",
             "**Structured Table**",
             "| Model / Configuration | Metric 1 | Metric 2 | Training Cost / Notes |",
@@ -320,15 +326,27 @@ def _build_multi_vision_prompt(
             "- **<Model 1>**: <exact metrics from table and comparison with citation>",
             "- **<Model 2>**: <exact metrics from table and comparison with citation>",
             "",
-            "**Relation to Architectural Mechanism**",
-            "- **Structural Design**: <explain how the mechanism shown in the diagram figure operates with citations like [1]>",
-            "- **Mechanism-to-Metric Link**: <explain why the ablation metrics in the table behave as observed based on this structural design with citations like [1] and [2]>",
+            f"Question: {question}",
+        ])
+    elif has_table and has_diagram_or_multiple:
+        parts.extend([
+            "Supporting text context from the paper:",
+            text_context or "(no additional text context available)",
             "",
-            "**Key Insights & Tradeoffs**",
-            "- <efficiency, FLOPs, parameter count, or representation subspace takeaways with citations>",
+            "CRITICAL INSTRUCTIONS FOR TARGETED MULTIMODAL SYNTHESIS:",
+            "1. Answer the user's specific question directly, synthesizing evidence from BOTH the diagram/figures and the table/text context.",
+            "2. RELEVANCE RULE: Focus exclusively on the specific models, parameters, equations, or rows relevant to the question. Do NOT dump entire unrelated table sections (e.g. do not discuss attention head variations when the question is about positional encodings).",
+            "3. If comparing metrics, cite them directly in your explanation with the assigned numeric citation markers (e.g. [1], [2]). You may include a small, focused comparison of only the relevant models if helpful.",
+            "4. Explain how the architectural mechanism shown in the diagram figure connects to or explains the empirical findings.",
+            "5. Do NOT include empty headers or boilerplate sections. If there are no limits to report, omit the Limits section entirely.",
             "",
-            "**Limits**",
-            "- <what cannot be determined from these figures/tables alone>",
+            "Use the format:",
+            "**Answer**",
+            "<direct, clear synthesized answer addressing the user's specific question in 1-2 focused paragraphs with exact citations>",
+            "",
+            "**Key Findings & Mechanism**",
+            "- **Architectural Link**: <how the structural mechanism in the diagram explains or connects to the finding with citations>",
+            "- **Empirical Evidence**: <specific relevant metrics or tradeoffs from the paper/table with citations>",
             "",
             f"Question: {question}",
         ])
@@ -338,31 +356,18 @@ def _build_multi_vision_prompt(
             text_context or "(no additional text context available)",
             "",
             "CRITICAL INSTRUCTIONS FOR TABULAR EVIDENCE:",
-            "1. Read the numbers and text from the table image with extreme precision.",
-            "2. Reconstruct the table as a clean, complete Markdown table with all columns and rows.",
-            "3. Format model names, configurations, and abbreviations naturally as clean readable text (e.g. BERT-Base, BERT-Large, Transformer-Big) - NEVER write pseudo-LaTeX like $\\text{BERT}_{\\text{BASE}}$.",
-            "4. Cite every table claim with that table's exact assigned numeric citation ID; do not assume the first image is the supporting table.",
-            "5. Provide a row-by-row / model-by-model analysis detailing metric differences, gains, and tradeoffs.",
-            "6. Use single dollar signs ONLY for actual mathematical equations or scientific notations (e.g. $1.0 \\times 10^{20}$, $\\alpha = 0.1$).",
+            "1. Answer the user's specific question directly using the numbers and text from the table image and text context.",
+            "2. RELEVANCE RULE: Focus exclusively on the specific models, metrics, or rows relevant to the user's question. Do NOT dump entire unrelated tables or rows.",
+            "3. Cite every claim with that table's exact assigned numeric citation ID (e.g. [1] or [2]).",
+            "4. Format model names and numbers naturally (e.g. BERT-Base, Transformer-Big).",
+            "5. Do NOT include empty headers or boilerplate sections. If there are no limits, omit the Limits section entirely.",
             "",
-            "Use the exact format:",
+            "Use the format:",
             "**Answer**",
-            "<high-level overview of what the table evaluates and main conclusions with exact assigned citations>",
+            "<direct, comprehensive answer addressing the user's question with exact citations and relevant metrics>",
             "",
-            "**Structured Table**",
-            "| Model / Configuration | Metric 1 | Metric 2 | Training Cost / Notes |",
-            "| :--- | :--- | :--- | :--- |",
-            "<fill in all rows faithfully from the image>",
-            "",
-            "**Row-by-Row Analysis & Metric Deltas**",
-            "- **<Model 1>**: <exact metrics from table and comparison to others>",
-            "- **<Model 2>**: <exact metrics from table and comparison to others>",
-            "",
-            "**Key Insights & Tradeoffs**",
-            "- <efficiency, FLOPs, parameter count, or performance breakthroughs>",
-            "",
-            "**Limits**",
-            "- <what cannot be determined from this table alone>",
+            "**Key Insights**",
+            "- <1-2 concise bullet points highlighting key empirical takeaways or tradeoffs relevant to the question>",
             "",
             f"Question: {question}",
         ])
@@ -373,10 +378,11 @@ def _build_multi_vision_prompt(
             "",
             "CRITICAL INSTRUCTIONS FOR MULTIMODAL SYNTHESIS:",
             "1. Synthesize findings from BOTH the visual figures and the supporting text passages from the paper.",
-            "2. If specific quantitative thresholds, numbers, or empirical findings are stated in the text context (such as from Results, Observations, or Discussion sections), state them clearly and combine them with the visual trends in the figures.",
+            "2. If specific quantitative thresholds, numbers, or empirical findings are stated in the text context, state them clearly and combine them with the visual trends in the figures.",
             "3. Cite every single factual statement or bullet point with its supporting numeric citation marker (e.g. [1], [2]). Put the citation marker directly inside the bullet point.",
             "4. Format model names and words naturally (e.g. BERT-Base, ResNet-50) rather than LaTeX commands. Use dollar signs ONLY for true mathematical formulas (e.g. $2^{14}$, $p_\\theta(x_t)$).",
             "5. If the figures are architectural diagrams and do not contain performance numbers, explain the architecture from the figures and extract the performance comparison / thresholds directly from the supporting text context.",
+            "6. Do NOT include empty headers. If there are no limitations, omit the Limits section entirely.",
             "",
             "Use the format:",
             "**Answer**",
@@ -385,9 +391,6 @@ def _build_multi_vision_prompt(
             "**Key Findings & Evidence**",
             "- **Visual Evidence**: <what is depicted in the figures with citations like [1]>",
             "- **Quantitative Findings / Thresholds**: <empirical metrics or thresholds from the paper with citations like [2]>",
-            "",
-            "**Limits**",
-            "- <what cannot be determined from these figures/sections alone>",
             "",
             f"Question: {question}",
         ])
@@ -802,6 +805,39 @@ async def answer_with_multimodal_evidence(
     cleaned_answer = re.sub(r"\$\\text\{([^}]+)\}_\{([^}]+)\}\$", r"\1-\2", cleaned_answer)
     cleaned_answer = re.sub(r"\$\\text\{([^}]+)\}\$", r"\1", cleaned_answer)
     cleaned_answer = re.sub(r"\\text\{([^}]+)\}", r"\1", cleaned_answer)
+
+    # Strip empty or trailing boilerplate sections
+    cleaned_answer = re.sub(
+        r"\n+\*\*(?:Limits|Limitations)\*\*\s*(?:-\s*(?:none|n/a|\s*))?(?=\n\*\*|\Z)",
+        "",
+        cleaned_answer,
+        flags=re.IGNORECASE,
+    )
+    cleaned_answer = re.sub(
+        r"\n+\*\*Row-by-Row Analysis[^\n]*\*\*\s*(?=\n\*\*|\Z)",
+        "",
+        cleaned_answer,
+        flags=re.IGNORECASE,
+    )
+    cleaned_answer = re.sub(
+        r"\n+\*\*Relation to Architectural Mechanism[^\n]*\*\*\s*(?=\n\*\*|\Z)",
+        "",
+        cleaned_answer,
+        flags=re.IGNORECASE,
+    )
+    cleaned_answer = re.sub(
+        r"\n+\*\*Key Insights[^\n]*\*\*\s*(?=\n\*\*|\Z)",
+        "",
+        cleaned_answer,
+        flags=re.IGNORECASE,
+    )
+    cleaned_answer = re.sub(
+        r"\n+\*\*Key Findings & Mechanism[^\n]*\*\*\s*(?=\n\*\*|\Z)",
+        "",
+        cleaned_answer,
+        flags=re.IGNORECASE,
+    )
+    cleaned_answer = cleaned_answer.strip()
 
     labels_all = ", ".join(f.get("label", "Figure") for f in loaded_figures)
     return {

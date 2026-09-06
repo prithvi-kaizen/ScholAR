@@ -297,8 +297,10 @@ _CAPTION_RE = re.compile(
 )
 
 # Fraction of page height to capture above/below the caption block
-_FIG_ABOVE_FRAC = 0.38
-_FIG_BELOW_FRAC = 0.12
+_FIG_ABOVE_FRAC = 0.40
+_FIG_BELOW_FRAC = 0.08
+_TABLE_ABOVE_FRAC = 0.04
+_TABLE_BELOW_FRAC = 0.45
 _FIG_RENDER_ZOOM = 3.0  # 3× so dense figures (small axis labels, grid thumbnails) stay legible to the vision model
 # Cap figures rendered per document. A crafted PDF whose text contains thousands
 # of "Figure N" strings would otherwise force thousands of 3x full-page renders
@@ -323,6 +325,37 @@ def _caption_bbox(page: "fitz.Page", caption_label: str) -> "fitz.Rect | None":
             best = fitz.Rect(block["bbox"])
             break
     return best
+
+
+def _find_matching_table_bbox(page: "fitz.Page", cap_bbox: "fitz.Rect | None") -> "fitz.Rect | None":
+    """Detect table boundary using PyMuPDF layout analysis."""
+    try:
+        tabs = page.find_tables()
+        if not tabs or not tabs.tables:
+            return None
+        if cap_bbox is None:
+            largest = max(tabs.tables, key=lambda t: (t.bbox[2] - t.bbox[0]) * (t.bbox[3] - t.bbox[1]))
+            return fitz.Rect(0, max(0.0, largest.bbox[1] - 4), page.rect.width, min(page.rect.height, largest.bbox[3] + 8))
+
+        best_table = None
+        min_dist = float("inf")
+        for t in tabs.tables:
+            tb = fitz.Rect(t.bbox)
+            # Table in scientific papers is typically immediately below the caption
+            if tb.y0 >= cap_bbox.y0 - 25:
+                dist = abs(tb.y0 - cap_bbox.y1)
+                if dist < min_dist:
+                    min_dist = dist
+                    best_table = tb
+
+        if best_table is not None:
+            # Combine caption and table bounding boxes across the page width with margin
+            y0 = max(0.0, min(best_table.y0, cap_bbox.y0) - 4)
+            y1 = min(page.rect.height, max(best_table.y1, cap_bbox.y1) + 8)
+            return fitz.Rect(0, y0, page.rect.width, y1)
+    except Exception:
+        pass
+    return None
 
 
 def extract_figures(
@@ -373,15 +406,23 @@ def extract_figures(
                 # Locate caption bbox on the page so we know where to clip
                 cap_bbox = _caption_bbox(page, label_raw)
 
-                if cap_bbox:
-                    # Clip: from (above_frac × page height) above caption top
-                    #        to (below_frac × page height) below caption bottom
-                    clip_y0 = max(0.0, cap_bbox.y0 - _FIG_ABOVE_FRAC * page_rect.height)
-                    clip_y1 = min(page_rect.height, cap_bbox.y1 + _FIG_BELOW_FRAC * page_rect.height)
-                    clip = fitz.Rect(0, clip_y0, page_rect.width, clip_y1)
+                if figure_type == "table":
+                    matched_table = _find_matching_table_bbox(page, cap_bbox)
+                    if matched_table is not None:
+                        clip = matched_table
+                    elif cap_bbox:
+                        clip_y0 = max(0.0, cap_bbox.y0 - _TABLE_ABOVE_FRAC * page_rect.height)
+                        clip_y1 = min(page_rect.height, cap_bbox.y1 + _TABLE_BELOW_FRAC * page_rect.height)
+                        clip = fitz.Rect(0, clip_y0, page_rect.width, clip_y1)
+                    else:
+                        clip = page_rect
                 else:
-                    # Fallback: render the whole page
-                    clip = page_rect
+                    if cap_bbox:
+                        clip_y0 = max(0.0, cap_bbox.y0 - _FIG_ABOVE_FRAC * page_rect.height)
+                        clip_y1 = min(page_rect.height, cap_bbox.y1 + _FIG_BELOW_FRAC * page_rect.height)
+                        clip = fitz.Rect(0, clip_y0, page_rect.width, clip_y1)
+                    else:
+                        clip = page_rect
 
                 mat = fitz.Matrix(_FIG_RENDER_ZOOM, _FIG_RENDER_ZOOM)
                 pix = page.get_pixmap(matrix=mat, clip=clip, alpha=False)
@@ -397,7 +438,7 @@ def extract_figures(
                     "y0": round(clip.y0, 1),
                     "x1": round(clip.x1, 1),
                     "y1": round(clip.y1, 1),
-                } if cap_bbox else None
+                } if (cap_bbox or figure_type == "table") else None
 
                 bbox_norm_dict = {
                     "x0": round(clip.x0 / max(page_rect.width, 1.0), 4),
