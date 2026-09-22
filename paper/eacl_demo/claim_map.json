@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0",
+  "paper": "paper/eacl_demo/main.tex",
+  "claims": [
+    {
+      "claim_id": "SYS-001",
+      "text": "ScholAR provides a local-first scientific paper assistant with inspectable text and visual evidence.",
+      "claim_type": "software",
+      "status": "SUPPORTED",
+      "sources": ["backend/services/answer_pipeline.py", "frontend/components/StudyWorkspace.tsx", "frontend/components/ChatBox.tsx", "frontend/components/PdfViewer.tsx"]
+    },
+    {
+      "claim_id": "SYS-002",
+      "text": "The ingestion pipeline preserves source identity across PDF, AST, page, chunk, figure, and SQLite artifacts.",
+      "claim_type": "software",
+      "status": "SUPPORTED",
+      "sources": ["backend/services/ingestion_service.py", "backend/services/paper_finalize_service.py", "tests/test_paper_finalize_service.py"]
+    },
+    {
+      "claim_id": "SYS-003",
+      "text": "Strict-local network policy blocks remote calls and allows local loopback model engines like Ollama.",
+      "claim_type": "software",
+      "status": "SUPPORTED",
+      "sources": ["backend/services/network_policy_service.py", "tests/test_network_policy.py", "tests/test_offline_strict.py"]
+    },
+    {
+      "claim_id": "SYS-004",
+      "text": "The verifier performs deterministic lexical checking and citation remapping rather than semantic entailment.",
+      "claim_type": "software",
+      "status": "SUPPORTED",
+      "sources": ["backend/services/verifier_service.py", "tests/test_verifier_and_repair.py"]
+    },
+    {
+      "claim_id": "SYS-005",
+      "text": "The full question-answering workflow records an inspectable answer trace and evidence graph.",
+      "claim_type": "software",
+      "status": "SUPPORTED",
+      "sources": ["backend/services/evidence_graph_service.py", "backend/schemas/answer_trace.py", "frontend/components/EvidenceGraphModal.tsx"]
+    },
+    {
+      "claim_id": "EMP-R01",
+      "text": "Retrospective retrieval: BM25+dense RRF reaches Hit@1 of 0.85 versus 0.84 for BM25 with overlapping CI, while modality boosting drops Hit@1 to 0.59.",
+      "claim_type": "empirical_retrospective",
+      "status": "SUPPORTED",
+      "sources": ["evaluation/PHASE2_AGGREGATE_PUBLIC.json", "paper/eacl_demo/tables/retrieval_baselines.tex"]
+    },
+    {
+      "claim_id": "EMP-R02",
+      "text": "Deterministic repair increases lexical overlap F1 from 0.159 to 0.224 but decreases cited-page alignment from 0.670 to 0.618.",
+      "claim_type": "empirical_retrospective",
+      "status": "SUPPORTED",
+      "sources": ["evaluation/PHASE2_AGGREGATE_PUBLIC.json", "paper/eacl_demo/tables/repair_ablation.tex"]
+    },
+    {
+      "claim_id": "EMP-R03",
+      "text": "Paired pipeline abstained status declines from 13 to 5 cases across 20 cross-paper controls after repair.",
+      "claim_type": "empirical_retrospective",
+      "status": "SUPPORTED",
+      "sources": ["evaluation/PHASE2_AGGREGATE_PUBLIC.json"]
+    },
+    {
+      "claim_id": "EMP-HUMAN-50",
+      "text": "Stratified 50-question human evaluation protocol with 5 raters; results gated pending completion of collection.",
+      "claim_type": "empirical_human",
+      "status": "PENDING",
+      "sources": ["evaluation/human_eval/STUDY_50_FIVE_RATERS_README.md"]
+    },
+    {
+      "claim_id": "EMP-LUNA-150",
+      "text": "LLM-based evaluation covering the 150-case complement: 52.2% correctness on eligible references (n=113), 74.7% evidence grounding, and 73.3% citation accuracy; these are model judgments rather than human ratings, and the later out-of-schema visual labels are excluded.",
+      "claim_type": "empirical_llm",
+      "status": "SUPPORTED",
+      "sources": ["evaluation/EACL_DEMO_150_LUNA_PUBLIC.json", "evaluation/results/eacl_demo_150_luna/judgments.jsonl", "paper/eacl_demo/tables/luna_150.tex"]
+    }
+  ]
+}

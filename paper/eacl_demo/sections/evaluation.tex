@@ -1,0 +1,19 @@
+\section{Evaluation}
+\label{sec:evaluation}
+
+\subsection{Can the system find relevant evidence?}
+We evaluate page-level evidence retrieval on a retrospective benchmark of 100 questions across 25 scientific papers. Table~\ref{tab:retrieval_ablation} compares lexical, dense, and fused retrieval configurations. BM25 places a gold evidence page at rank 1 for 84\% of queries (MRR 0.892). BM25+dense reciprocal-rank fusion reaches Hit@1 of 0.85 and MRR of 0.905, but its paired bootstrap Hit@1 difference over BM25 is only $+0.01$ (95\% CI $[-0.054,+0.078]$), which includes zero. An uncalibrated modality boost instead drops Hit@1 from 0.85 to 0.59 ($-0.26$, 95\% CI $[-0.388,-0.136]$). We therefore keep visual evidence available for inspection without treating visual intent as proof that a candidate is relevant.
+
+\input{tables/retrieval_baselines}
+
+\subsection{Do answers and citations remain grounded?}
+The completed 150-case LLM-based evaluation provides a categorical diagnostic of answer correctness, evidence grounding, and citation quality. The retained rows identify the evaluator generically, so we do not claim a named judge model; visual labels are excluded because the later visual update introduced a value outside the frozen rubric. On the 113 reference-eligible cases, 59 are correct, 33 partly correct, 20 incorrect, and one not judgeable. Across all 150 cases, grounding is supported in 112 and citation quality is accurate in 110. These are model judgments, not human ground truth.
+
+\input{tables/luna_150}
+
+The deterministic repair ablation remains informative but not a headline quality result: it raises reference-unit overlap F1 from 0.159 to 0.224 while lowering cited-page alignment from 0.670 to 0.618 on the 20 gold-page cases. We therefore treat repair as a diagnostic and preserve the principle that spatially correct evidence matters more than lexical overlap alone; the paired table is in Appendix~\ref{app:protocols}.
+
+\subsection{Can the complete path run locally?}
+Across 100 valid requests on an Apple M3 Pro with 18\,GB unified memory and local Ollama, end-to-end latency has $p_{50}=27.34$\,s, $p_{90}=41.61$\,s, and $p_{95}=149.54$\,s. Retrieval has median 523\,ms; generation has median 26.59\,s and $p_{95}=37.48$\,s; verification and trace writing have median 15\,ms and $p_{95}=24$\,ms. These observations establish feasibility on the named workstation, not interactive responsiveness at scale.
+
+Taken together, these results support a narrow claim: the current prototype retrieves useful evidence and runs locally on the tested workstation. They do not establish generalization or human benefit.

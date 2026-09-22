@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "paper_title": "A Comparative Study of Dynamic Evidence Fusion in Scientific Document QA",
+  "document_file": "sample_paper.pdf",
+  "total_pages": 2,
+  "cases": [
+    {
+      "id": "DEMO-Q1-TEXT",
+      "question": "What optimizer, learning rate, and batch size are used during training?",
+      "expected_page": 1,
+      "expected_section": "3.1 Experimental Setup",
+      "keywords": ["Adam", "beta1", "beta2", "2e-4", "32"],
+      "element_type": "text"
+    },
+    {
+      "id": "DEMO-Q2-TABLE",
+      "question": "What F1 score and latency are reported for Dynamic Evidence Fusion in Table 1?",
+      "expected_page": 1,
+      "expected_table": "Table 1",
+      "keywords": ["88.4", "42", "Dynamic Evidence Fusion"],
+      "element_type": "table"
+    },
+    {
+      "id": "DEMO-Q3-VISUAL",
+      "question": "According to Figure 1, which module connects the visual feature encoder to the ranker?",
+      "expected_page": 1,
+      "expected_figure": "Figure 1",
+      "keywords": ["cross-modal projection", "visual feature encoder", "ranker"],
+      "element_type": "figure"
+    }
+  ]
+}

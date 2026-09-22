@@ -1,0 +1,16 @@
+\section*{Limitations}
+\label{sec:limitations}
+
+The current system and evidence have four clear limits.
+
+\paragraph{Layout and parsing.}
+The dual-engine ingestion pipeline works best on modern two-column preprints. Degraded scans, multi-page tables, intricate vector graphics, and formulas that depend on custom fonts can produce misaligned boxes or incomplete text and table extraction.
+
+\paragraph{Verifier scope.}
+The verifier checks lexical overlap, n-gram containment, and numerical patterns. It does not establish semantic entailment or prove a mathematical statement. It can therefore miss a conceptual error that reuses source vocabulary, or remove a valid paraphrase whose wording differs substantially from the source.
+
+\paragraph{Hardware and latency.}
+The measured profile covers one Apple M3 Pro workstation with 18\,GB unified memory. End-to-end latency is $p_{50}=27.34$\,s and $p_{95}=149.54$\,s under uncontrolled cache conditions. Other devices may be slower or may not fit the local model; we make no claim about responsiveness at scale.
+
+\paragraph{Evidence scope.}
+The retrieval benchmark contains 100 retrospective questions over 25 papers, so its results are not population estimates. The 150-case language-model audit is not human ground truth, and no real researcher workflow or user benefit has yet been measured.

@@ -1,0 +1,61 @@
+{
+  "schema_version": "eacl_demo_150_luna_public_v1",
+  "status": "COMPLETED",
+  "evaluation_mode": "manual_assistant_proxy",
+  "judge_model": "manual-assistant-proxy",
+  "total_attempted_cases": 150,
+  "completed_cases": 150,
+  "reference_correctness_denominator": 113,
+  "reference_ineligible_denominator": 37,
+  "visual_evidence_cases": 90,
+  "visual_grounding_judgeable_denominator": 90,
+  "visual_grounding_not_judgeable_count": 0,
+  "metrics": {
+    "correctness_distribution": {
+      "correct": 59,
+      "partly_correct": 33,
+      "not_judgeable": 38,
+      "incorrect": 20
+    },
+    "eligible_reference_correctness_distribution": {
+      "correct": 59,
+      "partly_correct": 33,
+      "incorrect": 20,
+      "not_judgeable": 1
+    },
+    "ineligible_reference_correctness_distribution": {
+      "not_judgeable": 37
+    },
+    "completeness_distribution": {
+      "complete": 83,
+      "partially_complete": 24,
+      "incomplete": 41,
+      "not_judgeable": 2
+    },
+    "grounding_distribution": {
+      "partly_supported": 26,
+      "unsupported": 10,
+      "supported": 112,
+      "not_judgeable": 2
+    },
+    "citation_quality_distribution": {
+      "partially_accurate": 28,
+      "inaccurate": 10,
+      "accurate": 110,
+      "missing": 2
+    },
+    "visual_grounding_distribution": {
+      "not_applicable": 60,
+      "supported": 35,
+      "partly_supported": 55
+    },
+    "failure_types": {
+      "unsupported_claim": 8,
+      "missing_fact": 53,
+      "wrong_fact": 14,
+      "none": 73,
+      "other": 2
+    }
+  },
+  "created_at": "2026-09-19T11:29:39.466738+00:00"
+}

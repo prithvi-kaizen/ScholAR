@@ -1,0 +1,46 @@
+\documentclass[11pt]{article}
+\usepackage{style/acl}
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{url}
+
+\title{\textsc{ScholAR}: Inspectable Local-First Question Answering for Scientific Papers}
+
+\author{Prithviraj Patil \\
+  Independent Researcher \\
+  \texttt{prithvisp28@gmail.com}
+}
+
+% Input evaluation table gates
+\input{build/evaluation_gates.tex}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\input{sections/abstract}
+\end{abstract}
+
+\input{sections/introduction}
+\input{sections/system}
+\input{sections/demo}
+\input{sections/evaluation}
+\input{sections/availability}
+\input{sections/conclusion}
+
+\input{limitations}
+\clearpage
+\input{ethics}
+
+\bibliography{references}
+
+\clearpage
+\appendix
+\input{appendix}
+
+\end{document}

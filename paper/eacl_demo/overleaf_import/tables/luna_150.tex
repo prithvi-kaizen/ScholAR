@@ -1,0 +1,17 @@
+\begin{table}[t]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Dimension} & \textbf{Supported/Correct} & \textbf{Partial} & \textbf{Incorrect/Unsupp.} & \textbf{N/A} \\
+\midrule
+Correctness (eligible $n=113$) & 59 (52.2\%) & 33 (29.2\%) & 20 (17.7\%) & 1 (0.9\% unjudgeable)\textsuperscript{*} \\
+Completeness ($n=150$) & 83 (55.3\%) & 24 (16.0\%) & 41 (27.3\%) & 2 (not judgeable) \\
+Grounding ($n=150$) & 112 (74.7\%) & 26 (17.3\%) & 10 (6.7\%) & 2 (not judgeable) \\
+Citation Quality ($n=150$) & 110 (73.3\%) & 28 (18.7\%) & 10 (6.7\%) & 2 (missing) \\
+\bottomrule
+\end{tabular}%
+}
+\caption{\textbf{LLM-based evaluation results on 150 complement cases}. Correctness is evaluated strictly against the 113 verified eligible references (\textsuperscript{*}37 cases had ineligible reference answers; 1 eligible case was unjudgeable). Grounding and citation quality evaluate local excerpt attribution. The table reports only categories in the frozen rubric; a later visual-label update introduced an out-of-schema category and is excluded. These are model judgments, not human ratings.}
+\label{tab:luna_150}
+\end{table}

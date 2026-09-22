@@ -1,0 +1,759 @@
+{
+  "amendment_sha256": "052f71bdda994eb05837cd98a19246abfd8a3da57ba395f1e7265fcba5dfae61",
+  "limitations": [
+    "Retrospective, curated questions; not held-out or paper-disjoint.",
+    "Automatic text overlap does not establish answer correctness or claim support.",
+    "Citation page accuracy is observable for only 20 of 30 answerable cases per condition.",
+    "Unanswerable controls are cross-paper swaps, not independently human-verified absence judgments.",
+    "Pipeline ABSTAINED status is not equivalent to semantic refusal in final answer text.",
+    "Peak process RSS and controlled cold/warm latencies were not measured.",
+    "The invalid five-row abstention pilot is retained for audit, excluded from estimates."
+  ],
+  "machine": {
+    "answerable": {
+      "G1_with": {
+        "abstained": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "cluster": "paper",
+          "mean": 0.0,
+          "n": 30,
+          "papers": 19
+        },
+        "answer_changed_by_repair": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 1.0,
+          "ci95_low": 1.0,
+          "cluster": "paper",
+          "mean": 1.0,
+          "n": 30,
+          "papers": 19
+        },
+        "answered": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 1.0,
+          "ci95_low": 1.0,
+          "cluster": "paper",
+          "mean": 1.0,
+          "n": 30,
+          "papers": 19
+        },
+        "automatic_key_term_coverage": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.8475,
+          "ci95_low": 0.6358,
+          "cluster": "paper",
+          "mean": 0.7421,
+          "n": 30,
+          "papers": 19
+        },
+        "citation_page_accuracy": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.7926,
+          "ci95_low": 0.4551,
+          "cluster": "paper",
+          "mean": 0.6176,
+          "n": 20,
+          "papers": 14
+        },
+        "citation_page_accuracy_gold_page_labeled_cases": 20,
+        "citation_page_accuracy_missingness_note": "Visual gold loci specify a figure/table but no page; these are unscored, not zero-valued citation failures. All ten visual outputs cite pages.",
+        "citation_page_accuracy_unscored_visual_cases": 10,
+        "reference_unit_overlap_f1": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.2722,
+          "ci95_low": 0.1807,
+          "cluster": "paper",
+          "mean": 0.2239,
+          "n": 30,
+          "papers": 19
+        },
+        "token_f1": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.0818,
+          "ci95_low": 0.0559,
+          "cluster": "paper",
+          "mean": 0.0673,
+          "n": 30,
+          "papers": 19
+        }
+      },
+      "G1_without": {
+        "abstained": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.1515,
+          "ci95_low": 0.0,
+          "cluster": "paper",
+          "mean": 0.0667,
+          "n": 30,
+          "papers": 19
+        },
+        "answer_changed_by_repair": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "cluster": "paper",
+          "mean": 0.0,
+          "n": 30,
+          "papers": 19
+        },
+        "answered": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 1.0,
+          "ci95_low": 0.8438,
+          "cluster": "paper",
+          "mean": 0.9333,
+          "n": 30,
+          "papers": 19
+        },
+        "automatic_key_term_coverage": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.8633,
+          "ci95_low": 0.6583,
+          "cluster": "paper",
+          "mean": 0.759,
+          "n": 30,
+          "papers": 19
+        },
+        "citation_page_accuracy": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.8556,
+          "ci95_low": 0.5,
+          "cluster": "paper",
+          "mean": 0.67,
+          "n": 20,
+          "papers": 14
+        },
+        "citation_page_accuracy_gold_page_labeled_cases": 20,
+        "citation_page_accuracy_missingness_note": "Visual gold loci specify a figure/table but no page; these are unscored, not zero-valued citation failures. All ten visual outputs cite pages.",
+        "citation_page_accuracy_unscored_visual_cases": 10,
+        "reference_unit_overlap_f1": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.1962,
+          "ci95_low": 0.1312,
+          "cluster": "paper",
+          "mean": 0.159,
+          "n": 30,
+          "papers": 19
+        },
+        "token_f1": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.0576,
+          "ci95_low": 0.0387,
+          "cluster": "paper",
+          "mean": 0.047,
+          "n": 30,
+          "papers": 19
+        }
+      },
+      "paired_with_minus_without": {
+        "abstained": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.0,
+          "ci95_low": -0.1515,
+          "cluster": "paper",
+          "mean": -0.0667,
+          "n": 30,
+          "papers": 19
+        },
+        "answer_changed_by_repair": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 1.0,
+          "ci95_low": 1.0,
+          "cluster": "paper",
+          "mean": 1.0,
+          "n": 30,
+          "papers": 19
+        },
+        "answered": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.1515,
+          "ci95_low": 0.0,
+          "cluster": "paper",
+          "mean": 0.0667,
+          "n": 30,
+          "papers": 19
+        },
+        "automatic_key_term_coverage": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.0,
+          "ci95_low": -0.0381,
+          "cluster": "paper",
+          "mean": -0.0169,
+          "n": 30,
+          "papers": 19
+        },
+        "citation_page_accuracy": {
+          "bootstrap_draws": 10000,
+          "ci95_high": -0.0153,
+          "ci95_low": -0.0912,
+          "cluster": "paper",
+          "mean": -0.0524,
+          "n": 20,
+          "papers": 14
+        },
+        "reference_unit_overlap_f1": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.091,
+          "ci95_low": 0.0421,
+          "cluster": "paper",
+          "mean": 0.0649,
+          "n": 30,
+          "papers": 19
+        },
+        "token_f1": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.0266,
+          "ci95_low": 0.0145,
+          "cluster": "paper",
+          "mean": 0.0202,
+          "n": 30,
+          "papers": 19
+        }
+      }
+    },
+    "batch_provenance": {
+      "A1r_with": {
+        "path": "evaluation/results/final_machine/A1r_with.jsonl",
+        "pre_generation_abstentions": 4,
+        "rows": 20,
+        "sha256": "463dee63c55af971c7a5ff94b4b295702c28e5a8e62c0c82a58402fa0476f6ca",
+        "terminal_status_counts": {
+          "ABSTAINED": 5,
+          "ERROR": 0,
+          "SUCCESS": 15
+        }
+      },
+      "A1r_without": {
+        "path": "evaluation/results/final_machine/A1r_without.jsonl",
+        "pre_generation_abstentions": 4,
+        "rows": 20,
+        "sha256": "e3c4ca736591262ebe37df49de7711f2f60d86abd4d9162c5e7b23a0276e1667",
+        "terminal_status_counts": {
+          "ABSTAINED": 13,
+          "ERROR": 0,
+          "SUCCESS": 7
+        }
+      },
+      "G1_with": {
+        "path": "evaluation/results/final_machine/G1_with.jsonl",
+        "pre_generation_abstentions": 0,
+        "rows": 30,
+        "sha256": "216295504a9b79908500e4297b0e4d71d222dee3e0fc88b02792f2bb67adad7f",
+        "terminal_status_counts": {
+          "ABSTAINED": 0,
+          "ERROR": 0,
+          "SUCCESS": 30
+        }
+      },
+      "G1_without": {
+        "path": "evaluation/results/final_machine/G1_without.jsonl",
+        "pre_generation_abstentions": 0,
+        "rows": 30,
+        "sha256": "29c454eecea31ade67336e943977215f1ab35c2e19099d839c3f55fbc8a2344f",
+        "terminal_status_counts": {
+          "ABSTAINED": 2,
+          "ERROR": 0,
+          "SUCCESS": 28
+        }
+      }
+    },
+    "control_quality": {
+      "cross_paper_swaps": 20,
+      "declared_absent_fact_phrases_not_found_in_target_chunks": 20,
+      "limitation": "Verbatim absence does not prove semantic unanswerability."
+    },
+    "invalid_pilot_excluded": true,
+    "latency": {
+      "by_batch": {
+        "A1r_with": {
+          "n": 20,
+          "p50_s": 14.843,
+          "p90_s": 25.823,
+          "p95_s": 27.676
+        },
+        "A1r_without": {
+          "n": 20,
+          "p50_s": 14.662,
+          "p90_s": 25.724,
+          "p95_s": 27.676
+        },
+        "G1_with": {
+          "n": 30,
+          "p50_s": 27.871,
+          "p90_s": 36.025,
+          "p95_s": 40.792
+        },
+        "G1_without": {
+          "n": 30,
+          "p50_s": 33.819,
+          "p90_s": 336.101,
+          "p95_s": 353.337
+        }
+      },
+      "cold_warm_note": "Cache state was not reset per paper; first-observed versus repeat is not a controlled cold/warm comparison.",
+      "n": 100,
+      "p50_s": 27.34,
+      "p90_s": 41.61,
+      "p95_s": 149.541,
+      "peak_process_rss_gb": null,
+      "peak_rss_note": "Not sampled during the frozen run; pre/post-window memory is not peak RSS.",
+      "stage_median_s": {
+        "context_assembly": 0.001,
+        "generation": 26.589,
+        "load_paper": 0.004,
+        "load_sources": 0.002,
+        "reasoning_artifacts": 0.0,
+        "retrieval": 0.523,
+        "sufficiency": 0.0,
+        "verification": 0.015
+      },
+      "stage_p95_s": {
+        "context_assembly": 0.014,
+        "generation": 37.475,
+        "load_paper": 0.014,
+        "load_sources": 0.003,
+        "reasoning_artifacts": 0.007,
+        "retrieval": 112.85,
+        "sufficiency": 0.002,
+        "verification": 0.037
+      }
+    },
+    "pairing": "30/30 and 20/20 identical raw generations and prompt hashes",
+    "rows_in_reported_batches": 100,
+    "unanswerable_controls": {
+      "A1r_with": {
+        "abstained": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.4706,
+          "ci95_low": 0.087,
+          "cluster": "paper",
+          "mean": 0.25,
+          "n": 20,
+          "papers": 16
+        },
+        "answer_changed_by_repair": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.9545,
+          "ci95_low": 0.5882,
+          "cluster": "paper",
+          "mean": 0.8,
+          "n": 20,
+          "papers": 16
+        },
+        "answered": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.913,
+          "ci95_low": 0.55,
+          "cluster": "paper",
+          "mean": 0.75,
+          "n": 20,
+          "papers": 16
+        }
+      },
+      "A1r_without": {
+        "abstained": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.8636,
+          "ci95_low": 0.4211,
+          "cluster": "paper",
+          "mean": 0.65,
+          "n": 20,
+          "papers": 16
+        },
+        "answer_changed_by_repair": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "cluster": "paper",
+          "mean": 0.0,
+          "n": 20,
+          "papers": 16
+        },
+        "answered": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.5909,
+          "ci95_low": 0.1429,
+          "cluster": "paper",
+          "mean": 0.35,
+          "n": 20,
+          "papers": 16
+        }
+      },
+      "metric_note": "ABSTAINED is the pipeline's terminal status, not a validated semantic-refusal or unanswerability-correctness judgment; SUCCESS can contain refusal prose.",
+      "paired_with_minus_without": {
+        "abstained": {
+          "bootstrap_draws": 10000,
+          "ci95_high": -0.1875,
+          "ci95_low": -0.619,
+          "cluster": "paper",
+          "mean": -0.4,
+          "n": 20,
+          "papers": 16
+        },
+        "answer_changed_by_repair": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.9545,
+          "ci95_low": 0.5882,
+          "cluster": "paper",
+          "mean": 0.8,
+          "n": 20,
+          "papers": 16
+        },
+        "answered": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.619,
+          "ci95_low": 0.1875,
+          "cluster": "paper",
+          "mean": 0.4,
+          "n": 20,
+          "papers": 16
+        }
+      }
+    }
+  },
+  "protocol_sha256": "3848a3ad8ff3cb2fbdd6d698be941065205b6d03f8a71908db210740f0bc6533",
+  "retrieval": {
+    "cases": 100,
+    "metric_note": "recall_at_k in the frozen JSON is an any-gold-page Hit@k, not fractional page recall",
+    "paired_deltas": {
+      "bm25_dense_modality_rrf_minus_bm25_dense_rrf": {
+        "mrr": {
+          "bootstrap_draws": 10000,
+          "ci95_high": -0.0921,
+          "ci95_low": -0.2526,
+          "cluster": "paper",
+          "mean": -0.1718,
+          "n": 100,
+          "papers": 25
+        },
+        "ndcg_at_5": {
+          "bootstrap_draws": 10000,
+          "ci95_high": -0.0814,
+          "ci95_low": -0.1997,
+          "cluster": "paper",
+          "mean": -0.1398,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_1": {
+          "bootstrap_draws": 10000,
+          "ci95_high": -0.1364,
+          "ci95_low": -0.3882,
+          "cluster": "paper",
+          "mean": -0.26,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_3": {
+          "bootstrap_draws": 10000,
+          "ci95_high": -0.0208,
+          "ci95_low": -0.1398,
+          "cluster": "paper",
+          "mean": -0.08,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_5": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.0111,
+          "ci95_low": -0.0702,
+          "cluster": "paper",
+          "mean": -0.03,
+          "n": 100,
+          "papers": 25
+        }
+      },
+      "bm25_dense_rrf_minus_bm25": {
+        "mrr": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.051,
+          "ci95_low": -0.0221,
+          "cluster": "paper",
+          "mean": 0.013,
+          "n": 100,
+          "papers": 25
+        },
+        "ndcg_at_5": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.0279,
+          "ci95_low": -0.0263,
+          "cluster": "paper",
+          "mean": -0.0013,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_1": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.0777,
+          "ci95_low": -0.0536,
+          "cluster": "paper",
+          "mean": 0.01,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_3": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.0865,
+          "ci95_low": 0.0,
+          "cluster": "paper",
+          "mean": 0.04,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_5": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.0439,
+          "ci95_low": -0.0227,
+          "cluster": "paper",
+          "mean": 0.01,
+          "n": 100,
+          "papers": 25
+        }
+      }
+    },
+    "papers": 25,
+    "rows": 500,
+    "source_sha256": "66359b46510b42483461bd64c5c84c919d0765caf72cc3e829150a42e59ca8b7",
+    "summary": {
+      "bm25": {
+        "mrr": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.9508,
+          "ci95_low": 0.8282,
+          "cluster": "paper",
+          "mean": 0.8923,
+          "n": 100,
+          "papers": 25
+        },
+        "ndcg_at_5": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.9076,
+          "ci95_low": 0.8035,
+          "cluster": "paper",
+          "mean": 0.8547,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_1": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.9268,
+          "ci95_low": 0.7447,
+          "cluster": "paper",
+          "mean": 0.84,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_3": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.9815,
+          "ci95_low": 0.8641,
+          "cluster": "paper",
+          "mean": 0.93,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_5": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 1.0,
+          "ci95_low": 0.9394,
+          "cluster": "paper",
+          "mean": 0.97,
+          "n": 100,
+          "papers": 25
+        }
+      },
+      "bm25_dense_modality_rrf": {
+        "mrr": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.8191,
+          "ci95_low": 0.6467,
+          "cluster": "paper",
+          "mean": 0.7335,
+          "n": 100,
+          "papers": 25
+        },
+        "ndcg_at_5": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.7793,
+          "ci95_low": 0.6466,
+          "cluster": "paper",
+          "mean": 0.7136,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_1": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.7172,
+          "ci95_low": 0.4568,
+          "cluster": "paper",
+          "mean": 0.59,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_3": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.954,
+          "ci95_low": 0.8165,
+          "cluster": "paper",
+          "mean": 0.89,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_5": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.9897,
+          "ci95_low": 0.9029,
+          "cluster": "paper",
+          "mean": 0.95,
+          "n": 100,
+          "papers": 25
+        }
+      },
+      "bm25_dense_rrf": {
+        "mrr": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.9504,
+          "ci95_low": 0.8561,
+          "cluster": "paper",
+          "mean": 0.9053,
+          "n": 100,
+          "papers": 25
+        },
+        "ndcg_at_5": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.9014,
+          "ci95_low": 0.8025,
+          "cluster": "paper",
+          "mean": 0.8534,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_1": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.9192,
+          "ci95_low": 0.7778,
+          "cluster": "paper",
+          "mean": 0.85,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_3": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 1.0,
+          "ci95_low": 0.9381,
+          "cluster": "paper",
+          "mean": 0.97,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_5": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 1.0,
+          "ci95_low": 0.9519,
+          "cluster": "paper",
+          "mean": 0.98,
+          "n": 100,
+          "papers": 25
+        }
+      },
+      "dense_cached": {
+        "mrr": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.8938,
+          "ci95_low": 0.7775,
+          "cluster": "paper",
+          "mean": 0.8378,
+          "n": 100,
+          "papers": 25
+        },
+        "ndcg_at_5": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.851,
+          "ci95_low": 0.7406,
+          "cluster": "paper",
+          "mean": 0.796,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_1": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.8384,
+          "ci95_low": 0.6789,
+          "cluster": "paper",
+          "mean": 0.76,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_3": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.9651,
+          "ci95_low": 0.8495,
+          "cluster": "paper",
+          "mean": 0.91,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_5": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.9884,
+          "ci95_low": 0.9038,
+          "cluster": "paper",
+          "mean": 0.95,
+          "n": 100,
+          "papers": 25
+        }
+      },
+      "keyword": {
+        "mrr": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.8712,
+          "ci95_low": 0.7181,
+          "cluster": "paper",
+          "mean": 0.7958,
+          "n": 100,
+          "papers": 25
+        },
+        "ndcg_at_5": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.8229,
+          "ci95_low": 0.6897,
+          "cluster": "paper",
+          "mean": 0.7571,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_1": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.8142,
+          "ci95_low": 0.6078,
+          "cluster": "paper",
+          "mean": 0.71,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_3": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.9512,
+          "ci95_low": 0.8023,
+          "cluster": "paper",
+          "mean": 0.88,
+          "n": 100,
+          "papers": 25
+        },
+        "recall_at_5": {
+          "bootstrap_draws": 10000,
+          "ci95_high": 0.9649,
+          "ci95_low": 0.8468,
+          "cluster": "paper",
+          "mean": 0.91,
+          "n": 100,
+          "papers": 25
+        }
+      }
+    }
+  },
+  "schema_version": "1.0",
+  "status": "AUDITED_RETROSPECTIVE_MACHINE_RESULTS"
+}

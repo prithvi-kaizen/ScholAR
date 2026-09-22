@@ -1,0 +1,18 @@
+\begin{table}[t]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Retrieval Configuration} & \textbf{Hit@1} $\uparrow$ & \textbf{Hit@5} $\uparrow$ & \textbf{MRR} $\uparrow$ & \textbf{nDCG@5} $\uparrow$ \\
+\midrule
+Keyword overlap & 0.71 & 0.91 & 0.796 & 0.757 \\
+BM25 lexical & 0.84 & 0.97 & 0.892 & 0.855 \\
+Dense embedding & 0.76 & 0.95 & 0.838 & 0.796 \\
+BM25 + dense RRF & \textbf{0.85} & \textbf{0.98} & \textbf{0.905} & 0.853 \\
+BM25 + dense + modality RRF & 0.59 & 0.95 & 0.734 & 0.714 \\
+\bottomrule
+\end{tabular}%
+}
+\caption{\textbf{Retrospective Page-Retrieval Ablation} on 100 questions across 25 scientific papers. Fusing BM25 and dense retrieval with Reciprocal Rank Fusion (RRF) yields Hit@1 of 0.85 (paired bootstrap difference $+0.01$, 95\% CI $[-0.054, +0.078]$ over BM25). Adding an uncalibrated modality heuristic degrades Hit@1 to 0.59 ($-0.26$, 95\% CI $[-0.388, -0.136]$).}
+\label{tab:retrieval_ablation}
+\end{table}

@@ -1,0 +1,15 @@
+{
+  "schema_version": "scholar-human-eval-status-v1",
+  "study": "offline_50_model_trace_v7",
+  "status_as_of": "2026-09-21",
+  "planned_questions": 50,
+  "planned_raters": 5,
+  "planned_ratings": 250,
+  "submitted_ratings": 0,
+  "cases_with_any_rating": 0,
+  "cases_with_all_five_ratings": 0,
+  "reference_status": "user_supplied_annotations_independent_checks_pending",
+  "sample_status": "retrospective_development_overlapping_not_paper_disjoint",
+  "analysis_command": ".venv/bin/python -m evaluation.human_eval.offline_50_import analyze --db evaluation/human_eval/private/offline_50_model_trace_v7/study.sqlite3",
+  "source_database_sha256": "ffbd4109714209f96a2dd2a79f2ad59a86755cde6534ae0ded0341589c47caa0"
+}
