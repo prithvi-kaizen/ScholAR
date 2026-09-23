@@ -1,0 +1,72 @@
+[
+  {
+    "id": "1706.03762",
+    "title": "Attention Is All You Need",
+    "authors": [
+      "Ashish Vaswani",
+      "Noam Shazeer",
+      "Niki Parmar",
+      "Jakob Uszkoreit",
+      "Llion Jones",
+      "Aidan N. Gomez",
+      "\u0141ukasz Kaiser",
+      "Illia Polosukhin"
+    ],
+    "year": "2017",
+    "venue": "NeurIPS 2017",
+    "summary": "The seminal Transformer architecture replacing recurrence with multi-head self-attention mechanisms.",
+    "pages": 15,
+    "imagePrefix": "assets/papers/1706.03762/page_",
+    "dataFile": "data/attention.json",
+    "tags": [
+      "Transformer",
+      "Self-Attention",
+      "NLP",
+      "Translation"
+    ]
+  },
+  {
+    "id": "scholar_eacl2027",
+    "title": "SCHOLAR: A Local-First Research Assistant for Scientific Papers",
+    "authors": [
+      "Prithviraj",
+      "Sai Amrit Patnaik",
+      "Sangeeta Lamba",
+      "Nidhi Goyal"
+    ],
+    "year": "2027",
+    "venue": "EACL 2027 System Demonstrations",
+    "summary": "Inspectable citation grounding preserving document, page, and bounding box coordinates for local-first scientific QA.",
+    "pages": 9,
+    "imagePrefix": "assets/papers/scholar_eacl2027/page_",
+    "dataFile": "data/scholar.json",
+    "tags": [
+      "Citation Grounding",
+      "Local-First",
+      "RAG",
+      "EACL 2027"
+    ]
+  },
+  {
+    "id": "1512.03385",
+    "title": "Deep Residual Learning for Image Recognition",
+    "authors": [
+      "Kaiming He",
+      "Xiangyu Zhang",
+      "Shaoqing Ren",
+      "Jian Sun"
+    ],
+    "year": "2015",
+    "venue": "CVPR 2016",
+    "summary": "Residual learning framework (ResNet) enabling networks of substantially deeper depth (up to 152 layers) to be trained easily.",
+    "pages": 7,
+    "imagePrefix": "assets/papers/1512.03385/page_",
+    "dataFile": "data/resnet.json",
+    "tags": [
+      "ResNet",
+      "Deep Learning",
+      "Computer Vision",
+      "Residuals"
+    ]
+  }
+]

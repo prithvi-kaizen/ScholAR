@@ -1,0 +1,4271 @@
+{
+  "metadata": {
+    "id": "1512.03385",
+    "title": "Deep Residual Learning for Image Recognition",
+    "authors": [
+      "Kaiming He",
+      "Xiangyu Zhang",
+      "Shaoqing Ren",
+      "Jian Sun"
+    ],
+    "year": "2015",
+    "venue": "CVPR 2016",
+    "summary": "Residual learning framework (ResNet) enabling networks of substantially deeper depth (up to 152 layers) to be trained easily.",
+    "pages": 7,
+    "imagePrefix": "assets/papers/1512.03385/page_",
+    "dataFile": "data/resnet.json",
+    "tags": [
+      "ResNet",
+      "Deep Learning",
+      "Computer Vision",
+      "Residuals"
+    ]
+  },
+  "presets": [
+    {
+      "id": "res_q1",
+      "category": "Degradation & Residuals",
+      "question": "What is the degradation problem in deep networks and how do residual connections solve it?",
+      "answer": "The degradation problem refers to the phenomenon where, as network depth increases, accuracy saturates and then degrades rapidly, which is not caused by overfitting [1]. The paper addresses this by introducing **deep residual learning**: instead of hoping few stacked layers fit a desired underlying mapping $H(x)$, they explicitly let these layers fit a residual mapping $F(x) := H(x) - x$ [1]. The original mapping is recast into $F(x) + x$, realized via **shortcut connections** that perform identity mapping without adding extra parameters or computational complexity [1].",
+      "citations": [
+        {
+          "index": 1,
+          "evidence_id": "RES_012",
+          "page": 2,
+          "bbox": [
+            0.15,
+            0.52,
+            0.38,
+            0.9
+          ],
+          "quote": "When deeper networks are able to start converging, a degradation problem has been exposed: with the network depth increasing, accuracy gets saturated and then degrades rapidly... We formulate F(x) + x.",
+          "modality": "text",
+          "role": "core_formulation",
+          "checks": {
+            "lexical_overlap": "0.95",
+            "numerical_match": "PASS (F(x)+x)",
+            "polarity": "VERIFIED"
+          }
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "q",
+            "label": "Query: Degradation Problem & Residual Solution",
+            "type": "query"
+          },
+          {
+            "id": "c1",
+            "label": "[1] Section 1 & 3: Residual Formulation F(x)+x",
+            "type": "evidence",
+            "modality": "text",
+            "page": 2,
+            "score": 0.98
+          },
+          {
+            "id": "ans",
+            "label": "Formulation: Identity shortcuts solve optimization degradation",
+            "type": "claim"
+          }
+        ],
+        "edges": [
+          {
+            "source": "q",
+            "target": "c1",
+            "label": "Formulation search"
+          },
+          {
+            "source": "c1",
+            "target": "ans",
+            "label": "Mathematical rationale"
+          }
+        ]
+      }
+    },
+    {
+      "id": "res_q2",
+      "category": "ImageNet Results",
+      "question": "What error rate did the 152-layer ResNet achieve on ImageNet?",
+      "answer": "On the ImageNet 2012 classification dataset, an ensemble of six residual networks with depth up to 152 layers achieved a **top-5 error rate of 3.57%** on the test set [1]. This result won 1st place in the ILSVRC 2015 classification competition, outperforming previous winners such as VGG and GoogLeNet [1].",
+      "citations": [
+        {
+          "index": 1,
+          "evidence_id": "RES_045",
+          "page": 7,
+          "bbox": [
+            0.42,
+            0.1,
+            0.68,
+            0.49
+          ],
+          "quote": "Table 5: Error rates (%) on ImageNet test. Combining 6 models of different depths achieved 3.57% top-5 error, winning 1st place in ILSVRC 2015.",
+          "modality": "table",
+          "role": "benchmark_result",
+          "checks": {
+            "lexical_overlap": "0.94",
+            "numerical_match": "PASS (3.57%, 152 layers)",
+            "polarity": "VERIFIED"
+          }
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "q",
+            "label": "Query: ResNet 152 ImageNet Top-5 Error",
+            "type": "query"
+          },
+          {
+            "id": "c1",
+            "label": "[1] Table 5: ImageNet Competition Results",
+            "type": "evidence",
+            "modality": "table",
+            "page": 7,
+            "score": 0.96
+          },
+          {
+            "id": "ans",
+            "label": "Empirical: 3.57% top-5 error rate winning ILSVRC 2015",
+            "type": "claim"
+          }
+        ],
+        "edges": [
+          {
+            "source": "q",
+            "target": "c1",
+            "label": "Result lookup"
+          },
+          {
+            "source": "c1",
+            "target": "ans",
+            "label": "Accuracy verification"
+          }
+        ]
+      }
+    }
+  ],
+  "blocks": [
+    {
+      "id": "RES_E_001",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.1337,
+        0.2507,
+        0.1519,
+        0.7219
+      ],
+      "text": "Deep Residual Learning for Image Recognition",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_002",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.1924,
+        0.2229,
+        0.2552,
+        0.7497
+      ],
+      "text": "Kaiming He\nXiangyu Zhang\nShaoqing Ren\nJian Sun\nMicrosoft Research\n{kahe, v-xiangz, v-shren, jiansun}@microsoft.com",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_003",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.2844,
+        0.2386,
+        0.2995,
+        0.3112
+      ],
+      "text": "Abstract",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_004",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.3107,
+        0.0819,
+        0.6559,
+        0.4679
+      ],
+      "text": "Deeper neural networks are more dif\ufb01cult to train. We\npresent a residual learning framework to ease the training\nof networks that are substantially deeper than those used\npreviously. We explicitly reformulate the layers as learn-\ning residual functions with reference to the layer inputs, in-\nstead of learning unreferenced functions. We provide com-\nprehensive empirical evidence showing that these ",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_005",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.6758,
+        0.0819,
+        0.6909,
+        0.2074
+      ],
+      "text": "1. Introduction",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_006",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.7023,
+        0.0819,
+        0.8658,
+        0.4679
+      ],
+      "text": "Deep convolutional neural networks [22, 21] have led\nto a series of breakthroughs for image classi\ufb01cation [21,\n50, 40]. Deep networks naturally integrate low/mid/high-\nlevel features [50] and classi\ufb01ers in an end-to-end multi-\nlayer fashion, and the \u201clevels\u201d of features can be enriched\nby the number of stacked layers (depth). Recent evidence\n[41, 44] reveals that network depth is of crucial import",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_007",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.8784,
+        0.0819,
+        0.9,
+        0.4679
+      ],
+      "text": "1http://image-net.org/challenges/LSVRC/2015/\nand\nhttp://mscoco.org/dataset/#detections-challenge2015.",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_008",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.3661,
+        0.5181,
+        0.3731,
+        0.6807
+      ],
+      "text": "0\n1\n2\n3\n4\n5\n6\n0",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_009",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.325,
+        0.5168,
+        0.3292,
+        0.5222
+      ],
+      "text": "10",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_010",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.284,
+        0.5168,
+        0.2882,
+        0.5222
+      ],
+      "text": "20",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_011",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.3733,
+        0.5848,
+        0.3816,
+        0.6273
+      ],
+      "text": "iter. (1e4)",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_012",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.2974,
+        0.5049,
+        0.3562,
+        0.5156
+      ],
+      "text": "training error (%)",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_013",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.3661,
+        0.7186,
+        0.3731,
+        0.8798
+      ],
+      "text": "0\n1\n2\n3\n4\n5\n6\n0",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_014",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.325,
+        0.7158,
+        0.3292,
+        0.7213
+      ],
+      "text": "10",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_015",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.284,
+        0.7158,
+        0.2882,
+        0.7213
+      ],
+      "text": "20",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_016",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.3733,
+        0.7838,
+        0.3816,
+        0.8264
+      ],
+      "text": "iter. (1e4)",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_017",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.3047,
+        0.7039,
+        0.3491,
+        0.7146
+      ],
+      "text": "test error (%)",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_018",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.3324,
+        0.654,
+        0.3407,
+        0.6899
+      ],
+      "text": "56-layer",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_019",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.3519,
+        0.654,
+        0.3602,
+        0.6899
+      ],
+      "text": "20-layer",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_020",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.3036,
+        0.8524,
+        0.3119,
+        0.8882
+      ],
+      "text": "56-layer",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_021",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.3186,
+        0.8524,
+        0.327,
+        0.8882
+      ],
+      "text": "20-layer",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_022",
+      "page": 1,
+      "modality": "figure",
+      "bbox": [
+        0.385,
+        0.5047,
+        0.4378,
+        0.8907
+      ],
+      "text": "Figure 1. Training error (left) and test error (right) on CIFAR-10\nwith 20-layer and 56-layer \u201cplain\u201d networks. The deeper network\nhas higher training error, and thus test error. Similar phenomena\non ImageNet is presented in Fig. 4.",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_023",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.4581,
+        0.5047,
+        0.9008,
+        0.8907
+      ],
+      "text": "greatly bene\ufb01ted from very deep models.\nDriven by the signi\ufb01cance of depth, a question arises: Is\nlearning better networks as easy as stacking more layers?\nAn obstacle to answering this question was the notorious\nproblem of vanishing/exploding gradients [1, 9], which\nhamper convergence from the beginning.\nThis problem,\nhowever, has been largely addressed by normalized initial-\nization [23, 9, 37, ",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_024",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.9259,
+        0.4822,
+        0.9385,
+        0.4904
+      ],
+      "text": "1",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_025",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.2638,
+        0.0179,
+        0.7071,
+        0.0615
+      ],
+      "text": "arXiv:1512.03385v1  [cs.CV]  10 Dec 2015",
+      "section": "Page 1"
+    },
+    {
+      "id": "RES_E_026",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.1561,
+        0.3366,
+        0.1664,
+        0.3784
+      ],
+      "text": "identity",
+      "section": "Page 2"
+    },
+    {
+      "id": "RES_E_027",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.1205,
+        0.2244,
+        0.1298,
+        0.2837
+      ],
+      "text": "weight layer",
+      "section": "Page 2"
+    },
+    {
+      "id": "RES_E_028",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.1515,
+        0.2244,
+        0.1607,
+        0.2837
+      ],
+      "text": "weight layer",
+      "section": "Page 2"
+    },
+    {
+      "id": "RES_E_029",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.1342,
+        0.26,
+        0.1446,
+        0.2814
+      ],
+      "text": "relu",
+      "section": "Page 2"
+    },
+    {
+      "id": "RES_E_030",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.1765,
+        0.1747,
+        0.1968,
+        0.2814
+      ],
+      "text": "relu\nF(x)\u0001+\u0001x",
+      "section": "Page 2"
+    },
+    {
+      "id": "RES_E_031",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.099,
+        0.2335,
+        0.1107,
+        0.2427
+      ],
+      "text": "x",
+      "section": "Page 2"
+    },
+    {
+      "id": "RES_E_032",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.1348,
+        0.1606,
+        0.1551,
+        0.361
+      ],
+      "text": "F(x)\nx",
+      "section": "Page 2"
+    },
+    {
+      "id": "RES_E_033",
+      "page": 2,
+      "modality": "figure",
+      "bbox": [
+        0.1997,
+        0.1415,
+        0.211,
+        0.4083
+      ],
+      "text": "Figure 2. Residual learning: a building block.",
+      "section": "Page 2"
+    },
+    {
+      "id": "RES_E_034",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.23,
+        0.0819,
+        0.9008,
+        0.4679
+      ],
+      "text": "are comparably good or better than the constructed solution\n(or unable to do so in feasible time).\nIn this paper, we address the degradation problem by\nintroducing a deep residual learning framework.\nIn-\nstead of hoping each few stacked layers directly \ufb01t a\ndesired underlying mapping, we explicitly let these lay-\ners \ufb01t a residual mapping. Formally, denoting the desired\nunderlying mapping as H(x),",
+      "section": "Page 2"
+    },
+    {
+      "id": "RES_E_035",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.0937,
+        0.5047,
+        0.2273,
+        0.8907
+      ],
+      "text": "ImageNet test set, and won the 1st place in the ILSVRC\n2015 classi\ufb01cation competition. The extremely deep rep-\nresentations also have excellent generalization performance\non other recognition tasks, and lead us to further win the\n1st places on: ImageNet detection, ImageNet localization,\nCOCO detection, and COCO segmentation in ILSVRC &\nCOCO 2015 competitions. This strong evidence shows that\nthe re",
+      "section": "Page 2"
+    },
+    {
+      "id": "RES_E_036",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.2463,
+        0.5047,
+        0.2614,
+        0.6405
+      ],
+      "text": "2. Related Work",
+      "section": "Page 2"
+    },
+    {
+      "id": "RES_E_037",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.2733,
+        0.5047,
+        0.5739,
+        0.8907
+      ],
+      "text": "Residual Representations. In image recognition, VLAD\n[18] is a representation that encodes by the residual vectors\nwith respect to a dictionary, and Fisher Vector [30] can be\nformulated as a probabilistic version [18] of VLAD. Both\nof them are powerful shallow representations for image re-\ntrieval and classi\ufb01cation [4, 48]. For vector quantization,\nencoding residual vectors [17] is shown to be mor",
+      "section": "Page 2"
+    },
+    {
+      "id": "RES_E_038",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.585,
+        0.5047,
+        0.9008,
+        0.8907
+      ],
+      "text": "Shortcut Connections. Practices and theories that lead to\nshortcut connections [2, 34, 49] have been studied for a long\ntime. An early practice of training multi-layer perceptrons\n(MLPs) is to add a linear layer connected from the network\ninput to the output [34, 49]. In [44, 24], a few interme-\ndiate layers are directly connected to auxiliary classi\ufb01ers\nfor addressing vanishing/exploding gradient",
+      "section": "Page 2"
+    },
+    {
+      "id": "RES_E_039",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.9259,
+        0.4822,
+        0.9385,
+        0.4904
+      ],
+      "text": "2",
+      "section": "Page 2"
+    },
+    {
+      "id": "RES_E_040",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.0939,
+        0.0819,
+        0.1216,
+        0.4679
+      ],
+      "text": "way networks have not demonstrated accuracy gains with\nextremely increased depth (e.g., over 100 layers).",
+      "section": "Page 3"
+    },
+    {
+      "id": "RES_E_041",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.1376,
+        0.0819,
+        0.1527,
+        0.303
+      ],
+      "text": "3. Deep Residual Learning",
+      "section": "Page 3"
+    },
+    {
+      "id": "RES_E_042",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.1626,
+        0.0819,
+        0.1764,
+        0.2547
+      ],
+      "text": "3.1. Residual Learning",
+      "section": "Page 3"
+    },
+    {
+      "id": "RES_E_043",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.1862,
+        0.0819,
+        0.6974,
+        0.4679
+      ],
+      "text": "Let us consider H(x) as an underlying mapping to be\n\ufb01t by a few stacked layers (not necessarily the entire net),\nwith x denoting the inputs to the \ufb01rst of these layers. If one\nhypothesizes that multiple nonlinear layers can asymptoti-\ncally approximate complicated functions2, then it is equiv-\nalent to hypothesize that they can asymptotically approxi-\nmate the residual functions, i.e., H(x) \u2212x (as",
+      "section": "Page 3"
+    },
+    {
+      "id": "RES_E_044",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.7093,
+        0.0819,
+        0.7231,
+        0.3495
+      ],
+      "text": "3.2. Identity Mapping by Shortcuts",
+      "section": "Page 3"
+    },
+    {
+      "id": "RES_E_045",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.7332,
+        0.0819,
+        0.7759,
+        0.4679
+      ],
+      "text": "We adopt residual learning to every few stacked layers.\nA building block is shown in Fig. 2. Formally, in this paper\nwe consider a building block de\ufb01ned as:",
+      "section": "Page 3"
+    },
+    {
+      "id": "RES_E_046",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.791,
+        0.2017,
+        0.8129,
+        0.4679
+      ],
+      "text": "y = F(x, {Wi}) + x.\n(1)",
+      "section": "Page 3"
+    },
+    {
+      "id": "RES_E_047",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.8192,
+        0.0819,
+        0.8861,
+        0.4679
+      ],
+      "text": "Here x and y are the input and output vectors of the lay-\ners considered.\nThe function F(x, {Wi}) represents the\nresidual mapping to be learned. For the example in Fig. 2\nthat has two layers, F = W2\u03c3(W1x) in which \u03c3 denotes",
+      "section": "Page 3"
+    },
+    {
+      "id": "RES_E_048",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.8885,
+        0.0996,
+        0.9002,
+        0.4212
+      ],
+      "text": "2This hypothesis, however, is still an open question. See [28].",
+      "section": "Page 3"
+    },
+    {
+      "id": "RES_E_049",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.0939,
+        0.5047,
+        0.3185,
+        0.8907
+      ],
+      "text": "ReLU [29] and the biases are omitted for simplifying no-\ntations. The operation F + x is performed by a shortcut\nconnection and element-wise addition. We adopt the sec-\nond nonlinearity after the addition (i.e., \u03c3(y), see Fig. 2).\nThe shortcut connections in Eqn.(1) introduce neither ex-\ntra parameter nor computation complexity. This is not only\nattractive in practice but also important in our com",
+      "section": "Page 3"
+    },
+    {
+      "id": "RES_E_050",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.3339,
+        0.6134,
+        0.3558,
+        0.8907
+      ],
+      "text": "y = F(x, {Wi}) + Wsx.\n(2)",
+      "section": "Page 3"
+    },
+    {
+      "id": "RES_E_051",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.3622,
+        0.5047,
+        0.5719,
+        0.8907
+      ],
+      "text": "We can also use a square matrix Ws in Eqn.(1). But we will\nshow by experiments that the identity mapping is suf\ufb01cient\nfor addressing the degradation problem and is economical,\nand thus Ws is only used when matching dimensions.\nThe form of the residual function F is \ufb02exible. Exper-\niments in this paper involve a function F that has two or\nthree layers (Fig. 5), while more layers are possible. But i",
+      "section": "Page 3"
+    },
+    {
+      "id": "RES_E_052",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.5843,
+        0.5047,
+        0.5981,
+        0.7107
+      ],
+      "text": "3.3. Network Architectures",
+      "section": "Page 3"
+    },
+    {
+      "id": "RES_E_053",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.6083,
+        0.5047,
+        0.6511,
+        0.8907
+      ],
+      "text": "We have tested various plain/residual nets, and have ob-\nserved consistent phenomena. To provide instances for dis-\ncussion, we describe two models for ImageNet as follows.",
+      "section": "Page 3"
+    },
+    {
+      "id": "RES_E_054",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.6613,
+        0.5047,
+        0.9008,
+        0.8907
+      ],
+      "text": "Plain Network. Our plain baselines (Fig. 3, middle) are\nmainly inspired by the philosophy of VGG nets [41] (Fig. 3,\nleft). The convolutional layers mostly have 3\u00d73 \ufb01lters and\nfollow two simple design rules: (i) for the same output\nfeature map size, the layers have the same number of \ufb01l-\nters; and (ii) if the feature map size is halved, the num-\nber of \ufb01lters is doubled so as to preserve the time c",
+      "section": "Page 3"
+    },
+    {
+      "id": "RES_E_055",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.9259,
+        0.4822,
+        0.9385,
+        0.4904
+      ],
+      "text": "3",
+      "section": "Page 3"
+    },
+    {
+      "id": "RES_E_056",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.1954,
+        0.2498,
+        0.2016,
+        0.3013
+      ],
+      "text": "7x7 conv, 64, /2",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_057",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2113,
+        0.2628,
+        0.2176,
+        0.2883
+      ],
+      "text": "pool, /2",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_058",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2275,
+        0.2554,
+        0.2337,
+        0.2959
+      ],
+      "text": "3x3 conv, 64",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_059",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2434,
+        0.2554,
+        0.2497,
+        0.2959
+      ],
+      "text": "3x3 conv, 64",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_060",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2594,
+        0.2554,
+        0.2656,
+        0.2959
+      ],
+      "text": "3x3 conv, 64",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_061",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2754,
+        0.2554,
+        0.2816,
+        0.2959
+      ],
+      "text": "3x3 conv, 64",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_062",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2915,
+        0.2556,
+        0.2977,
+        0.2961
+      ],
+      "text": "3x3 conv, 64",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_063",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3075,
+        0.2556,
+        0.3137,
+        0.2961
+      ],
+      "text": "3x3 conv, 64",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_064",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3235,
+        0.2479,
+        0.3297,
+        0.3034
+      ],
+      "text": "3x3 conv, 128, /2",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_065",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3394,
+        0.2535,
+        0.3457,
+        0.298
+      ],
+      "text": "3x3 conv, 128",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_066",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3554,
+        0.2536,
+        0.3616,
+        0.2982
+      ],
+      "text": "3x3 conv, 128",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_067",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3715,
+        0.2536,
+        0.3778,
+        0.2982
+      ],
+      "text": "3x3 conv, 128",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_068",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3875,
+        0.2536,
+        0.3937,
+        0.2982
+      ],
+      "text": "3x3 conv, 128",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_069",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4035,
+        0.2536,
+        0.4097,
+        0.2982
+      ],
+      "text": "3x3 conv, 128",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_070",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4195,
+        0.2538,
+        0.4257,
+        0.2984
+      ],
+      "text": "3x3 conv, 128",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_071",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4356,
+        0.2538,
+        0.4418,
+        0.2984
+      ],
+      "text": "3x3 conv, 128",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_072",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4516,
+        0.2481,
+        0.4578,
+        0.3036
+      ],
+      "text": "3x3 conv, 256, /2",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_073",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4675,
+        0.2536,
+        0.4738,
+        0.2982
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_074",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4835,
+        0.2535,
+        0.4897,
+        0.298
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_075",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4996,
+        0.2535,
+        0.5058,
+        0.298
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_076",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.5156,
+        0.2535,
+        0.5218,
+        0.298
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_077",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.5316,
+        0.2535,
+        0.5378,
+        0.298
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_078",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.5476,
+        0.2536,
+        0.5538,
+        0.2982
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_079",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.5637,
+        0.2536,
+        0.5699,
+        0.2982
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_080",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.5797,
+        0.2535,
+        0.5859,
+        0.298
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_081",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.5956,
+        0.2535,
+        0.6018,
+        0.298
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_082",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6116,
+        0.2536,
+        0.6178,
+        0.2982
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_083",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6276,
+        0.2536,
+        0.6338,
+        0.2982
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_084",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6437,
+        0.2481,
+        0.6499,
+        0.3036
+      ],
+      "text": "3x3 conv, 512, /2",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_085",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6597,
+        0.2536,
+        0.6659,
+        0.2982
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_086",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6757,
+        0.2538,
+        0.6819,
+        0.2984
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_087",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6916,
+        0.2538,
+        0.6978,
+        0.2984
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_088",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.7078,
+        0.2536,
+        0.714,
+        0.2982
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_089",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.7237,
+        0.2536,
+        0.7299,
+        0.2982
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_090",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.7397,
+        0.2619,
+        0.7459,
+        0.2895
+      ],
+      "text": "avg pool",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_091",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.7557,
+        0.263,
+        0.7619,
+        0.2869
+      ],
+      "text": "fc 1000",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_092",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.1154,
+        0.2651,
+        0.1216,
+        0.2849
+      ],
+      "text": "image",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_093",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3715,
+        0.1378,
+        0.3778,
+        0.1824
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_094",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.1313,
+        0.1396,
+        0.1375,
+        0.1801
+      ],
+      "text": "3x3 conv, 64",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_095",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.1473,
+        0.1396,
+        0.1535,
+        0.1801
+      ],
+      "text": "3x3 conv, 64",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_096",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.1634,
+        0.1472,
+        0.1696,
+        0.1727
+      ],
+      "text": "pool, /2",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_097",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.1794,
+        0.1376,
+        0.1856,
+        0.1822
+      ],
+      "text": "3x3 conv, 128",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_098",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.1954,
+        0.1376,
+        0.2016,
+        0.1822
+      ],
+      "text": "3x3 conv, 128",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_099",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2113,
+        0.1472,
+        0.2176,
+        0.1727
+      ],
+      "text": "pool, /2",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_100",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2275,
+        0.1378,
+        0.2337,
+        0.1824
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_101",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2434,
+        0.1378,
+        0.2497,
+        0.1824
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_102",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2594,
+        0.1376,
+        0.2656,
+        0.1822
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_103",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2754,
+        0.1376,
+        0.2816,
+        0.1822
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_104",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3235,
+        0.1474,
+        0.3297,
+        0.1729
+      ],
+      "text": "pool, /2",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_105",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3394,
+        0.1378,
+        0.3457,
+        0.1824
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_106",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3554,
+        0.138,
+        0.3616,
+        0.1826
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_107",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3875,
+        0.1378,
+        0.3937,
+        0.1824
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_108",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4516,
+        0.1472,
+        0.4578,
+        0.1727
+      ],
+      "text": "pool, /2",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_109",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4675,
+        0.1376,
+        0.4738,
+        0.1822
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_110",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4835,
+        0.1378,
+        0.4897,
+        0.1824
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_111",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4996,
+        0.1378,
+        0.5058,
+        0.1824
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_112",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.5156,
+        0.1376,
+        0.5218,
+        0.1822
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_113",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6437,
+        0.1474,
+        0.6499,
+        0.1729
+      ],
+      "text": "pool, /2",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_114",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.7397,
+        0.1486,
+        0.7459,
+        0.1723
+      ],
+      "text": "fc 4096",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_115",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.7557,
+        0.1486,
+        0.7619,
+        0.1723
+      ],
+      "text": "fc 4096",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_116",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.7718,
+        0.148,
+        0.778,
+        0.1717
+      ],
+      "text": "fc 1000",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_117",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.1154,
+        0.1505,
+        0.1216,
+        0.1702
+      ],
+      "text": "image",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_118",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.1687,
+        0.0831,
+        0.1824,
+        0.1112
+      ],
+      "text": "output \nsize: 112",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_119",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.1276,
+        0.0831,
+        0.1412,
+        0.1112
+      ],
+      "text": "output \nsize: 224",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_120",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2164,
+        0.0852,
+        0.23,
+        0.1101
+      ],
+      "text": "output \nsize: 56",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_121",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3286,
+        0.0852,
+        0.3423,
+        0.1101
+      ],
+      "text": "output \nsize: 28",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_122",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4479,
+        0.0852,
+        0.4615,
+        0.1101
+      ],
+      "text": "output \nsize: 14",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_123",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.64,
+        0.0862,
+        0.6536,
+        0.1101
+      ],
+      "text": "output \nsize: 7",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_124",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.736,
+        0.0862,
+        0.7496,
+        0.1101
+      ],
+      "text": "output \nsize: 1",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_125",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.0979,
+        0.1403,
+        0.1078,
+        0.3109
+      ],
+      "text": "VGG-19\n34-layer plain",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_126",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.1954,
+        0.3645,
+        0.2016,
+        0.4159
+      ],
+      "text": "7x7 conv, 64, /2",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_127",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2113,
+        0.3775,
+        0.2176,
+        0.4029
+      ],
+      "text": "pool, /2",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_128",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2275,
+        0.3696,
+        0.2337,
+        0.4102
+      ],
+      "text": "3x3 conv, 64",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_129",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2434,
+        0.3696,
+        0.2497,
+        0.4102
+      ],
+      "text": "3x3 conv, 64",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_130",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2594,
+        0.3696,
+        0.2656,
+        0.4102
+      ],
+      "text": "3x3 conv, 64",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_131",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2754,
+        0.3696,
+        0.2816,
+        0.4102
+      ],
+      "text": "3x3 conv, 64",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_132",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2915,
+        0.3695,
+        0.2977,
+        0.41
+      ],
+      "text": "3x3 conv, 64",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_133",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3075,
+        0.3695,
+        0.3137,
+        0.41
+      ],
+      "text": "3x3 conv, 64",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_134",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3235,
+        0.3622,
+        0.3297,
+        0.4177
+      ],
+      "text": "3x3 conv, 128, /2",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_135",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3394,
+        0.3677,
+        0.3457,
+        0.4123
+      ],
+      "text": "3x3 conv, 128",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_136",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3554,
+        0.3675,
+        0.3616,
+        0.4121
+      ],
+      "text": "3x3 conv, 128",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_137",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3715,
+        0.3675,
+        0.3778,
+        0.4121
+      ],
+      "text": "3x3 conv, 128",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_138",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3875,
+        0.3675,
+        0.3937,
+        0.4121
+      ],
+      "text": "3x3 conv, 128",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_139",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4035,
+        0.3675,
+        0.4097,
+        0.4121
+      ],
+      "text": "3x3 conv, 128",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_140",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4195,
+        0.3674,
+        0.4257,
+        0.4119
+      ],
+      "text": "3x3 conv, 128",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_141",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4356,
+        0.3674,
+        0.4418,
+        0.4119
+      ],
+      "text": "3x3 conv, 128",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_142",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4516,
+        0.362,
+        0.4578,
+        0.4175
+      ],
+      "text": "3x3 conv, 256, /2",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_143",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4675,
+        0.3675,
+        0.4738,
+        0.4121
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_144",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4835,
+        0.3677,
+        0.4897,
+        0.4123
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_145",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4996,
+        0.3677,
+        0.5058,
+        0.4123
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_146",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.5156,
+        0.3677,
+        0.5218,
+        0.4123
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_147",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.5316,
+        0.3677,
+        0.5378,
+        0.4123
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_148",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.5476,
+        0.3675,
+        0.5538,
+        0.4121
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_149",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.5637,
+        0.3675,
+        0.5699,
+        0.4121
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_150",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.5797,
+        0.3677,
+        0.5859,
+        0.4123
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_151",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.5956,
+        0.3677,
+        0.6018,
+        0.4123
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_152",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6116,
+        0.3675,
+        0.6178,
+        0.4121
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_153",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6276,
+        0.3675,
+        0.6338,
+        0.4121
+      ],
+      "text": "3x3 conv, 256",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_154",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6437,
+        0.362,
+        0.6499,
+        0.4175
+      ],
+      "text": "3x3 conv, 512, /2",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_155",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6597,
+        0.3675,
+        0.6659,
+        0.4121
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_156",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6757,
+        0.3674,
+        0.6819,
+        0.4119
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_157",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6916,
+        0.3674,
+        0.6978,
+        0.4119
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_158",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.7078,
+        0.3675,
+        0.714,
+        0.4121
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_159",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.7237,
+        0.3675,
+        0.7299,
+        0.4121
+      ],
+      "text": "3x3 conv, 512",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_160",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.7397,
+        0.376,
+        0.7459,
+        0.4033
+      ],
+      "text": "avg pool",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_161",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.7557,
+        0.3783,
+        0.7619,
+        0.402
+      ],
+      "text": "fc 1000",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_162",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.0979,
+        0.3471,
+        0.1216,
+        0.4336
+      ],
+      "text": "image\n34-layer residual",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_163",
+      "page": 4,
+      "modality": "table",
+      "bbox": [
+        0.799,
+        0.0819,
+        0.8796,
+        0.4679
+      ],
+      "text": "Figure 3. Example network architectures for ImageNet. Left: the\nVGG-19 model [41] (19.6 billion FLOPs) as a reference. Mid-\ndle: a plain network with 34 parameter layers (3.6 billion FLOPs).\nRight: a residual network with 34 parameter layers (3.6 billion\nFLOPs). The dotted shortcuts increase dimensions. Table 1 shows\nmore details and other variants.",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_164",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.0938,
+        0.5047,
+        0.2877,
+        0.8907
+      ],
+      "text": "Residual Network. Based on the above plain network, we\ninsert shortcut connections (Fig. 3, right) which turn the\nnetwork into its counterpart residual version. The identity\nshortcuts (Eqn.(1)) can be directly used when the input and\noutput are of the same dimensions (solid line shortcuts in\nFig. 3). When the dimensions increase (dotted line shortcuts\nin Fig. 3), we consider two options: (A) The s",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_165",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.2982,
+        0.5047,
+        0.312,
+        0.6584
+      ],
+      "text": "3.4. Implementation",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_166",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3219,
+        0.5047,
+        0.6152,
+        0.8907
+      ],
+      "text": "Our implementation for ImageNet follows the practice\nin [21, 41]. The image is resized with its shorter side ran-\ndomly sampled in [256, 480] for scale augmentation [41].\nA 224\u00d7224 crop is randomly sampled from an image or its\nhorizontal \ufb02ip, with the per-pixel mean subtracted [21]. The\nstandard color augmentation in [21] is used. We adopt batch\nnormalization (BN) [16] right after each convolution",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_167",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6207,
+        0.5047,
+        0.6358,
+        0.6306
+      ],
+      "text": "4. Experiments",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_168",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6456,
+        0.5047,
+        0.6594,
+        0.7176
+      ],
+      "text": "4.1. ImageNet Classi\ufb01cation",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_169",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6693,
+        0.5047,
+        0.7574,
+        0.8907
+      ],
+      "text": "We evaluate our method on the ImageNet 2012 classi\ufb01-\ncation dataset [36] that consists of 1000 classes. The models\nare trained on the 1.28 million training images, and evalu-\nated on the 50k validation images. We also obtain a \ufb01nal\nresult on the 100k test images, reported by the test server.\nWe evaluate both top-1 and top-5 error rates.",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_170",
+      "page": 4,
+      "modality": "table",
+      "bbox": [
+        0.7673,
+        0.5047,
+        0.9008,
+        0.8907
+      ],
+      "text": "Plain Networks. We \ufb01rst evaluate 18-layer and 34-layer\nplain nets. The 34-layer plain net is in Fig. 3 (middle). The\n18-layer plain net is of a similar form. See Table 1 for de-\ntailed architectures.\nThe results in Table 2 show that the deeper 34-layer plain\nnet has higher validation error than the shallower 18-layer\nplain net. To reveal the reasons, in Fig. 4 (left) we com-\npare their training/va",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_171",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.9259,
+        0.4822,
+        0.9385,
+        0.4904
+      ],
+      "text": "4",
+      "section": "Page 4"
+    },
+    {
+      "id": "RES_E_172",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.0926,
+        0.209,
+        0.1177,
+        0.7395
+      ],
+      "text": "layer name output size\n18-layer\n34-layer\n50-layer\n101-layer\n152-layer\nconv1\n112\u00d7112\n7\u00d77, 64, stride 2",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_173",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1306,
+        0.2151,
+        0.1448,
+        0.3001
+      ],
+      "text": "conv2 x\n56\u00d756",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_174",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1147,
+        0.3179,
+        0.1553,
+        0.5882
+      ],
+      "text": "3\u00d73 max pool, stride 2\n\u0014\n3\u00d73, 64\n3\u00d73, 64",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_175",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1304,
+        0.3686,
+        0.1502,
+        0.3877
+      ],
+      "text": "\u0015\n\u00d72",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_176",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1304,
+        0.4024,
+        0.1553,
+        0.4478
+      ],
+      "text": "\u0014\n3\u00d73, 64\n3\u00d73, 64",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_177",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1304,
+        0.4531,
+        0.1502,
+        0.4722
+      ],
+      "text": "\u0015\n\u00d73",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_178",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1255,
+        0.4869,
+        0.1337,
+        0.4939
+      ],
+      "text": "\uf8ee",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_179",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1262,
+        0.4869,
+        0.1603,
+        0.5391
+      ],
+      "text": "\uf8f0\n1\u00d71, 64\n3\u00d73, 64\n1\u00d71, 256",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_180",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1255,
+        0.5444,
+        0.1337,
+        0.5514
+      ],
+      "text": "\uf8f9",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_181",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1361,
+        0.5444,
+        0.1502,
+        0.5649
+      ],
+      "text": "\uf8fb\u00d73",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_182",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1255,
+        0.5822,
+        0.1337,
+        0.5893
+      ],
+      "text": "\uf8ee",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_183",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1262,
+        0.5822,
+        0.1603,
+        0.6345
+      ],
+      "text": "\uf8f0\n1\u00d71, 64\n3\u00d73, 64\n1\u00d71, 256",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_184",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1255,
+        0.6398,
+        0.1337,
+        0.6468
+      ],
+      "text": "\uf8f9",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_185",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1361,
+        0.6398,
+        0.1502,
+        0.6603
+      ],
+      "text": "\uf8fb\u00d73",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_186",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1255,
+        0.6803,
+        0.1337,
+        0.6873
+      ],
+      "text": "\uf8ee",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_187",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1262,
+        0.6803,
+        0.1603,
+        0.7325
+      ],
+      "text": "\uf8f0\n1\u00d71, 64\n3\u00d73, 64\n1\u00d71, 256",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_188",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1255,
+        0.7378,
+        0.1337,
+        0.7448
+      ],
+      "text": "\uf8f9",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_189",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1361,
+        0.7378,
+        0.1502,
+        0.7583
+      ],
+      "text": "\uf8fb\u00d73",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_190",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1686,
+        0.2151,
+        0.1828,
+        0.3001
+      ],
+      "text": "conv3 x\n28\u00d728",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_191",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.163,
+        0.3152,
+        0.188,
+        0.366
+      ],
+      "text": "\u0014\n3\u00d73, 128\n3\u00d73, 128",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_192",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.163,
+        0.3713,
+        0.1829,
+        0.3903
+      ],
+      "text": "\u0015\n\u00d72",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_193",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.163,
+        0.3997,
+        0.188,
+        0.4505
+      ],
+      "text": "\u0014\n3\u00d73, 128\n3\u00d73, 128",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_194",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.163,
+        0.4558,
+        0.1829,
+        0.4748
+      ],
+      "text": "\u0015\n\u00d74",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_195",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1581,
+        0.4869,
+        0.1663,
+        0.4939
+      ],
+      "text": "\uf8ee",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_196",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1589,
+        0.4869,
+        0.193,
+        0.5391
+      ],
+      "text": "\uf8f0\n1\u00d71, 128\n3\u00d73, 128\n1\u00d71, 512",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_197",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1581,
+        0.5444,
+        0.1663,
+        0.5514
+      ],
+      "text": "\uf8f9",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_198",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1687,
+        0.5444,
+        0.1829,
+        0.5649
+      ],
+      "text": "\uf8fb\u00d74",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_199",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1581,
+        0.5822,
+        0.1663,
+        0.5893
+      ],
+      "text": "\uf8ee",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_200",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1589,
+        0.5822,
+        0.193,
+        0.6345
+      ],
+      "text": "\uf8f0\n1\u00d71, 128\n3\u00d73, 128\n1\u00d71, 512",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_201",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1581,
+        0.6398,
+        0.1663,
+        0.6468
+      ],
+      "text": "\uf8f9",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_202",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1687,
+        0.6398,
+        0.1829,
+        0.6603
+      ],
+      "text": "\uf8fb\u00d74",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_203",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1581,
+        0.6803,
+        0.1663,
+        0.6873
+      ],
+      "text": "\uf8ee",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_204",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1589,
+        0.6803,
+        0.193,
+        0.7325
+      ],
+      "text": "\uf8f0\n1\u00d71, 128\n3\u00d73, 128\n1\u00d71, 512",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_205",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1581,
+        0.7378,
+        0.1663,
+        0.7448
+      ],
+      "text": "\uf8f9",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_206",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1687,
+        0.7378,
+        0.1829,
+        0.7583
+      ],
+      "text": "\uf8fb\u00d78",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_207",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2013,
+        0.2151,
+        0.2155,
+        0.3001
+      ],
+      "text": "conv4 x\n14\u00d714",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_208",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1957,
+        0.3152,
+        0.2206,
+        0.366
+      ],
+      "text": "\u0014\n3\u00d73, 256\n3\u00d73, 256",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_209",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1957,
+        0.3713,
+        0.2155,
+        0.3903
+      ],
+      "text": "\u0015\n\u00d72",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_210",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1957,
+        0.3997,
+        0.2206,
+        0.4505
+      ],
+      "text": "\u0014\n3\u00d73, 256\n3\u00d73, 256",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_211",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1957,
+        0.4558,
+        0.2155,
+        0.4748
+      ],
+      "text": "\u0015\n\u00d76",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_212",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1908,
+        0.4842,
+        0.199,
+        0.4913
+      ],
+      "text": "\uf8ee",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_213",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1915,
+        0.4842,
+        0.2256,
+        0.5417
+      ],
+      "text": "\uf8f0\n1\u00d71, 256\n3\u00d73, 256\n1\u00d71, 1024",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_214",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1908,
+        0.547,
+        0.199,
+        0.5541
+      ],
+      "text": "\uf8f9",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_215",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2014,
+        0.547,
+        0.2155,
+        0.5676
+      ],
+      "text": "\uf8fb\u00d76",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_216",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1908,
+        0.577,
+        0.199,
+        0.584
+      ],
+      "text": "\uf8ee",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_217",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1915,
+        0.577,
+        0.2256,
+        0.6345
+      ],
+      "text": "\uf8f0\n1\u00d71, 256\n3\u00d73, 256\n1\u00d71, 1024",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_218",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1908,
+        0.6398,
+        0.199,
+        0.6468
+      ],
+      "text": "\uf8f9",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_219",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2014,
+        0.6398,
+        0.2155,
+        0.6656
+      ],
+      "text": "\uf8fb\u00d723",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_220",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1908,
+        0.675,
+        0.199,
+        0.682
+      ],
+      "text": "\uf8ee",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_221",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1915,
+        0.675,
+        0.2256,
+        0.7325
+      ],
+      "text": "\uf8f0\n1\u00d71, 256\n3\u00d73, 256\n1\u00d71, 1024",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_222",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1908,
+        0.7378,
+        0.199,
+        0.7448
+      ],
+      "text": "\uf8f9",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_223",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2014,
+        0.7378,
+        0.2155,
+        0.7636
+      ],
+      "text": "\uf8fb\u00d736",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_224",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2339,
+        0.2151,
+        0.2481,
+        0.2948
+      ],
+      "text": "conv5 x\n7\u00d77",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_225",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2283,
+        0.3152,
+        0.2533,
+        0.366
+      ],
+      "text": "\u0014\n3\u00d73, 512\n3\u00d73, 512",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_226",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2283,
+        0.3713,
+        0.2482,
+        0.3903
+      ],
+      "text": "\u0015\n\u00d72",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_227",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2283,
+        0.3997,
+        0.2533,
+        0.4505
+      ],
+      "text": "\u0014\n3\u00d73, 512\n3\u00d73, 512",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_228",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2283,
+        0.4558,
+        0.2482,
+        0.4748
+      ],
+      "text": "\u0015\n\u00d73",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_229",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2234,
+        0.4842,
+        0.2316,
+        0.4913
+      ],
+      "text": "\uf8ee",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_230",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2242,
+        0.4842,
+        0.2583,
+        0.5417
+      ],
+      "text": "\uf8f0\n1\u00d71, 512\n3\u00d73, 512\n1\u00d71, 2048",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_231",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2234,
+        0.547,
+        0.2316,
+        0.5541
+      ],
+      "text": "\uf8f9",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_232",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.234,
+        0.547,
+        0.2482,
+        0.5676
+      ],
+      "text": "\uf8fb\u00d73",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_233",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2234,
+        0.5796,
+        0.2316,
+        0.5866
+      ],
+      "text": "\uf8ee",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_234",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2242,
+        0.5796,
+        0.2583,
+        0.6371
+      ],
+      "text": "\uf8f0\n1\u00d71, 512\n3\u00d73, 512\n1\u00d71, 2048",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_235",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2234,
+        0.6424,
+        0.2316,
+        0.6494
+      ],
+      "text": "\uf8f9",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_236",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.234,
+        0.6424,
+        0.2482,
+        0.6629
+      ],
+      "text": "\uf8fb\u00d73",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_237",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2234,
+        0.6776,
+        0.2316,
+        0.6847
+      ],
+      "text": "\uf8ee",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_238",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2242,
+        0.6776,
+        0.2583,
+        0.7351
+      ],
+      "text": "\uf8f0\n1\u00d71, 512\n3\u00d73, 512\n1\u00d71, 2048",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_239",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2234,
+        0.7404,
+        0.2316,
+        0.7474
+      ],
+      "text": "\uf8f9",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_240",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.234,
+        0.7404,
+        0.2482,
+        0.7609
+      ],
+      "text": "\uf8fb\u00d73",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_241",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.256,
+        0.2438,
+        0.2813,
+        0.7397
+      ],
+      "text": "1\u00d71\naverage pool, 1000-d fc, softmax\nFLOPs\n1.8\u00d7109\n3.6\u00d7109\n3.8\u00d7109\n7.6\u00d7109\n11.3\u00d7109",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_242",
+      "page": 5,
+      "modality": "table",
+      "bbox": [
+        0.2837,
+        0.0819,
+        0.3088,
+        0.8907
+      ],
+      "text": "Table 1. Architectures for ImageNet. Building blocks are shown in brackets (see also Fig. 5), with the numbers of blocks stacked. Down-\nsampling is performed by conv3 1, conv4 1, and conv5 1 with a stride of 2.",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_243",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.4678,
+        0.1543,
+        0.4823,
+        0.4438
+      ],
+      "text": "0\n10\n20\n30\n40\n50\n20",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_244",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.4323,
+        0.1543,
+        0.441,
+        0.1656
+      ],
+      "text": "30",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_245",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.3972,
+        0.1543,
+        0.4059,
+        0.1656
+      ],
+      "text": "40",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_246",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.3617,
+        0.1543,
+        0.3704,
+        0.1656
+      ],
+      "text": "50",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_247",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.3265,
+        0.1543,
+        0.3352,
+        0.1656
+      ],
+      "text": "60",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_248",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.4823,
+        0.2938,
+        0.491,
+        0.3379
+      ],
+      "text": "iter. (1e4)",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_249",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.3799,
+        0.1406,
+        0.4122,
+        0.1519
+      ],
+      "text": "error (%)",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_250",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.4459,
+        0.1893,
+        0.4686,
+        0.2331
+      ],
+      "text": "plain-18\nplain-34",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_251",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.4678,
+        0.5204,
+        0.4823,
+        0.8098
+      ],
+      "text": "0\n10\n20\n30\n40\n50\n20",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_252",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.4323,
+        0.5204,
+        0.441,
+        0.5316
+      ],
+      "text": "30",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_253",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.3972,
+        0.5204,
+        0.4059,
+        0.5316
+      ],
+      "text": "40",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_254",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.3617,
+        0.5204,
+        0.3704,
+        0.5316
+      ],
+      "text": "50",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_255",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.3265,
+        0.5204,
+        0.3352,
+        0.5316
+      ],
+      "text": "60",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_256",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.4823,
+        0.6598,
+        0.491,
+        0.7039
+      ],
+      "text": "iter. (1e4)",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_257",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.3799,
+        0.5066,
+        0.4122,
+        0.5179
+      ],
+      "text": "error (%)",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_258",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.4459,
+        0.5553,
+        0.4686,
+        0.6112
+      ],
+      "text": "ResNet-18\nResNet-34",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_259",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.4394,
+        0.4135,
+        0.4493,
+        0.4564
+      ],
+      "text": "18-layer",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_260",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.4078,
+        0.4135,
+        0.4177,
+        0.4564
+      ],
+      "text": "34-layer",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_261",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.4171,
+        0.7772,
+        0.4271,
+        0.8201
+      ],
+      "text": "18-layer",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_262",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.458,
+        0.7772,
+        0.4679,
+        0.8201
+      ],
+      "text": "34-layer",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_263",
+      "page": 5,
+      "modality": "figure",
+      "bbox": [
+        0.4953,
+        0.0819,
+        0.5344,
+        0.8907
+      ],
+      "text": "Figure 4. Training on ImageNet. Thin curves denote training error, and bold curves denote validation error of the center crops. Left: plain\nnetworks of 18 and 34 layers. Right: ResNets of 18 and 34 layers. In this plot, the residual networks have no extra parameter compared to\ntheir plain counterparts.",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_264",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.5619,
+        0.1658,
+        0.6041,
+        0.384
+      ],
+      "text": "plain\nResNet\n18 layers\n27.94\n27.88\n34 layers\n28.54\n25.03",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_265",
+      "page": 5,
+      "modality": "table",
+      "bbox": [
+        0.6131,
+        0.0819,
+        0.6521,
+        0.4679
+      ],
+      "text": "Table 2. Top-1 error (%, 10-crop testing) on ImageNet validation.\nHere the ResNets have no extra parameter compared to their plain\ncounterparts. Fig. 4 shows the training procedures.",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_266",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.6878,
+        0.0819,
+        0.7458,
+        0.4679
+      ],
+      "text": "34-layer plain net has higher training error throughout the\nwhole training procedure, even though the solution space\nof the 18-layer plain network is a subspace of that of the\n34-layer one.",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_267",
+      "page": 5,
+      "modality": "table",
+      "bbox": [
+        0.7521,
+        0.0819,
+        0.9008,
+        0.4679
+      ],
+      "text": "We argue that this optimization dif\ufb01culty is unlikely to\nbe caused by vanishing gradients. These plain networks are\ntrained with BN [16], which ensures forward propagated\nsignals to have non-zero variances. We also verify that the\nbackward propagated gradients exhibit healthy norms with\nBN. So neither forward nor backward signals vanish. In\nfact, the 34-layer plain net is still able to achieve com",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_268",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.5606,
+        0.5047,
+        0.59,
+        0.8907
+      ],
+      "text": "reducing of the training error3. The reason for such opti-\nmization dif\ufb01culties will be studied in the future.",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_269",
+      "page": 5,
+      "modality": "table",
+      "bbox": [
+        0.5999,
+        0.5047,
+        0.8542,
+        0.8907
+      ],
+      "text": "Residual Networks. Next we evaluate 18-layer and 34-\nlayer residual nets (ResNets). The baseline architectures\nare the same as the above plain nets, expect that a shortcut\nconnection is added to each pair of 3\u00d73 \ufb01lters as in Fig. 3\n(right). In the \ufb01rst comparison (Table 2 and Fig. 4 right),\nwe use identity mapping for all shortcuts and zero-padding\nfor increasing dimensions (option A). So they hav",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_270",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.8646,
+        0.5047,
+        0.9002,
+        0.8907
+      ],
+      "text": "3We have experimented with more training iterations (3\u00d7) and still ob-\nserved the degradation problem, suggesting that this problem cannot be\nfeasibly addressed by simply using more iterations.",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_271",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.9259,
+        0.4822,
+        0.9385,
+        0.4904
+      ],
+      "text": "5",
+      "section": "Page 5"
+    },
+    {
+      "id": "RES_E_272",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.0944,
+        0.1576,
+        0.1045,
+        0.3922
+      ],
+      "text": "model\ntop-1 err.\ntop-5 err.",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_273",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1092,
+        0.1576,
+        0.1205,
+        0.3812
+      ],
+      "text": "VGG-16 [41]\n28.07\n9.33",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_274",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1244,
+        0.1576,
+        0.1357,
+        0.3812
+      ],
+      "text": "GoogLeNet [44]\n-\n9.15",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_275",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1396,
+        0.1576,
+        0.151,
+        0.3812
+      ],
+      "text": "PReLU-net [13]\n24.27\n7.38",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_276",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1584,
+        0.1576,
+        0.1697,
+        0.3848
+      ],
+      "text": "plain-34\n28.54\n10.02",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_277",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1736,
+        0.1576,
+        0.1849,
+        0.3812
+      ],
+      "text": "ResNet-34 A\n25.03\n7.76",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_278",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1888,
+        0.1576,
+        0.2002,
+        0.3812
+      ],
+      "text": "ResNet-34 B\n24.52\n7.46",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_279",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.2041,
+        0.1576,
+        0.2154,
+        0.3812
+      ],
+      "text": "ResNet-34 C\n24.19\n7.40",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_280",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.2198,
+        0.1576,
+        0.2311,
+        0.3812
+      ],
+      "text": "ResNet-50\n22.85\n6.71",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_281",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.235,
+        0.1576,
+        0.2463,
+        0.3812
+      ],
+      "text": "ResNet-101\n21.75\n6.05",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_282",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.2501,
+        0.1576,
+        0.2614,
+        0.3812
+      ],
+      "text": "ResNet-152\n21.43\n5.71",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_283",
+      "page": 6,
+      "modality": "table",
+      "bbox": [
+        0.2705,
+        0.0819,
+        0.3096,
+        0.4679
+      ],
+      "text": "Table 3. Error rates (%, 10-crop testing) on ImageNet validation.\nVGG-16 is based on our test. ResNet-50/101/152 are of option B\nthat only uses projections for increasing dimensions.",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_284",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.3253,
+        0.1096,
+        0.3514,
+        0.4402
+      ],
+      "text": "method\ntop-1 err.\ntop-5 err.\nVGG [41] (ILSVRC\u201914)\n-\n8.43\u2020",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_285",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.3553,
+        0.1096,
+        0.4894,
+        0.4291
+      ],
+      "text": "GoogLeNet [44] (ILSVRC\u201914)\n-\n7.89\nVGG [41] (v5)\n24.4\n7.1\nPReLU-net [13]\n21.59\n5.71\nBN-inception [16]\n21.99\n5.81\nResNet-34 B\n21.84\n5.71\nResNet-34 C\n21.53\n5.60\nResNet-50\n20.74\n5.25\nResNet-101\n19.87\n4.60\nResNet-152\n19.38\n4.49",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_286",
+      "page": 6,
+      "modality": "table",
+      "bbox": [
+        0.499,
+        0.0819,
+        0.5243,
+        0.4679
+      ],
+      "text": "Table 4. Error rates (%) of single-model results on the ImageNet\nvalidation set (except \u2020 reported on the test set).",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_287",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.5403,
+        0.1189,
+        0.6445,
+        0.4309
+      ],
+      "text": "method\ntop-5 err. (test)\nVGG [41] (ILSVRC\u201914)\n7.32\nGoogLeNet [44] (ILSVRC\u201914)\n6.66\nVGG [41] (v5)\n6.8\nPReLU-net [13]\n4.94\nBN-inception [16]\n4.82\nResNet (ILSVRC\u201915)\n3.57",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_288",
+      "page": 6,
+      "modality": "table",
+      "bbox": [
+        0.6541,
+        0.0819,
+        0.6794,
+        0.4679
+      ],
+      "text": "Table 5. Error rates (%) of ensembles. The top-5 error is on the\ntest set of ImageNet and reported by the test server.",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_289",
+      "page": 6,
+      "modality": "table",
+      "bbox": [
+        0.7109,
+        0.0819,
+        0.8763,
+        0.4679
+      ],
+      "text": "ResNet reduces the top-1 error by 3.5% (Table 2), resulting\nfrom the successfully reduced training error (Fig. 4 right vs.\nleft). This comparison veri\ufb01es the effectiveness of residual\nlearning on extremely deep systems.\nLast, we also note that the 18-layer plain/residual nets\nare comparably accurate (Table 2), but the 18-layer ResNet\nconverges faster (Fig. 4 right vs. left). When the net is \u201cnot\no",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_290",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.8881,
+        0.0819,
+        0.9008,
+        0.4679
+      ],
+      "text": "Identity vs. Projection Shortcuts. We have shown that",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_291",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1283,
+        0.7685,
+        0.1359,
+        0.7975
+      ],
+      "text": "3x3, 64",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_292",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1102,
+        0.7685,
+        0.1178,
+        0.7975
+      ],
+      "text": "1x1, 64",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_293",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1185,
+        0.7883,
+        0.1254,
+        0.8025
+      ],
+      "text": "relu",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_294",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1464,
+        0.766,
+        0.154,
+        0.8001
+      ],
+      "text": "1x1, 256",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_295",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1367,
+        0.7883,
+        0.1436,
+        0.8025
+      ],
+      "text": "relu",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_296",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1702,
+        0.7883,
+        0.1771,
+        0.8025
+      ],
+      "text": "relu",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_297",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1127,
+        0.5722,
+        0.1203,
+        0.6012
+      ],
+      "text": "3x3, 64",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_298",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1406,
+        0.5722,
+        0.1482,
+        0.6012
+      ],
+      "text": "3x3, 64",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_299",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1702,
+        0.592,
+        0.1771,
+        0.6063
+      ],
+      "text": "relu",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_300",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1236,
+        0.592,
+        0.1305,
+        0.6063
+      ],
+      "text": "relu",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_301",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.0909,
+        0.5966,
+        0.0978,
+        0.8116
+      ],
+      "text": "64-d\n256-d",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_302",
+      "page": 6,
+      "modality": "figure",
+      "bbox": [
+        0.198,
+        0.5047,
+        0.2374,
+        0.8907
+      ],
+      "text": "Figure 5. A deeper residual function F for ImageNet. Left: a\nbuilding block (on 56\u00d756 feature maps) as in Fig. 3 for ResNet-\n34. Right: a \u201cbottleneck\u201d building block for ResNet-50/101/152.",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_303",
+      "page": 6,
+      "modality": "table",
+      "bbox": [
+        0.2595,
+        0.5047,
+        0.5447,
+        0.8907
+      ],
+      "text": "parameter-free, identity shortcuts help with training. Next\nwe investigate projection shortcuts (Eqn.(2)). In Table 3 we\ncompare three options: (A) zero-padding shortcuts are used\nfor increasing dimensions, and all shortcuts are parameter-\nfree (the same as Table 2 and Fig. 4 right); (B) projec-\ntion shortcuts are used for increasing dimensions, and other\nshortcuts are identity; and (C) all shortc",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_304",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.5555,
+        0.5047,
+        0.8266,
+        0.8907
+      ],
+      "text": "Deeper Bottleneck Architectures. Next we describe our\ndeeper nets for ImageNet. Because of concerns on the train-\ning time that we can afford, we modify the building block\nas a bottleneck design4. For each residual function F, we\nuse a stack of 3 layers instead of 2 (Fig. 5). The three layers\nare 1\u00d71, 3\u00d73, and 1\u00d71 convolutions, where the 1\u00d71 layers\nare responsible for reducing and then increasing ",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_305",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.8407,
+        0.5047,
+        0.9002,
+        0.8907
+      ],
+      "text": "4Deeper non-bottleneck ResNets (e.g., Fig. 5 left) also gain accuracy\nfrom increased depth (as shown on CIFAR-10), but are not as economical\nas the bottleneck ResNets. So the usage of bottleneck designs is mainly due\nto practical considerations. We further note that the degradation problem\nof plain nets is also witnessed for the bottleneck designs.",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_306",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.9259,
+        0.4822,
+        0.9385,
+        0.4904
+      ],
+      "text": "6",
+      "section": "Page 6"
+    },
+    {
+      "id": "RES_E_307",
+      "page": 7,
+      "modality": "table",
+      "bbox": [
+        0.0939,
+        0.0819,
+        0.319,
+        0.4679
+      ],
+      "text": "34-layer net with this 3-layer bottleneck block, resulting in\na 50-layer ResNet (Table 1). We use option B for increasing\ndimensions. This model has 3.8 billion FLOPs.\n101-layer and 152-layer ResNets: We construct 101-\nlayer and 152-layer ResNets by using more 3-layer blocks\n(Table 1). Remarkably, although the depth is signi\ufb01cantly\nincreased, the 152-layer ResNet (11.3 billion FLOPs) still\nhas low",
+      "section": "Page 7"
+    },
+    {
+      "id": "RES_E_308",
+      "page": 7,
+      "modality": "table",
+      "bbox": [
+        0.3295,
+        0.0819,
+        0.4779,
+        0.4679
+      ],
+      "text": "Comparisons with State-of-the-art Methods. In Table 4\nwe compare with the previous best single-model results.\nOur baseline 34-layer ResNets have achieved very compet-\nitive accuracy. Our 152-layer ResNet has a single-model\ntop-5 validation error of 4.49%. This single-model result\noutperforms all previous ensemble results (Table 5). We\ncombine six models of different depth to form an ensemble\n(only",
+      "section": "Page 7"
+    },
+    {
+      "id": "RES_E_309",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.4913,
+        0.0819,
+        0.5052,
+        0.2947
+      ],
+      "text": "4.2. CIFAR-10 and Analysis",
+      "section": "Page 7"
+    },
+    {
+      "id": "RES_E_310",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.5156,
+        0.0819,
+        0.7854,
+        0.4679
+      ],
+      "text": "We conducted more studies on the CIFAR-10 dataset\n[20], which consists of 50k training images and 10k test-\ning images in 10 classes. We present experiments trained\non the training set and evaluated on the test set. Our focus\nis on the behaviors of extremely deep networks, but not on\npushing the state-of-the-art results, so we intentionally use\nsimple architectures as follows.\nThe plain/residual a",
+      "section": "Page 7"
+    },
+    {
+      "id": "RES_E_311",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.8009,
+        0.1343,
+        0.8436,
+        0.4155
+      ],
+      "text": "output map size\n32\u00d732\n16\u00d716\n8\u00d78\n# layers\n1+2n\n2n\n2n\n# \ufb01lters\n16\n32\n64",
+      "section": "Page 7"
+    },
+    {
+      "id": "RES_E_312",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.858,
+        0.0819,
+        0.9008,
+        0.4679
+      ],
+      "text": "When shortcut connections are used, they are connected\nto the pairs of 3\u00d73 layers (totally 3n shortcuts). On this\ndataset we use identity shortcuts in all cases (i.e., option A),",
+      "section": "Page 7"
+    },
+    {
+      "id": "RES_E_313",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.0943,
+        0.5169,
+        0.3044,
+        0.8784
+      ],
+      "text": "method\nerror (%)\nMaxout [10]\n9.38\nNIN [25]\n8.81\nDSN [24]\n8.22\n# layers\n# params\nFitNet [35]\n19\n2.5M\n8.39\nHighway [42, 43]\n19\n2.3M\n7.54 (7.72\u00b10.16)\nHighway [42, 43]\n32\n1.25M\n8.80\nResNet\n20\n0.27M\n8.75\nResNet\n32\n0.46M\n7.51\nResNet\n44\n0.66M\n7.17\nResNet\n56\n0.85M\n6.97\nResNet\n110\n1.7M\n6.43 (6.61\u00b10.16)\nResNet\n1202\n19.4M\n7.93",
+      "section": "Page 7"
+    },
+    {
+      "id": "RES_E_314",
+      "page": 7,
+      "modality": "table",
+      "bbox": [
+        0.3196,
+        0.5047,
+        0.3587,
+        0.8907
+      ],
+      "text": "Table 6. Classi\ufb01cation error on the CIFAR-10 test set. All meth-\nods are with data augmentation. For ResNet-110, we run it 5 times\nand show \u201cbest (mean\u00b1std)\u201d as in [43].",
+      "section": "Page 7"
+    },
+    {
+      "id": "RES_E_315",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.3857,
+        0.5047,
+        0.8663,
+        0.8907
+      ],
+      "text": "so our residual models have exactly the same depth, width,\nand number of parameters as the plain counterparts.\nWe use a weight decay of 0.0001 and momentum of 0.9,\nand adopt the weight initialization in [13] and BN [16] but\nwith no dropout. These models are trained with a mini-\nbatch size of 128 on two GPUs. We start with a learning\nrate of 0.1, divide it by 10 at 32k and 48k iterations, and\ntermi",
+      "section": "Page 7"
+    },
+    {
+      "id": "RES_E_316",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.8765,
+        0.5047,
+        0.9002,
+        0.8907
+      ],
+      "text": "5With an initial learning rate of 0.1, it starts converging (<90% error)\nafter several epochs, but still reaches similar accuracy.",
+      "section": "Page 7"
+    },
+    {
+      "id": "RES_E_317",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.9259,
+        0.4822,
+        0.9385,
+        0.4904
+      ],
+      "text": "7",
+      "section": "Page 7"
+    }
+  ]
+}

@@ -1,0 +1,2001 @@
+{
+  "metadata": {
+    "id": "scholar_eacl2027",
+    "title": "SCHOLAR: A Local-First Research Assistant for Scientific Papers",
+    "authors": [
+      "Prithviraj",
+      "Sai Amrit Patnaik",
+      "Sangeeta Lamba",
+      "Nidhi Goyal"
+    ],
+    "year": "2027",
+    "venue": "EACL 2027 System Demonstrations",
+    "summary": "Inspectable citation grounding preserving document, page, and bounding box coordinates for local-first scientific QA.",
+    "pages": 9,
+    "imagePrefix": "assets/papers/scholar_eacl2027/page_",
+    "dataFile": "data/scholar.json",
+    "tags": [
+      "Citation Grounding",
+      "Local-First",
+      "RAG",
+      "EACL 2027"
+    ]
+  },
+  "presets": [
+    {
+      "id": "sch_q1",
+      "category": "System Contributions",
+      "question": "What are the three main contributions of SCHOLAR?",
+      "answer": "SCHOLAR makes three primary system contributions [1]:\n1. **Source-preserving document representation**: Evidence retains document, page, and region identity throughout document processing, keeping citation provenance under application control [1].\n2. **Inspectable scientific question answering**: Generated citations resolve directly to the corresponding text, figure, or table region in the original PDF, with retrieval and verification actions available through an audit trace [1].\n3. **Local and reproducible evaluation**: An open implementation evaluated for evidence retrieval, human grounding, citation quality, and end-to-end execution on consumer hardware [1].",
+      "citations": [
+        {
+          "index": 1,
+          "evidence_id": "SCHOLAR_E_018",
+          "page": 2,
+          "bbox": [
+            0.19,
+            0.12,
+            0.42,
+            0.49
+          ],
+          "quote": "This demonstration makes three contributions: 1. Source-preserving document representation... 2. Inspectable scientific question answering... 3. Local and reproducible evaluation...",
+          "modality": "text",
+          "role": "contributions",
+          "checks": {
+            "lexical_overlap": "0.98",
+            "numerical_match": "PASS (1, 2, 3)",
+            "polarity": "VERIFIED"
+          }
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "q",
+            "label": "Query: Three Main Contributions",
+            "type": "query"
+          },
+          {
+            "id": "c1",
+            "label": "[1] Section 1: Contributions List",
+            "type": "evidence",
+            "modality": "text",
+            "page": 2,
+            "score": 0.99
+          },
+          {
+            "id": "ans",
+            "label": "Synthesis: Source-preserving representation, Inspectable QA, Local evaluation",
+            "type": "claim"
+          }
+        ],
+        "edges": [
+          {
+            "source": "q",
+            "target": "c1",
+            "label": "Lexical match"
+          },
+          {
+            "source": "c1",
+            "target": "ans",
+            "label": "Decomposition"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sch_q2",
+      "category": "Retrieval Evaluation",
+      "question": "What retrieval performance does BM25 + Dense RRF achieve in Table 1?",
+      "answer": "In Table 1 (Page-level retrieval results evaluated on 200 questions across 10 papers) [1]:\n- **BM25 + Dense RRF** achieves the highest overall scores with **Hit@1 of 0.85**, **Hit@5 of 0.98**, **MRR of 0.905**, and **nDCG@5 of 0.853** [1].\n- BM25 alone achieves **Hit@1 of 0.84** and **MRR of 0.892**, showing that lexical search is already a strong baseline [1].\n- Applying the modality heuristic reduces Hit@1 to **0.59**, demonstrating why visual evidence is retained as an inspection channel rather than a ranking filter [1].",
+      "citations": [
+        {
+          "index": 1,
+          "evidence_id": "SCHOLAR_E_056",
+          "page": 5,
+          "bbox": [
+            0.45,
+            0.12,
+            0.65,
+            0.49
+          ],
+          "quote": "Table 1: Page-level retrieval results. BM25 + Dense uses reciprocal-rank fusion... BM25 + Dense achieves Hit@1 .85, Hit@5 .98, MRR .905, nDCG .853.",
+          "modality": "table",
+          "role": "empirical_table",
+          "checks": {
+            "lexical_overlap": "0.95",
+            "numerical_match": "PASS (0.85, 0.98, 0.905, 0.853)",
+            "polarity": "VERIFIED"
+          }
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "q",
+            "label": "Query: Table 1 Retrieval Performance",
+            "type": "query"
+          },
+          {
+            "id": "c1",
+            "label": "[1] Table 1: Retrieval Results (200 Questions)",
+            "type": "evidence",
+            "modality": "table",
+            "page": 5,
+            "score": 0.97
+          },
+          {
+            "id": "ans",
+            "label": "Result: BM25+Dense RRF leads (Hit@1 0.85, MRR 0.905)",
+            "type": "claim"
+          }
+        ],
+        "edges": [
+          {
+            "source": "q",
+            "target": "c1",
+            "label": "Table lookup"
+          },
+          {
+            "source": "c1",
+            "target": "ans",
+            "label": "Metrics extraction"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sch_q3",
+      "category": "Human Evaluation",
+      "question": "What were the findings of the 5-evaluator human study across 45 questions?",
+      "answer": "Across 45 questions from 9 papers evaluated by 5 independent raters (225 ratings) [1]:\n- **Utility** averaged **4.19 / 5** (79.1% favorable $\\ge 4$)\n- **Correctness** averaged **4.16 / 5** (79.6% favorable)\n- **Grounding** averaged **4.13 / 5** (mean grounding score of **82.6%**)\n- **Completeness** averaged **4.13 / 5** (78.7% favorable)\n- **Citation Quality** averaged **3.96 / 5** (70.2% favorable) [1].\nAt the citation level (675 judgments), **87.6%** of citations were supported (69.9%) or partially supported (17.6%) [1]. Low inter-rater agreement (Krippendorff's $\\alpha \\in [-0.07, -0.01]$) showed that judgments reflect individual evaluator distributions rather than consensus [1].",
+      "citations": [
+        {
+          "index": 1,
+          "evidence_id": "SCHOLAR_E_063",
+          "page": 5,
+          "bbox": [
+            0.22,
+            0.51,
+            0.42,
+            0.88
+          ],
+          "quote": "Table 2: Human evaluation on 45 questions from 9 papers. Means are computed over 225 ratings on a five-point scale... Utility 4.19, Correctness 4.16, Grounding 4.13.",
+          "modality": "table",
+          "role": "human_evaluation_table",
+          "checks": {
+            "lexical_overlap": "0.96",
+            "numerical_match": "PASS (4.19, 4.16, 4.13, 87.6%)",
+            "polarity": "VERIFIED"
+          }
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "q",
+            "label": "Query: Human Study Findings (Table 2)",
+            "type": "query"
+          },
+          {
+            "id": "c1",
+            "label": "[1] Table 2: 5 Evaluators / 45 Questions / 225 Ratings",
+            "type": "evidence",
+            "modality": "table",
+            "page": 5,
+            "score": 0.98
+          },
+          {
+            "id": "ans",
+            "label": "Outcome: Favorable means >4.1 across utility, correctness, grounding",
+            "type": "claim"
+          }
+        ],
+        "edges": [
+          {
+            "source": "q",
+            "target": "c1",
+            "label": "Table retrieval"
+          },
+          {
+            "source": "c1",
+            "target": "ans",
+            "label": "Statistical breakdown"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sch_q4",
+      "category": "Workstation Latency",
+      "question": "What is the query-time latency breakdown on consumer hardware (Apple M3 Pro)?",
+      "answer": "Evaluated across 100 valid query-time requests on an Apple M3 Pro (18 GB RAM) with local Ollama inference [1]:\n- **End-to-End Latency**: Median **27.34 s** ($p_{90} = 41.61$\\,s, $p_{95} = 149.54$\\,s)\n- **Retrieval**: Median **523 ms** ($p_{95} = 112.85$\\,s with cold index builds)\n- **Generation** (`qwen3.5:9b`): Median **26.59 s** ($p_{95} = 37.48$\\,s)\n- **Verification & Trace Writing**: Median **15 ms** ($p_{95} = 24$\\,ms) [1].",
+      "citations": [
+        {
+          "index": 1,
+          "evidence_id": "SCHOLAR_E_077",
+          "page": 6,
+          "bbox": [
+            0.74,
+            0.12,
+            0.92,
+            0.49
+          ],
+          "quote": "Median end-to-end latency is 27.34 s, with p90 = 41.61 s and p95 = 149.54 s. Retrieval takes a median of 523 ms... Generation takes a median of 26.59 s... verification takes 15 ms.",
+          "modality": "text",
+          "role": "latency_benchmarks",
+          "checks": {
+            "lexical_overlap": "0.97",
+            "numerical_match": "PASS (27.34s, 523ms, 26.59s, 15ms)",
+            "polarity": "VERIFIED"
+          }
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "q",
+            "label": "Query: Query Latency Breakdown",
+            "type": "query"
+          },
+          {
+            "id": "c1",
+            "label": "[1] Section 5.4: Local Execution Profile (M3 Pro 18GB)",
+            "type": "evidence",
+            "modality": "text",
+            "page": 6,
+            "score": 0.99
+          },
+          {
+            "id": "ans",
+            "label": "Profile: Median 27.34s e2e, 523ms retrieval, 15ms verifier",
+            "type": "claim"
+          }
+        ],
+        "edges": [
+          {
+            "source": "q",
+            "target": "c1",
+            "label": "Benchmark retrieval"
+          },
+          {
+            "source": "c1",
+            "target": "ans",
+            "label": "Timing profile"
+          }
+        ]
+      }
+    }
+  ],
+  "blocks": [
+    {
+      "id": "SCHOLAR_E_001",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.083,
+        0.154,
+        0.1,
+        0.8466
+      ],
+      "text": "SCHOLAR: A Local-First Research Assistant for Scientific Papers",
+      "section": "Page 1"
+    },
+    {
+      "id": "SCHOLAR_E_002",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.1098,
+        0.2426,
+        0.242,
+        0.7624
+      ],
+      "text": "Prithviraj, Sai Amrit Patnaik, Sangeeta Lamba, Nidhi Goyal\nMahindra University, Avykt Ehsaas, CUH\nCSE Dept.\nHyderabad, India\nse23uari141@mahindrauniversity.edu.in\nsaiamritp@gmail.com\nsangeetalamba@cuh.ac.in\nnidhi.goyal@mahindrauniversity.edu.in",
+      "section": "Page 1"
+    },
+    {
+      "id": "SCHOLAR_E_003",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.2633,
+        0.265,
+        0.2775,
+        0.3397
+      ],
+      "text": "Abstract",
+      "section": "Page 1"
+    },
+    {
+      "id": "SCHOLAR_E_004",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.285,
+        0.1476,
+        0.6659,
+        0.4601
+      ],
+      "text": "Scientific-document assistants can answer ques-\ntions over research papers, but verifying their\nanswers still requires readers to locate and in-\nspect the supporting evidence.\nWe present\nSCHOLAR, a local-first scientific-document\nassistant designed around inspectable citation\ngrounding. SCHOLAR preserves source iden-\ntity throughout document processing, allowing\ncitations in generated answers to r",
+      "section": "Page 1"
+    },
+    {
+      "id": "SCHOLAR_E_005",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.6742,
+        0.119,
+        0.6884,
+        0.2582
+      ],
+      "text": "1\nIntroduction",
+      "section": "Page 1"
+    },
+    {
+      "id": "SCHOLAR_E_006",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.699,
+        0.1186,
+        0.9211,
+        0.4889
+      ],
+      "text": "Scientific papers are not flat text documents. Their\nclaims are often distributed across prose, tables,\nfigures, captions, and other layout-dependent ele-\nments, with the surrounding page providing context\nthat may be needed to interpret a result correctly.\nQuestion-answering systems can reduce the effort\nrequired to search through this material, but they\nintroduce a second task for the reader: ch",
+      "section": "Page 1"
+    },
+    {
+      "id": "SCHOLAR_E_007",
+      "page": 1,
+      "modality": "text",
+      "bbox": [
+        0.2643,
+        0.5136,
+        0.9211,
+        0.8842
+      ],
+      "text": "with external evidence during generation (Lewis\net al., 2020), while work on citation-grounded gen-\neration studies how generated statements can be\nattributed to supporting sources (Gao et al., 2023).\nThese approaches establish a connection between\nan answer and retrieved evidence, but that connec-\ntion does not necessarily preserve the evidence\u2019s lo-\ncation in the source document. Scientific-docu",
+      "section": "Page 1"
+    },
+    {
+      "id": "SCHOLAR_E_008",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.0875,
+        0.119,
+        0.2131,
+        0.4889
+      ],
+      "text": "tigates whether generated responses are adequately\ngrounded in retrieved evidence (Asai et al., 2024).\nSCHOLAR focuses on a complementary systems\nquestion: how to preserve an inspectable path from\na generated claim to the location of its evidence in\nthe original scientific document. We discuss the\nrelationship to these systems in Section 2.\nThis demonstration makes three contributions:",
+      "section": "Page 2"
+    },
+    {
+      "id": "SCHOLAR_E_009",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.2272,
+        0.1336,
+        0.3047,
+        0.4888
+      ],
+      "text": "1. Source-preserving document representa-\ntion: evidence retains document, page, and\nregion identity throughout the answering\npipeline, keeping citation provenance under\napplication control.",
+      "section": "Page 2"
+    },
+    {
+      "id": "SCHOLAR_E_010",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.3188,
+        0.1336,
+        0.3963,
+        0.4888
+      ],
+      "text": "2. Inspectable scientific question answering:\ngenerated citations resolve to the correspond-\ning text, figure, or table region in the original\nPDF, with retrieval and verification actions\navailable through an audit trace.",
+      "section": "Page 2"
+    },
+    {
+      "id": "SCHOLAR_E_011",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.4106,
+        0.1336,
+        0.4719,
+        0.4888
+      ],
+      "text": "3. Local and reproducible evaluation: an open\nimplementation evaluated for evidence re-\ntrieval, grounding, citation quality, and end-\nto-end execution on consumer hardware.",
+      "section": "Page 2"
+    },
+    {
+      "id": "SCHOLAR_E_012",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.4865,
+        0.119,
+        0.5007,
+        0.2687
+      ],
+      "text": "2\nRelated Work",
+      "section": "Page 2"
+    },
+    {
+      "id": "SCHOLAR_E_013",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.5125,
+        0.119,
+        0.7349,
+        0.4889
+      ],
+      "text": "Scientific QA and reading systems.\nQASPER\nlinks answers to evidence in full research papers,\nSPIQA extends scientific QA to figures and tables,\nM3SciQA adds multimodal multi-document rea-\nsoning, and SciFact studies scientific claim verifi-\ncation (Dasigi et al., 2021; Pramanick et al., 2024;\nLi et al., 2024; Wadden et al., 2020). Interactive\nsystems span academic-search question answer-\ning (Zhao",
+      "section": "Page 2"
+    },
+    {
+      "id": "SCHOLAR_E_014",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.7471,
+        0.119,
+        0.9211,
+        0.4889
+      ],
+      "text": "Attribution and inspectable evidence.\nAttribu-\ntion work evaluates whether generated content is\nsupported by an identified source (Rashkin et al.,\n2023; Gao et al., 2023), while Self-RAG integrates\nretrieval with self-reflection (Asai et al., 2024). Re-\ncent systems expose evidence at sentence, para-\ngraph, or token level, including SciTrue, Clini-\ncalTrialsHub, and TrialsSummarizer (Tan et al.,\n2",
+      "section": "Page 2"
+    },
+    {
+      "id": "SCHOLAR_E_015",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.0874,
+        0.5143,
+        0.1325,
+        0.881
+      ],
+      "text": "can be inspected in their original layout. Its lexical\nand numerical checks are diagnostic rather than\nsemantic-entailment judgments.",
+      "section": "Page 2"
+    },
+    {
+      "id": "SCHOLAR_E_016",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.1449,
+        0.5136,
+        0.3834,
+        0.8842
+      ],
+      "text": "Document representation and local operation.\nGROBID, Nougat, and Docling convert scholarly\nPDFs into structured representations (Lopez, 2009;\nBlecher et al., 2024; Auer et al., 2024), while\nColPali retrieves directly over page-image embed-\ndings (Faysse et al., 2025). Recent EACL demon-\nstrations apply document structure to complex ta-\nbles and heterogeneous reports (Santacroce et al.,\n2026; Vaghe",
+      "section": "Page 2"
+    },
+    {
+      "id": "SCHOLAR_E_017",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.3983,
+        0.5143,
+        0.4125,
+        0.7194
+      ],
+      "text": "3\nSystem Architecture",
+      "section": "Page 2"
+    },
+    {
+      "id": "SCHOLAR_E_018",
+      "page": 2,
+      "modality": "figure",
+      "bbox": [
+        0.4247,
+        0.5143,
+        0.5503,
+        0.884
+      ],
+      "text": "SCHOLAR is organized around one requirement:\nevidence retrieved from a scientific paper should\nremain traceable to its location in the original doc-\nument throughout question answering. A local\nFastAPI backend handles ingestion, retrieval, gen-\neration, verification, and trace persistence, while a\nNext.js/React frontend renders answers beside the\nsource PDF. Figure 1 summarizes the pipeline.",
+      "section": "Page 2"
+    },
+    {
+      "id": "SCHOLAR_E_019",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.5646,
+        0.5143,
+        0.5936,
+        0.7802
+      ],
+      "text": "3.1\nSource-preserving document\nrepresentation",
+      "section": "Page 2"
+    },
+    {
+      "id": "SCHOLAR_E_020",
+      "page": 2,
+      "modality": "figure",
+      "bbox": [
+        0.6019,
+        0.5143,
+        0.8565,
+        0.884
+      ],
+      "text": "During ingestion, Docling (Auer et al., 2024) is\nused when its local resources are available, with\nPyMuPDF as a fallback.\nParser-produced text\nblocks, tables, and visual elements are retained\nas retrieval units rather than passed through a sec-\nond fixed-length chunker. Each evidence object\nstores its document identifier, page, modality, con-\ntent, and a normalized bounding box. Figures and\ntables",
+      "section": "Page 2"
+    },
+    {
+      "id": "SCHOLAR_E_021",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.8708,
+        0.5143,
+        0.8837,
+        0.6977
+      ],
+      "text": "3.2\nEvidence retrieval",
+      "section": "Page 2"
+    },
+    {
+      "id": "SCHOLAR_E_022",
+      "page": 2,
+      "modality": "text",
+      "bbox": [
+        0.892,
+        0.5143,
+        0.9211,
+        0.884
+      ],
+      "text": "Lexical retrieval uses BM25 (Robertson and\nZaragoza, 2009), while dense retrieval uses lo-",
+      "section": "Page 2"
+    },
+    {
+      "id": "SCHOLAR_E_023",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.1004,
+        0.1527,
+        0.1087,
+        0.8521
+      ],
+      "text": "1\nDOCUMENT REPRESENTATION\n2\nRETRIEVAL + LOCAL ANSWERING\n3\nVERIFICATION + INSPECTION",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_024",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.1352,
+        0.2098,
+        0.143,
+        0.2794
+      ],
+      "text": "Scientific PDF",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_025",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.1812,
+        0.1941,
+        0.1889,
+        0.2951
+      ],
+      "text": "Layout-aware parsing",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_026",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.2246,
+        0.2033,
+        0.2325,
+        0.2859
+      ],
+      "text": "Evidence objects",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_027",
+      "page": 3,
+      "modality": "table",
+      "bbox": [
+        0.2446,
+        0.1739,
+        0.2506,
+        0.3142
+      ],
+      "text": "Text\nFigure\nTable",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_028",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.2664,
+        0.1838,
+        0.2719,
+        0.3026
+      ],
+      "text": "page + bounding box + source ID",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_029",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.1313,
+        0.4674,
+        0.1391,
+        0.5326
+      ],
+      "text": "User question",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_030",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.1726,
+        0.4326,
+        0.1803,
+        0.5673
+      ],
+      "text": "BM25\nDense",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_031",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.2061,
+        0.4564,
+        0.221,
+        0.5436
+      ],
+      "text": "Evidence selection\nRRF",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_032",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.2473,
+        0.4707,
+        0.2551,
+        0.5293
+      ],
+      "text": "Local model",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_033",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.2802,
+        0.4739,
+        0.295,
+        0.5262
+      ],
+      "text": "Cited draft\n[1] [2] [...]",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_034",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.1372,
+        0.7042,
+        0.1522,
+        0.8067
+      ],
+      "text": "Deterministic checks\nlexical + numerical",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_035",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.1975,
+        0.7121,
+        0.2052,
+        0.7989
+      ],
+      "text": "Final cited answer",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_036",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.2515,
+        0.6705,
+        0.268,
+        0.7259
+      ],
+      "text": "PDF region\nhighlight",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_037",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.2523,
+        0.7752,
+        0.2688,
+        0.8503
+      ],
+      "text": "Evidence Graph\naudit trace",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_038",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.2827,
+        0.6443,
+        0.2922,
+        0.7494
+      ],
+      "text": "click citation \u2192source region",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_039",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.3238,
+        0.3725,
+        0.3393,
+        0.6139
+      ],
+      "text": "Source identity preserved across the pipeline\ndocument\n\u2022\npage\n\u2022\nbounding box\n\u2022\nevidence ID",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_040",
+      "page": 3,
+      "modality": "figure",
+      "bbox": [
+        0.3611,
+        0.119,
+        0.4157,
+        0.8812
+      ],
+      "text": "Figure 1: SCHOLAR architecture. A scientific PDF is converted into source-scoped evidence objects that\nretain page and bounding-box metadata. Lexical, dense, and optional visual retrieval select evidence for local\nanswer generation. Model-visible evidence identifiers are bound deterministically to source objects, checked after\ngeneration, and resolved back to highlighted PDF regions.",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_041",
+      "page": 3,
+      "modality": "figure",
+      "bbox": [
+        0.4436,
+        0.1184,
+        0.6842,
+        0.4888
+      ],
+      "text": "cal all-MiniLM-L6-v2 embeddings (Reimers and\nGurevych, 2019). Figure and table crops or full\npages can also enter the candidate pool when vi-\nsual evidence is relevant. Figure/table intent is\ndetected with keyword, regular-expression, section,\nand modality heuristics.\nRanked outputs are combined using reciprocal-\nrank fusion (Cormack et al., 2009) with k = 60\nand passed through a local cross-encod",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_042",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.7044,
+        0.119,
+        0.7335,
+        0.4504
+      ],
+      "text": "3.3\nLocal answer generation and citation\nbinding",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_043",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.7454,
+        0.119,
+        0.9211,
+        0.4888
+      ],
+      "text": "Selected evidence is serialized with temporary iden-\ntifiers such as [E1] and [E2], together with source\nlabel, page, chunk ID, and supporting text. Genera-\ntion runs locally through Ollama (Ollama, 2026),\nusing qwen3.5:9b (Qwen Team, 2026) by default;\nselected images can also be supplied when the con-\nfigured model supports visual input.\nBefore generation, the application maps each\ntemporary iden",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_044",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.444,
+        0.5143,
+        0.5052,
+        0.884
+      ],
+      "text": "fiers are discarded. The model therefore generates\nthe answer, while page identity, coordinates, and\ncitation resolution remain under deterministic ap-\nplication control.",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_045",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.5255,
+        0.5143,
+        0.5384,
+        0.7645
+      ],
+      "text": "3.4\nVerification and inspection",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_046",
+      "page": 3,
+      "modality": "text",
+      "bbox": [
+        0.5502,
+        0.5137,
+        0.9211,
+        0.8842
+      ],
+      "text": "Post-generation checks compare claims with cited\nevidence using lexical overlap, polarity terms, and\nnumerical consistency. Depending on repair mode,\nthe system may remap a citation, narrow a partially\nsupported claim, or remove unsupported material.\nThese checks are diagnostic rather than semantic-\nentailment judgments.\nEach request produces a local JSON trace con-\ntaining retrieval metadata, evi",
+      "section": "Page 3"
+    },
+    {
+      "id": "SCHOLAR_E_047",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.0873,
+        0.119,
+        0.1325,
+        0.4888
+      ],
+      "text": "than downloading them. This is an application-\nlevel offline mode rather than an operating-system\nnetwork-isolation guarantee.",
+      "section": "Page 4"
+    },
+    {
+      "id": "SCHOLAR_E_048",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.146,
+        0.119,
+        0.1602,
+        0.3758
+      ],
+      "text": "4\nInteractive Demonstration",
+      "section": "Page 4"
+    },
+    {
+      "id": "SCHOLAR_E_049",
+      "page": 4,
+      "modality": "figure",
+      "bbox": [
+        0.1711,
+        0.1184,
+        0.2968,
+        0.4888
+      ],
+      "text": "The demonstration focuses on the interaction that\nmotivates SCHOLAR: moving from a generated\nclaim to the evidence that supports it in the original\nscientific document. Rather than presenting cita-\ntions only as textual references, the interface keeps\nthe answer and source paper connected throughout\nthe reading workflow. Figure 2 shows the main\nworkspace.",
+      "section": "Page 4"
+    },
+    {
+      "id": "SCHOLAR_E_050",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3096,
+        0.119,
+        0.3225,
+        0.2836
+      ],
+      "text": "4.1\nDemo workflow",
+      "section": "Page 4"
+    },
+    {
+      "id": "SCHOLAR_E_051",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.3304,
+        0.1184,
+        0.617,
+        0.4888
+      ],
+      "text": "A demonstration begins by loading and indexing\na scientific PDF. The user then asks a question in\nnatural language and receives a response whose\ncitations are linked to the evidence objects selected\nduring retrieval. Selecting a citation moves the doc-\nument view to the corresponding page and high-\nlights the retained source region when bounding-\nbox information is available.\nThe same interaction ",
+      "section": "Page 4"
+    },
+    {
+      "id": "SCHOLAR_E_052",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6298,
+        0.119,
+        0.6428,
+        0.3535
+      ],
+      "text": "4.2\nRepresentative scenarios",
+      "section": "Page 4"
+    },
+    {
+      "id": "SCHOLAR_E_053",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6507,
+        0.1185,
+        0.6797,
+        0.4888
+      ],
+      "text": "The live demonstration covers three types of ques-\ntions that exercise different parts of the system.",
+      "section": "Page 4"
+    },
+    {
+      "id": "SCHOLAR_E_054",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.6907,
+        0.1185,
+        0.8487,
+        0.489
+      ],
+      "text": "Text and numerical evidence.\nA user can ask\na question such as, \u201cWhat improvement does\nthe proposed method report over baseline X?\u201d\nSCHOLAR retrieves relevant textual and tabular\nevidence, generates a cited response, and allows\nthe reader to open the cited source region directly.\nThis scenario demonstrates how a numerical state-\nment in the answer can be checked against the\nexperiment description ",
+      "section": "Page 4"
+    },
+    {
+      "id": "SCHOLAR_E_055",
+      "page": 4,
+      "modality": "figure",
+      "bbox": [
+        0.8597,
+        0.119,
+        0.9211,
+        0.4888
+      ],
+      "text": "Figures and tables.\nThe user can instead ask a\nquestion tied to visual material, such as, \u201cWhat\ndoes Figure 3 show about the ablation?\u201d The re-\ntrieval pipeline can include figure or table evidence",
+      "section": "Page 4"
+    },
+    {
+      "id": "SCHOLAR_E_056",
+      "page": 4,
+      "modality": "figure",
+      "bbox": [
+        0.3334,
+        0.5143,
+        0.4164,
+        0.8837
+      ],
+      "text": "Figure 2: SCHOLAR demonstration interface. The\ngenerated answer and source document are shown in the\nsame workspace. Selecting a citation moves the docu-\nment view to the corresponding page and highlights the\nstored evidence region, allowing the reader to compare\nthe generated claim with its source context directly.",
+      "section": "Page 4"
+    },
+    {
+      "id": "SCHOLAR_E_057",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.4456,
+        0.5136,
+        0.5228,
+        0.8813
+      ],
+      "text": "together with associated textual context. When the\nresulting citation is selected, the interface returns\nthe reader to the corresponding region of the paper\nso that the generated description can be compared\nwith the original visual evidence.",
+      "section": "Page 4"
+    },
+    {
+      "id": "SCHOLAR_E_058",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.536,
+        0.5137,
+        0.694,
+        0.8842
+      ],
+      "text": "Evidence-path inspection.\nThe third scenario\nfocuses on how an answer was assembled rather\nthan on the answer alone. After receiving a cited\nresponse, the user opens the Evidence Graph to\ninspect the evidence objects associated with the\nrun, including their pages, modalities, and roles.\nThis provides a second route from the generated\nresponse back to the document and makes the evi-\ndence used duri",
+      "section": "Page 4"
+    },
+    {
+      "id": "SCHOLAR_E_059",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.709,
+        0.5143,
+        0.7219,
+        0.6558
+      ],
+      "text": "4.3\nIntended use",
+      "section": "Page 4"
+    },
+    {
+      "id": "SCHOLAR_E_060",
+      "page": 4,
+      "modality": "text",
+      "bbox": [
+        0.7306,
+        0.5143,
+        0.9211,
+        0.884
+      ],
+      "text": "SCHOLAR is intended for situations in which\nreading and verification happen together. A re-\nsearcher comparing experimental results can move\nfrom a reported number to its source table; a peer\nreviewer can inspect the evidence behind a gener-\nated summary; and a student reading a technical\npaper can follow a cited explanation back to the\nrelevant paragraph or figure.\nDuring the live demonstration, ",
+      "section": "Page 4"
+    },
+    {
+      "id": "SCHOLAR_E_061",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.0873,
+        0.119,
+        0.1647,
+        0.4864
+      ],
+      "text": "highlighted source regions, opening the Evidence\nGraph, and exporting the corresponding reasoning\nreport. The screencast follows the same workflow\nso that the interaction can be reproduced outside\nthe live session.",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_062",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.1784,
+        0.119,
+        0.1926,
+        0.2427
+      ],
+      "text": "5\nEvaluation",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_063",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2036,
+        0.1182,
+        0.3133,
+        0.4888
+      ],
+      "text": "We evaluate SCHOLAR along four dimensions:\npage-level evidence retrieval, human assessment\nof generated answers and citations, a post-hoc au-\ntomated audit, and query-time execution on con-\nsumer hardware. These evaluations target different\nparts of the system and should not be interpreted\nas a single combined benchmark.",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_064",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.3262,
+        0.119,
+        0.3392,
+        0.3025
+      ],
+      "text": "5.1\nEvidence retrieval",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_065",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.347,
+        0.1182,
+        0.4405,
+        0.4888
+      ],
+      "text": "We evaluate page-level evidence retrieval on a\nbenchmark of 200 questions drawn from 10 sci-\nentific papers. Each question is associated with a\ngold evidence page. We compare five retrieval con-\nfigurations using Hit@1, Hit@5, mean reciprocal\nrank (MRR), and nDCG@5.",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_066",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.4601,
+        0.119,
+        0.4708,
+        0.4857
+      ],
+      "text": "Retriever\nH@1 H@5 MRR nDCG",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_067",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.4805,
+        0.119,
+        0.5451,
+        0.478
+      ],
+      "text": "Keyword\n.71\n.91\n.796\n.757\nBM25\n.84\n.97\n.892\n.855\nDense\n.76\n.95\n.838\n.796\nBM25 + Dense\n.85\n.98\n.905\n.853\n+ Modality\n.59\n.95\n.734\n.714",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_068",
+      "page": 5,
+      "modality": "table",
+      "bbox": [
+        0.5626,
+        0.1185,
+        0.6313,
+        0.4885
+      ],
+      "text": "Table 1: Page-level retrieval results. Results are com-\nputed on 200 questions from 10 papers. BM25 + Dense\nuses reciprocal-rank fusion; the final row additionally\napplies the modality heuristic. Bold indicates the best\nvalue per metric.",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_069",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.652,
+        0.119,
+        0.8582,
+        0.4888
+      ],
+      "text": "BM25 retrieves the gold page at rank one for\n84% of queries, with an MRR of 0.892. Combin-\ning BM25 and dense retrieval with reciprocal-rank\nfusion gives the highest Hit@1, Hit@5, and MRR,\nreaching 0.85, 0.98, and 0.905, respectively. The\nimprovement over BM25 is small, indicating that\nlexical retrieval is already a strong baseline for this\ncollection.\nAdding the current modality heuristic reduces",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_070",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.8712,
+        0.119,
+        0.8841,
+        0.3049
+      ],
+      "text": "5.2\nHuman evaluation",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_071",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.892,
+        0.1182,
+        0.9211,
+        0.4887
+      ],
+      "text": "We conducted a human evaluation of answer qual-\nity and citation grounding on 45 questions drawn",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_072",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.0873,
+        0.5143,
+        0.2131,
+        0.884
+      ],
+      "text": "from 9 scientific papers. Five evaluators indepen-\ndently rated the same 45 cases, yielding 225 case-\nlevel evaluations.\nFor each case, 5 evaluators inspected the ques-\ntion, generated answer, citations, and cited source\nevidence. They scored correctness, completeness,\ngrounding, citation quality, and utility on five-point\nscales.",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_073",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2315,
+        0.5143,
+        0.2425,
+        0.8661
+      ],
+      "text": "Dimension\nMean\n\u22654\n\u03b1",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_074",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.2518,
+        0.5143,
+        0.3168,
+        0.881
+      ],
+      "text": "Correctness\n4.16\n79.6%\n\u22120.05\nCompleteness\n4.13\n78.7%\n\u22120.01\nGrounding\n4.13\n79.6%\n\u22120.03\nCitation quality\n3.96\n70.2%\n\u22120.02\nUtility\n4.19\n79.1%\n\u22120.07",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_075",
+      "page": 5,
+      "modality": "table",
+      "bbox": [
+        0.3342,
+        0.5138,
+        0.4031,
+        0.881
+      ],
+      "text": "Table 2: Human evaluation on 45 questions from 9\npapers. Means are computed over 225 ratings on a\nfive-point scale. \u22654 reports the proportion of ratings\nof four or five. \u03b1 is ordinal Krippendorff\u2019s agreement\ncoefficient.",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_076",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.4252,
+        0.5129,
+        0.696,
+        0.884
+      ],
+      "text": "Average ratings are above 3.9 in every dimen-\nsion. Correctness, completeness, grounding, and\nutility average above 4 out of 5, while citation qual-\nity averages 3.96. Across the five dimensions, be-\ntween 70.2% and 79.6% of individual ratings are\nat least four.\nInter-rater agreement remains low, with Krip-\npendorff\u2019s \u03b1 ranging from \u22120.07 to \u22120.01. The\nhuman results should therefore be interpreted",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_077",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.7099,
+        0.5143,
+        0.7228,
+        0.7747
+      ],
+      "text": "5.3\nAutomated audit and repair",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_078",
+      "page": 5,
+      "modality": "text",
+      "bbox": [
+        0.7309,
+        0.5136,
+        0.9211,
+        0.884
+      ],
+      "text": "As a separate diagnostic, we analyze 150 com-\npleted cases using a post-hoc LLM-assisted au-\ndit. The retained evaluation artifacts contain cat-\negorical judgments for correctness, completeness,\ngrounding, and citation quality. They do not pro-\nvide a provider receipt that independently verifies\nthe identity of the executing judge. We therefore\ntreat these results as diagnostic labels rather than\n",
+      "section": "Page 5"
+    },
+    {
+      "id": "SCHOLAR_E_079",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.0873,
+        0.119,
+        0.1164,
+        0.4888
+      ],
+      "text": "able. Completeness, grounding, and citation qual-\nity are evaluated over all 150 cases.",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_080",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1378,
+        0.119,
+        0.1484,
+        0.4857
+      ],
+      "text": "Dimension\nPos.\nPart.\nNeg.\nN/A",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_081",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.1561,
+        0.119,
+        0.2092,
+        0.4822
+      ],
+      "text": "Correctnessa\n52.2\n29.2\n17.7\n0.9\nCompleteness\n55.3\n16.0\n27.3\n1.3\nGrounding\n74.7\n17.3\n6.7\n1.3\nCitation quality\n73.3\n18.7\n6.7\n1.3",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_082",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.2152,
+        0.1392,
+        0.2396,
+        0.4609
+      ],
+      "text": "Values are percentages. aCorrectness uses 113\nreference-eligible cases; all other rows use 150 cases.",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_083",
+      "page": 6,
+      "modality": "table",
+      "bbox": [
+        0.2521,
+        0.1185,
+        0.3066,
+        0.4885
+      ],
+      "text": "Table 3: Post-hoc LLM-assisted audit. The retained ar-\ntifacts do not independently verify the executing judge\u2019s\nidentity; results are therefore treated as diagnostic labels\nrather than human ground truth.",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_084",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.3289,
+        0.1177,
+        0.6638,
+        0.4888
+      ],
+      "text": "Grounding is labeled positive in 112 of 150 cases\n(74.7%), and citation quality is positive in 110\ncases (73.3%).\nWe additionally examine the deterministic repair\nstage on 30 paired answerable cases. Reference-\nunit overlap F1 increases from 0.159 before repair\nto 0.224 afterward. Page-level citation alignment is\nevaluated on 20 cases whose gold evidence locus\ncontains an explicit page number, com",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_085",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.6777,
+        0.119,
+        0.6906,
+        0.283
+      ],
+      "text": "5.4\nLocal execution",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_086",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.6986,
+        0.1182,
+        0.9211,
+        0.4889
+      ],
+      "text": "We measure query-time execution on 100 valid\nrequests using an Apple M3 Pro with 18 GB of\nunified memory and local Ollama inference. Docu-\nments are already prepared for querying, so these\nmeasurements cover the answering pipeline rather\nthan PDF ingestion.\nMedian end-to-end latency is 27.34 s, with p90 =\n41.61 s and p95 = 149.54 s. Retrieval takes a me-\ndian of 523 ms, although its p95 reaches 11",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_087",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.0873,
+        0.5143,
+        0.2614,
+        0.884
+      ],
+      "text": "clude first-use embedding or index construction,\nand cache state was not controlled during these\nmeasurements. Stage-wise percentiles are com-\nputed independently and therefore do not sum to\nthe corresponding end-to-end percentile.\nOverall, the evaluation shows that SCHOLAR\ncan retrieve page-level evidence and execute the\ncomplete question-answering and inspection work-\nflow on the tested consumer",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_088",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.276,
+        0.5143,
+        0.2902,
+        0.8197
+      ],
+      "text": "6\nAvailability and Reproducibility",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_089",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.3022,
+        0.5136,
+        0.3796,
+        0.884
+      ],
+      "text": "A self-contained review package provides the ap-\nplication source, setup instructions, dependencies,\nand an example PDF. A workflow screencast will\nbe available here . Both resources are intended to\nbe accessible without authentication.",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_090",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.3943,
+        0.5143,
+        0.4085,
+        0.6404
+      ],
+      "text": "7\nConclusion",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_091",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.4204,
+        0.5138,
+        0.5622,
+        0.8842
+      ],
+      "text": "SCHOLAR preserves source identity from PDF\ningestion to interface navigation, turning generated\ncitations into inspectable links to source regions.\nResults show strong page-level retrieval and fa-\nvorable mean human ratings, while low inter-rater\nagreement and repair trade-offs bound those find-\nings. The demonstration provides a local workflow\nfor moving directly from generated claims to the\nevid",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_092",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.5919,
+        0.5143,
+        0.6061,
+        0.6076
+      ],
+      "text": "References",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_093",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.6151,
+        0.5143,
+        0.679,
+        0.8839
+      ],
+      "text": "Akari Asai, Zeqiu Wu, Yizhong Wang, Avirup Sil, and\nHannaneh Hajishirzi. 2024. Self-RAG: Learning to\nretrieve, generate, and critique through self-reflection.\nIn The Twelfth International Conference on Learning\nRepresentations.",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_094",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.6913,
+        0.5143,
+        0.7944,
+        0.8837
+      ],
+      "text": "Christoph Auer, Maksym Lysak, Ahmed Nassar,\nMichele Dolfi, Nikolaos Livathinos, Panos Vage-\nnas, Cesar Berrospi Ramis, Matteo Omenetti, Fabian\nLindlbauer, Kasper Dinkla, Lokesh Mishra, Yusik\nKim, Shubham Gupta, Rafael Teixeira de Lima,\nValery Weber, Lucas Morin, Ingmar Meijer, Viktor\nKuropiatnyk, and Peter W. J. Staar. 2024. Docling\ntechnical report. arXiv preprint arXiv:2408.09869.",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_095",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.8068,
+        0.5143,
+        0.8706,
+        0.8837
+      ],
+      "text": "Lukas Blecher, Guillem Cucurull, Thomas Scialom, and\nRobert Stojnic. 2024. Nougat: Neural optical under-\nstanding for academic documents. In The Twelfth\nInternational Conference on Learning Representa-\ntions.",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_096",
+      "page": 6,
+      "modality": "text",
+      "bbox": [
+        0.8829,
+        0.5143,
+        0.9209,
+        0.881
+      ],
+      "text": "Gordon V. Cormack, Charles L. A. Clarke, and Stefan\nBuettcher. 2009. Reciprocal rank fusion outperforms\ncondorcet and individual rank learning methods. In",
+      "section": "Page 6"
+    },
+    {
+      "id": "SCHOLAR_E_097",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.0879,
+        0.1368,
+        0.1261,
+        0.4885
+      ],
+      "text": "Proceedings of the 32nd International ACM SIGIR\nConference on Research and Development in Infor-\nmation Retrieval, pages 758\u2013759.",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_098",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.1377,
+        0.119,
+        0.2407,
+        0.4885
+      ],
+      "text": "Pradeep Dasigi, Kyle Lo, Iz Beltagy, Arman Cohan,\nNoah A. Smith, and Matt Gardner. 2021. A dataset\nof information-seeking questions and answers an-\nchored in research papers. In Proceedings of the\n2021 Conference of the North American Chapter of\nthe Association for Computational Linguistics: Hu-\nman Language Technologies, pages 4599\u20134610. As-\nsociation for Computational Linguistics.",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_099",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.2525,
+        0.119,
+        0.3163,
+        0.4886
+      ],
+      "text": "Manuel Faysse, Hugues Sibille, Tony Wu, Bilel Omrani,\nGautier Viaud, C\u00e9line Hudelot, and Pierre Colombo.\n2025. ColPali: Efficient document retrieval with\nvision language models. In The Thirteenth Interna-\ntional Conference on Learning Representations.",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_100",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.328,
+        0.119,
+        0.4049,
+        0.4886
+      ],
+      "text": "Tianyu Gao, Howard Yen, Jiatong Yu, and Danqi Chen.\n2023. Enabling large language models to generate\ntext with citations. In Proceedings of the 2023 Con-\nference on Empirical Methods in Natural Language\nProcessing, pages 6465\u20136488, Singapore. Associa-\ntion for Computational Linguistics.",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_101",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.4165,
+        0.119,
+        0.4804,
+        0.4886
+      ],
+      "text": "Jakub L\u00e1la, Odhran O\u2019Donoghue, Aleksandar Shtedrit-\nski, Sam Cox, Samuel G. Rodriques, and Andrew D.\nWhite. 2023. PaperQA: Retrieval-augmented gen-\nerative agent for scientific research. arXiv preprint\narXiv:2312.07559.",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_102",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.492,
+        0.119,
+        0.582,
+        0.4886
+      ],
+      "text": "Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio\nPetroni, Vladimir Karpukhin, Naman Goyal, Hein-\nrich K\u00fcttler, Mike Lewis, Wen-tau Yih, Tim Rock-\nt\u00e4schel, Sebastian Riedel, and Douwe Kiela. 2020.\nRetrieval-augmented generation for knowledge-\nintensive NLP tasks. In Advances in Neural Informa-\ntion Processing Systems, volume 33.",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_103",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.5937,
+        0.119,
+        0.6836,
+        0.4885
+      ],
+      "text": "Chuhan Li, Ziyao Shangguan, Yilun Zhao, Deyuan Li,\nYixin Liu, and Arman Cohan. 2024. M3SciQA: A\nmulti-modal multi-document scientific QA bench-\nmark for evaluating foundation models. In Findings\nof the Association for Computational Linguistics:\nEMNLP 2024, pages 15419\u201315446, Miami, Florida,\nUSA. Association for Computational Linguistics.",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_104",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.6953,
+        0.119,
+        0.7592,
+        0.4886
+      ],
+      "text": "Kyle Lo, Joseph Chee Chang, Andrew Head, Jonathan\nBragg, Amy X. Zhang, et al. 2024. The semantic\nreader project: Augmenting scholarly documents\nthrough AI-powered interactive reading interfaces.\nCommunications of the ACM, 67(10):50\u201361.",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_105",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.7708,
+        0.119,
+        0.8478,
+        0.4886
+      ],
+      "text": "Patrice Lopez. 2009. GROBID: Combining automatic\nbibliographic data recognition and term extraction for\nscholarship publications. In Research and Advanced\nTechnology for Digital Libraries, volume 5714 of\nLecture Notes in Computer Science, pages 473\u2013474.\nSpringer.",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_106",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.8594,
+        0.119,
+        0.8843,
+        0.4885
+      ],
+      "text": "Ollama. 2026. Ollama. Software documentation. Ac-\ncessed 2026-09-23.",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_107",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.8959,
+        0.119,
+        0.9209,
+        0.4878
+      ],
+      "text": "Jiwoo Park, Ruoqi Liu, Avani Jagdale, Andrew\nSrisuwananukorn, Jing Zhao, Lang Li, Ping Zhang,",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_108",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.0882,
+        0.532,
+        0.1782,
+        0.8839
+      ],
+      "text": "and Sachin Kumar. 2026. ClinicalTrialsHub: Bridg-\ning registries and literature for comprehensive clin-\nical trial access. In Proceedings of the 19th Con-\nference of the European Chapter of the Association\nfor Computational Linguistics (Volume 3: System\nDemonstrations), pages 359\u2013396, Rabat, Morocco.\nAssociation for Computational Linguistics.",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_109",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.1892,
+        0.5143,
+        0.2531,
+        0.8837
+      ],
+      "text": "Shraman Pramanick, Rama Chellappa, and Subhashini\nVenugopalan. 2024. SPIQA: A dataset for multi-\nmodal question answering on scientific papers. In\nAdvances in Neural Information Processing Systems\n37, Datasets and Benchmarks Track.",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_110",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.2642,
+        0.5143,
+        0.289,
+        0.8809
+      ],
+      "text": "Qwen Team. 2026. Qwen3.5-9B. Hugging Face model\ncard. Accessed 2026-09-23.",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_111",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.2999,
+        0.5143,
+        0.403,
+        0.8839
+      ],
+      "text": "Sanjana Ramprasad, Jered Mcinerney, Iain Marshall,\nand Byron Wallace. 2023. Automatically summa-\nrizing evidence from clinical trials: A prototype\nhighlighting current challenges. In Proceedings of\nthe 17th Conference of the European Chapter of the\nAssociation for Computational Linguistics: System\nDemonstrations, pages 236\u2013247, Dubrovnik, Croatia.\nAssociation for Computational Linguistics.",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_112",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.4139,
+        0.5143,
+        0.4909,
+        0.8837
+      ],
+      "text": "Hannah Rashkin, Vitaly Nikolaev, Matthew Lamm,\nLora Aroyo, Michael Collins, Dipanjan Das, Slav\nPetrov, Gaurav Singh Tomar, Iulia Turc, and David\nReitter. 2023. Measuring attribution in natural lan-\nguage generation models. Computational Linguistics,\n49(4):777\u2013840.",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_113",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.5019,
+        0.5143,
+        0.6049,
+        0.8837
+      ],
+      "text": "Nils Reimers and Iryna Gurevych. 2019.\nSentence-\nBERT: Sentence embeddings using siamese BERT-\nnetworks. In Proceedings of the 2019 Conference on\nEmpirical Methods in Natural Language Processing\nand the 9th International Joint Conference on Natu-\nral Language Processing (EMNLP-IJCNLP), pages\n3982\u20133992, Hong Kong, China. Association for Com-\nputational Linguistics.",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_114",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.6159,
+        0.5143,
+        0.6668,
+        0.8837
+      ],
+      "text": "Stephen Robertson and Hugo Zaragoza. 2009.\nThe\nprobabilistic relevance framework: BM25 and be-\nyond. Foundations and Trends in Information Re-\ntrieval, 3(4):333\u2013389.",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_115",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.6778,
+        0.5143,
+        0.7938,
+        0.8837
+      ],
+      "text": "Andrey Sakhovskiy, Ivan Ulitin, Emilia Bojarskaja,\nVladimir Kokh, Ruslan Murtazin, Maxim Novopolt-\nsev, and Semen Budennyy. 2026. InkSight: Towards\nAI-aided historical manuscript analysis. In Proceed-\nings of the 19th Conference of the European Chap-\nter of the Association for Computational Linguistics\n(Volume 3: System Demonstrations), pages 271\u2013281,\nRabat, Morocco. Association for Computational ",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_116",
+      "page": 7,
+      "modality": "text",
+      "bbox": [
+        0.8048,
+        0.5143,
+        0.9208,
+        0.8837
+      ],
+      "text": "Marta Santacroce, Michele Luca Contalbo, Sara Ped-\nerzoli, Riccardo Benassi, Valeria Venturelli, Matteo\nPaganelli, and Francesco Guerra. 2026. CLARIESG:\nAn end-to-end system for ESG analysis over com-\nplex tables in corporate reports. In Proceedings of\nthe 19th Conference of the European Chapter of the\nAssociation for Computational Linguistics (Volume 3:\nSystem Demonstrations), pages 86\u2013100, Rabat",
+      "section": "Page 7"
+    },
+    {
+      "id": "SCHOLAR_E_117",
+      "page": 8,
+      "modality": "text",
+      "bbox": [
+        0.0881,
+        0.119,
+        0.1651,
+        0.4885
+      ],
+      "text": "Michael D. Skarlinski, Sam Cox, Jon M. Laurent,\nJames D. Braza, Michaela Hinks, Michael J. Ham-\nmerling, Manvitha Ponnapati, Samuel G. Rodriques,\nand Andrew D. White. 2024.\nLanguage agents\nachieve superhuman synthesis of scientific knowl-\nedge. arXiv preprint arXiv:2409.13740.",
+      "section": "Page 8"
+    },
+    {
+      "id": "SCHOLAR_E_118",
+      "page": 8,
+      "modality": "text",
+      "bbox": [
+        0.1769,
+        0.119,
+        0.2669,
+        0.4886
+      ],
+      "text": "Ne\u00b8set \u00d6zkan Tan, Minghao Li, and Mark Gahegan.\n2026. SciTrue: Evidence-grounded claim verifica-\ntion in science.\nIn Proceedings of the 19th Con-\nference of the European Chapter of the Association\nfor Computational Linguistics (Volume 3: System\nDemonstrations), pages 397\u2013406, Rabat, Morocco.\nAssociation for Computational Linguistics.",
+      "section": "Page 8"
+    },
+    {
+      "id": "SCHOLAR_E_119",
+      "page": 8,
+      "modality": "text",
+      "bbox": [
+        0.2787,
+        0.119,
+        0.3947,
+        0.4885
+      ],
+      "text": "Ario Saeid Vaghefi, Aymane Hachcham, Veronica\nGrasso, Nakiete Msemo, Chiara Colesanti Senni,\nand Markus Leippold. 2026. AI for climate finance:\nAgentic retrieval and multi-step reasoning for early\nwarning system investments. In Proceedings of the\n19th Conference of the European Chapter of the As-\nsociation for Computational Linguistics (Volume 3:\nSystem Demonstrations), pages 492\u2013511, Rabat, Mo-\nr",
+      "section": "Page 8"
+    },
+    {
+      "id": "SCHOLAR_E_120",
+      "page": 8,
+      "modality": "text",
+      "bbox": [
+        0.4065,
+        0.119,
+        0.4965,
+        0.4885
+      ],
+      "text": "David Wadden, Shanchuan Lin, Kyle Lo, Lucy Lu\nWang, Madeleine van Zuylen, Arman Cohan, and\nHannaneh Hajishirzi. 2020. Fact or fiction: Verifying\nscientific claims. In Proceedings of the 2020 Con-\nference on Empirical Methods in Natural Language\nProcessing (EMNLP), pages 7534\u20137550. Association\nfor Computational Linguistics.",
+      "section": "Page 8"
+    },
+    {
+      "id": "SCHOLAR_E_121",
+      "page": 8,
+      "modality": "text",
+      "bbox": [
+        0.5082,
+        0.119,
+        0.5852,
+        0.4885
+      ],
+      "text": "Tiancheng Zhao and Kyusong Lee. 2020. Talk to pa-\npers: Bringing neural question answering to aca-\ndemic search. In Proceedings of the 58th Annual\nMeeting of the Association for Computational Lin-\nguistics: System Demonstrations, pages 30\u201336, On-\nline. Association for Computational Linguistics.",
+      "section": "Page 8"
+    },
+    {
+      "id": "SCHOLAR_E_122",
+      "page": 8,
+      "modality": "text",
+      "bbox": [
+        0.5999,
+        0.119,
+        0.6141,
+        0.355
+      ],
+      "text": "A\nImplementation Details",
+      "section": "Page 8"
+    },
+    {
+      "id": "SCHOLAR_E_123",
+      "page": 8,
+      "modality": "figure",
+      "bbox": [
+        0.6256,
+        0.119,
+        0.7997,
+        0.4888
+      ],
+      "text": "Parsing and evidence representation.\nDo-\ncling (Auer et al., 2024) is used when its local\nassets are available; otherwise ingestion falls back\nto PyMuPDF. Parser-produced blocks are used di-\nrectly as retrieval units rather than being divided by\na second fixed-length chunker. Each evidence ob-\nject retains its document identifier, page, modality,\ntextual or caption content, and normalized bound-\ni",
+      "section": "Page 8"
+    },
+    {
+      "id": "SCHOLAR_E_124",
+      "page": 8,
+      "modality": "figure",
+      "bbox": [
+        0.8114,
+        0.1184,
+        0.9211,
+        0.4889
+      ],
+      "text": "Retrieval.\nLexical retrieval uses BM25 (Robert-\nson and Zaragoza, 2009), while dense retrieval uses\nall-MiniLM-L6-v2, based on Sentence-BERT\nrepresentations (Reimers and Gurevych, 2019).\nFigure and table intent is detected with key-\nword, regular-expression, section, and modality\nheuristics. Ranked channels are combined using",
+      "section": "Page 8"
+    },
+    {
+      "id": "SCHOLAR_E_125",
+      "page": 8,
+      "modality": "text",
+      "bbox": [
+        0.0874,
+        0.5143,
+        0.1647,
+        0.881
+      ],
+      "text": "reciprocal-rank fusion (Cormack et al., 2009) with\nk = 60. A local cross-encoder reranks the fused\nset when available, with a deterministic heuristic\nfallback otherwise. At most seven evidence items\nare supplied to the generator.",
+      "section": "Page 8"
+    },
+    {
+      "id": "SCHOLAR_E_126",
+      "page": 8,
+      "modality": "text",
+      "bbox": [
+        0.1827,
+        0.5136,
+        0.3568,
+        0.8842
+      ],
+      "text": "Generation and citation binding.\nSelected ev-\nidence is serialized into a structured prompt and\nassigned temporary identifiers such as [E1]. The\napplication maintains a deterministic mapping from\nthese identifiers to the underlying evidence objects.\nGeneration runs through Ollama (Ollama, 2026),\nwith qwen3.5:9b (Qwen Team, 2026) as the de-\nfault local model. After generation, returned identi-\nfier",
+      "section": "Page 8"
+    },
+    {
+      "id": "SCHOLAR_E_127",
+      "page": 8,
+      "modality": "text",
+      "bbox": [
+        0.3747,
+        0.5136,
+        0.599,
+        0.884
+      ],
+      "text": "Verification and traces.\nThe verifier combines\nlexical-overlap variants, polarity checks, and nu-\nmerical matching while ignoring structural num-\nbers such as figure and table labels. Depending\non repair mode, it may remap a citation, narrow a\npartially supported claim, or remove unsupported\nmaterial. These checks are not semantic-entailment\njudgments.\nEach request produces a local JSON trace con-",
+      "section": "Page 8"
+    },
+    {
+      "id": "SCHOLAR_E_128",
+      "page": 8,
+      "modality": "text",
+      "bbox": [
+        0.6169,
+        0.5137,
+        0.7428,
+        0.8842
+      ],
+      "text": "Local execution.\nStrict-local mode disables ex-\nternal acquisition features at the application level,\nrestricts model endpoints to local services, and en-\nables offline settings for supported model libraries.\nThis mechanism is application-level rather than an\noperating-system firewall. If local Docling assets\nare unavailable, parsing falls back to PyMuPDF\nrather than downloading them.",
+      "section": "Page 8"
+    },
+    {
+      "id": "SCHOLAR_E_129",
+      "page": 8,
+      "modality": "text",
+      "bbox": [
+        0.7633,
+        0.5143,
+        0.7775,
+        0.7055
+      ],
+      "text": "B\nEvaluation Details",
+      "section": "Page 8"
+    },
+    {
+      "id": "SCHOLAR_E_130",
+      "page": 8,
+      "modality": "text",
+      "bbox": [
+        0.7935,
+        0.5137,
+        0.9211,
+        0.884
+      ],
+      "text": "Human evaluation.\nFive evaluators rated the\nsame 45 cases on five-point scales for correctness,\ncompleteness, grounding, citation quality, and util-\nity. Inter-rater agreement is reported using ordinal\nKrippendorff\u2019s \u03b1.\nAcross 675 citation judgments, 472 (69.9%) are\nsupported, 119 (17.6%) partially supported, 82\n(12.1%) unsupported, and 2 (0.3%) unverifiable.",
+      "section": "Page 8"
+    },
+    {
+      "id": "SCHOLAR_E_131",
+      "page": 9,
+      "modality": "text",
+      "bbox": [
+        0.0871,
+        0.1177,
+        0.2934,
+        0.4889
+      ],
+      "text": "Automated audit.\nThe post-hoc audit contains\n150 cases and records correctness, completeness,\ngrounding, and citation quality. Correctness is eval-\nuated on 113 reference-eligible cases: 59 correct,\n33 partial, 20 incorrect, and one not judgeable.\nAcross all 150 cases, completeness has 83 pos-\nitive, 24 partial, 41 negative, and 2 N/A labels.\nGrounding has 112 positive, 26 partial, 10 nega-\ntive, ",
+      "section": "Page 9"
+    },
+    {
+      "id": "SCHOLAR_E_132",
+      "page": 9,
+      "modality": "text",
+      "bbox": [
+        0.3051,
+        0.1184,
+        0.4631,
+        0.4889
+      ],
+      "text": "Repair analysis.\nReference-unit overlap F1 is\ncomputed on 30 paired answerable cases and in-\ncreases from 0.159 to 0.224 after repair. Page-level\ncitation alignment is computed on the 20 cases\nwhose gold evidence locus contains an explicit\npage number, comprising 10 textual and 10 math-\nematical cases; it decreases from 0.670 to 0.618.\nThe remaining 10 visual cases identify a figure or\ntable witho",
+      "section": "Page 9"
+    },
+    {
+      "id": "SCHOLAR_E_133",
+      "page": 9,
+      "modality": "text",
+      "bbox": [
+        0.4748,
+        0.119,
+        0.665,
+        0.4889
+      ],
+      "text": "Latency.\nFor 100 valid query-time requests on\nan Apple M3 Pro with 18 GB unified memory, end-\nto-end latency has median 27.34 s, p90 = 41.61 s,\nand p95 = 149.54 s. Retrieval has median 523 ms\nand p95 = 112.85 s; generation has median 26.59 s\nand p95 = 37.48 s; verification plus trace writing\nhas median 15 ms and p95 = 24 ms.\nSome requests include first-use embedding or in-\ndex construction, and ca",
+      "section": "Page 9"
+    }
+  ]
+}
