@@ -2,6 +2,8 @@
 
 This guide provides step-by-step instructions to install, verify, and evaluate the **ScholAR** system demonstration from the frozen release package (`ScholAR_EACL2027_Demo_v1.0.0.zip`) across **macOS**, **Linux**, and **Windows**.
 
+> 💡 **Zero-Install Web Demonstration:** Want to evaluate the interface and inspect citation grounding immediately without downloading or installing anything? Visit the live interactive browser demo at [https://prithvi-kaizen.github.io/ScholAR/](https://prithvi-kaizen.github.io/ScholAR/).
+
 ---
 
 ## 1. Quickstart (Cross-Platform Universal Fast-Path)

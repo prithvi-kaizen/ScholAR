@@ -1,6 +1,7 @@
 # SCHOLAR: A Local-First Research Assistant for Scientific Papers
 
 [![EACL 2027 Demo](https://img.shields.io/badge/EACL_2027-System_Demonstration-blue.svg)](paper/eacl_demo/main.pdf)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-GitHub_Pages_Preview-brightgreen.svg)](https://prithvi-kaizen.github.io/ScholAR/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](requirements/locks/base-py312.txt)
 [![Release](https://img.shields.io/badge/Release-v1.0.0--eacl--demo-orange.svg)](https://github.com/prithvi-kaizen/ScholAR/releases/tag/eacl-demo-2027-v1.0.0)
@@ -24,6 +25,7 @@ The entire pipeline runs locally on consumer hardware without sending unpublishe
 > $^2$Avykt Ehsaas, Hyderabad, India  
 > $^3$Central University of Haryana (CUH), India  
 >  
+> 🌐 **Live Web Demo (No Install):** [https://prithvi-kaizen.github.io/ScholAR/](https://prithvi-kaizen.github.io/ScholAR/)  
 > 📄 **Paper (PDF):** [`paper/eacl_demo/main.pdf`](paper/eacl_demo/main.pdf)  
 > 📦 **Release Package:** [`release/ScholAR_EACL2027_Demo_v1.0.0.zip`](release/ScholAR_EACL2027_Demo_v1.0.0.zip) (SHA-256: `ebb3a67286c35256ccb7ca78df66371953c4f4f8bc7b791a7b1ce4f83b0e825f`)  
 > 📖 **Reviewer & Installation Guide:** [`DEMO_INSTALL.md`](DEMO_INSTALL.md)  
@@ -64,9 +66,22 @@ The entire pipeline runs locally on consumer hardware without sending unpublishe
 
 ---
 
-## Interactive Demonstration Interface
+## Online Interactive Reviewer Demonstration (Zero Installation)
 
-![SCHOLAR Interactive Demonstration Interface](paper/eacl_demo/figs/ui_demo.png)
+Reviewers and readers can evaluate ScholAR immediately in their web browser without downloading packages or setting up local Python/Ollama processes:
+
+🌐 **[Launch Interactive Reviewer Demo on GitHub Pages](https://prithvi-kaizen.github.io/ScholAR/)**
+
+![ScholAR Interactive Demonstration Interface](reviewer_demo/assets/reviewer_demo_preview.png)
+
+### Key Capabilities in the Web Demo
+
+* **Pre-Indexed Scientific Papers**: Switch between *Attention Is All You Need* (Vaswani et al.), *SCHOLAR: A Local-First Research Assistant* (EACL 2027 Demo Paper), and *Deep Residual Learning (ResNet)* (He et al.).
+* **Inspectable Citation Grounding**: Click citation badges (`[1]`, `[2]`, etc.) to jump directly to the cited page and highlight the exact bounding box around the source paragraph, table, or figure.
+* **Interactive Evidence Graph**: Explore multi-hop retrieval paths, node modalities (Text, Table, Figure), and verification diagnostics.
+* **Diagnostic JSON Audit Trace**: View telemetry with real execution latency breakdown, prompt hashes, and verifier consistency checks.
+* **Report Export**: Live export of audited reasoning reports in Markdown (`.md`) and LaTeX (`.tex`).
+* **Local System Download Option**: Click **"Download Package (v1.0.0)"** in the top navigation bar to download the self-contained offline package for running with local Ollama on macOS, Linux, or Windows.
 
 ### Representative Demonstration Scenarios
 
@@ -212,6 +227,7 @@ Local runtime data lives under `backend/data/` and is strictly excluded from Git
 ```text
 ├── backend/          # FastAPI server, Evidence AST schemas, hybrid retrieval & pipeline services
 ├── frontend/         # Next.js 15 web application (split-view reader, chat copilot, telemetry)
+├── reviewer_demo/    # Standalone interactive browser demonstration for GitHub Pages
 ├── paper/
 │   ├── eacl_demo/    # EACL 2027 System Demonstrations Track manuscript (LaTeX source & artifacts)
 │   └── eacl_industry/# EACL 2027 Industry Track manuscript source
