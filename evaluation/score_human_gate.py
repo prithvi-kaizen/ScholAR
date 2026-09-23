@@ -25,7 +25,15 @@ def run(release_dir: Path, annotations: Path, spec_path: Path) -> Path:
     spec = PairedComparisonSpec.model_validate(read_json(spec_path))
     rows = read_jsonl(release_dir / "raw/rows.jsonl", RawReleaseRow)
     result = score_primary_gate(bundle, spec, rows)
+    bundle_snapshot = release_dir / "human/annotations.json"
+    spec_snapshot = release_dir / "human/paired_gate_spec.json"
+    for path, value in ((bundle_snapshot, bundle), (spec_snapshot, spec)):
+        if path.exists() and read_json(path) != value.model_dump(mode="json"):
+            raise ValueError(f"human gate input snapshot is immutable and differs: {path.name}")
+        write_json(path, value)
     output = release_dir / "human/primary_gate.json"
+    if output.exists() and read_json(output) != result.model_dump(mode="json"):
+        raise ValueError("human primary-gate result is immutable and differs")
     write_json(output, result)
     if result.decision == "BLOCKED":
         raise ValueError("primary human gate is BLOCKED: " + "; ".join(result.reasons))

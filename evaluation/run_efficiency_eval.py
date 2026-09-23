@@ -21,7 +21,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import statistics
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -29,7 +28,18 @@ from pathlib import Path
 import httpx
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
+# When this file is executed directly, Python puts ``evaluation/`` first on
+# sys.path.  That would shadow the standard-library ``statistics`` module with
+# ``evaluation/statistics.py``.  Put the repository root first before importing
+# the standard library module and the local evaluation runner.
+if sys.path and Path(sys.path[0]).resolve() == Path(__file__).resolve().parent:
+    sys.path[0] = str(PROJECT_ROOT)
+elif str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+import statistics
+
+sys.path.insert(1, str(PROJECT_ROOT / "evaluation"))
 
 from backend.services.network_policy_service import NetworkPolicyService  # noqa: E402
 from backend.services.ollama_service import OLLAMA_BASE_URL, OLLAMA_MODEL  # noqa: E402

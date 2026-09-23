@@ -1,7 +1,24 @@
-% Evaluation table build gates for ScholAR EACL Demo paper
-% When false, placeholder notes indicate evaluations are in progress or require external API runs.
+% Evaluation build gates for the SCHOLAR EACL Demo paper.
+% Human results are intentionally disabled until verified aggregates are supplied.
 \newif\ifhumanresults
 \humanresultsfalse
+
+% Fail closed if someone enables the human-results branch without replacing
+% every source-level placeholder and updating this flag.
+\newif\ifhumanplaceholders
+\humanplaceholderstrue
+\ifhumanresults
+  \ifhumanplaceholders
+    \PackageError{SCHOLAR}{Human evaluation results gate enabled with placeholders still active}{Replace all human-evaluation macros with verified aggregates and disable the placeholder flag before compiling a submission.}
+  \fi
+\fi
+
+\newcommand{\humanCorrectness}{[verified correctness result]}
+\newcommand{\humanCompleteness}{[verified completeness result]}
+\newcommand{\humanGrounding}{[verified evidence-support result]}
+\newcommand{\humanCitationAccuracy}{[verified citation-accuracy result]}
+\newcommand{\humanAgreement}{[verified inter-rater agreement result]}
+\newcommand{\humanCategoryBreakdown}{[verified category breakdown]}
 
 \newif\ifllmresults
 \llmresultstrue

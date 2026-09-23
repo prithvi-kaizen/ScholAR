@@ -1,9 +1,12 @@
-"""Evidence Graph & Reasoning Path Construction Service for ScholAR.
+"""Heuristic evidence-selection graph and explanatory ordering for ScholAR.
 
-Connects isolated evidence chunks into a structured directed graph:
+Connects retrieved evidence chunks into an auditable directed graph:
 - Methodological definitions (E1) -> Ablation evidence (E2) -> Benchmark results (E3)
 - Text claims -> 2D Table cells -> Figure visual regions
-- Builds transparent ReasoningPath for model synthesis and interactive UI inspection
+- Builds a transparent ordering for context selection and UI inspection
+
+The graph relations are heuristics inferred from metadata and proximity. They are
+not verified causal links or evidence that the model followed a reasoning chain.
 """
 
 from __future__ import annotations
@@ -32,7 +35,7 @@ def _infer_mlr_mode_and_subgoal(
     total_steps: int,
     analysis: QuestionAnalysis,
 ) -> tuple[MLRReasoningMode, str]:
-    """Assign MLR reasoning mode and concise actionable subgoal (<= 30 words)."""
+    """Assign an explanatory inspection label and concise subgoal (<= 30 words)."""
     section_name = (node.section or f"page {node.page}").strip()
 
     if node.reasoning_role == "method_definition":
@@ -91,7 +94,7 @@ def _infer_mlr_mode_and_subgoal(
 
 
 class EvidenceGraphService:
-    """Constructs and traverses multi-level scientific evidence graphs."""
+    """Constructs heuristic scientific-evidence selection graphs."""
 
     @classmethod
     def build_evidence_graph(
@@ -100,7 +103,7 @@ class EvidenceGraphService:
         retrieved_chunks: list[dict[str, Any]],
         analysis: QuestionAnalysis,
     ) -> tuple[EvidenceGraph, ReasoningPath]:
-        """Construct a directed EvidenceGraph and ordered ReasoningPath from retrieved evidence."""
+        """Construct a directed selection graph and explanatory evidence order."""
         nodes: list[EvidenceNode] = []
         edges: list[EvidenceEdge] = []
         steps: list[ReasoningPathStep] = []
@@ -170,7 +173,10 @@ class EvidenceGraphService:
                         source_id=src.node_id,
                         target_id=tgt.node_id,
                         relation=EvidenceRelation.ABLATION_EVIDENCE,
-                        description=f"Ablation in {tgt.section or 'experiments'} tests mechanism defined in {src.section or 'method'}",
+                        description=(
+                            f"Heuristic role link: {tgt.section or 'experiments'} follows "
+                            f"{src.section or 'method'}; support is not independently verified"
+                        ),
                     ))
                 # Rule B: Ablation -> Results
                 elif src.reasoning_role == "ablation_support" and tgt.reasoning_role == "final_result":
@@ -178,7 +184,10 @@ class EvidenceGraphService:
                         source_id=src.node_id,
                         target_id=tgt.node_id,
                         relation=EvidenceRelation.EXPLAINS_RESULT,
-                        description=f"Component ablation explains performance gain in {tgt.section or 'results'}",
+                        description=(
+                            f"Heuristic role link to {tgt.section or 'results'}; "
+                            "causation is not independently verified"
+                        ),
                     ))
                 # Rule C: Text Claim -> Table / Figure
                 elif src.modality == "text" and tgt.modality in ("table", "visual"):
@@ -186,7 +195,10 @@ class EvidenceGraphService:
                         source_id=src.node_id,
                         target_id=tgt.node_id,
                         relation=EvidenceRelation.CROSS_MODAL_GROUNDING,
-                        description=f"Prose narrative grounded by {tgt.modality} data on page {tgt.page}",
+                        description=(
+                            f"Candidate cross-modal link to {tgt.modality} on page {tgt.page}; "
+                            "grounding is not independently verified"
+                        ),
                     ))
                 # Rule D: Adjacent Section Bridge
                 elif abs(src.page - tgt.page) <= 1:
@@ -194,7 +206,7 @@ class EvidenceGraphService:
                         source_id=src.node_id,
                         target_id=tgt.node_id,
                         relation=EvidenceRelation.SECTION_SEQUENCE,
-                        description="Linear section sequence",
+                        description="Page-adjacency candidate used for evidence ordering",
                     ))
 
         # 4. Construct Ordered ReasoningPath with MLR descriptors
@@ -240,11 +252,14 @@ class EvidenceGraphService:
             reasoning_level=analysis.reasoning_level.value,
             steps=steps,
             graph=graph,
-            synthesized_rationale=f"Constructed multi-level reasoning path across {len(steps)} evidence steps ({modes_summary}).",
+            synthesized_rationale=(
+                f"Constructed an explanatory ordering across {len(steps)} evidence items "
+                f"({modes_summary}); this is not a reasoning proof."
+            ),
         )
 
         logger.info(
-            "Built EvidenceGraph for [%s]: %d nodes, %d edges, %d steps",
+            "Built evidence-selection graph for [%s]: %d nodes, %d edges, %d steps",
             query[:40], len(nodes), len(edges), len(steps)
         )
         return graph, path

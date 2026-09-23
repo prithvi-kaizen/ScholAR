@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 from backend.services.paper_finalize_service import PaperFinalizeService
 from backend.services.pdf_service import PAPERS_DIR, read_json, safe_paper_id, write_json
@@ -92,6 +92,12 @@ class CorpusPaperRecord(StrictModel):
     generation_id: str
     ingestion_schema_version: str
     parser_engine: str
+    ingestion_policy_identity_sha256: str | None = Field(
+        default=None, pattern=r"^[0-9a-f]{64}$"
+    )
+    chunking_policy_identity_sha256: str | None = Field(
+        default=None, pattern=r"^[0-9a-f]{64}$"
+    )
     degraded_mode: bool
     pdf_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     chunks_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -102,6 +108,15 @@ class CorpusPaperRecord(StrictModel):
     source_artifacts: list[FileArtifact] = Field(min_length=1)
     visual_artifacts: list[FileArtifact] = Field(min_length=1)
     derived_index_manifests: list[FileArtifact] = Field(default_factory=list)
+
+    @model_serializer(mode="wrap")
+    def omit_legacy_policy_identities(self, handler: Any) -> dict[str, Any]:
+        payload = handler(self)
+        if self.ingestion_policy_identity_sha256 is None:
+            payload.pop("ingestion_policy_identity_sha256", None)
+        if self.chunking_policy_identity_sha256 is None:
+            payload.pop("chunking_policy_identity_sha256", None)
+        return payload
 
     @model_validator(mode="after")
     def validate_artifact_order(self) -> "CorpusPaperRecord":
@@ -381,6 +396,12 @@ def _paper_record(
         generation_id=str(ingestion.get("generation_id") or ""),
         ingestion_schema_version=str(ingestion.get("schema_version") or ""),
         parser_engine=str(metadata.get("parser_engine") or ""),
+        ingestion_policy_identity_sha256=(
+            ingestion.get("ingestion_policy_identity") or {}
+        ).get("identity_sha256"),
+        chunking_policy_identity_sha256=(
+            ingestion.get("chunking_policy_identity") or {}
+        ).get("identity_sha256"),
         degraded_mode=bool(metadata.get("degraded_mode")),
         pdf_sha256=str(ingestion.get("pdf_sha256") or ""),
         chunks_sha256=str(ingestion.get("chunks_sha256") or ""),

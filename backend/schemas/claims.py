@@ -5,16 +5,27 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class EntailmentStatus(str, Enum):
-    """Canonical four-way claim-support vocabulary."""
+    """Canonical claim-support vocabulary, including unresolved pixel evidence."""
 
     SUPPORTED = "SUPPORTED"
     PARTIAL = "PARTIAL"
     UNSUPPORTED = "UNSUPPORTED"
     CONTRADICTED = "CONTRADICTED"
+    UNVERIFIED_VISUAL = "UNVERIFIED_VISUAL"
+
+
+class EvidenceOrigin(str, Enum):
+    """Whether evidence is a source artifact or a model/application derivative."""
+
+    SOURCE_TEXT = "SOURCE_TEXT"
+    SOURCE_TABLE = "SOURCE_TABLE"
+    SOURCE_PIXELS = "SOURCE_PIXELS"
+    MODEL_VISUAL_OBSERVATION = "MODEL_VISUAL_OBSERVATION"
+    APPLICATION_IMPUTED = "APPLICATION_IMPUTED"
 
 
 class RepairAction(str, Enum):
@@ -47,6 +58,46 @@ class EvidenceProvenance(BaseModel):
     document_id: str | None = None
     page: int | None = None
     region: dict[str, Any] | list[float] | None = None
+    origin: EvidenceOrigin = EvidenceOrigin.SOURCE_TEXT
+    derived_artifact_ids: list[str] = Field(default_factory=list)
+
+
+class DerivedEvidenceArtifact(BaseModel):
+    """Model/application output linked to source evidence but never replacing it."""
+
+    artifact_id: str = Field(min_length=1)
+    origin: EvidenceOrigin
+    derived_from_evidence_id: str = Field(min_length=1)
+    content_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    model_id: str | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def require_derived_origin(self) -> "DerivedEvidenceArtifact":
+        if self.origin not in {
+            EvidenceOrigin.MODEL_VISUAL_OBSERVATION,
+            EvidenceOrigin.APPLICATION_IMPUTED,
+        }:
+            raise ValueError("derived evidence must have a model/application origin")
+        return self
+
+    @classmethod
+    def model_observation(
+        cls,
+        *,
+        artifact_id: str,
+        derived_from_evidence_id: str,
+        content_sha256: str,
+        model_id: str | None,
+    ) -> "DerivedEvidenceArtifact":
+        return cls(
+            artifact_id=artifact_id,
+            origin=EvidenceOrigin.MODEL_VISUAL_OBSERVATION,
+            derived_from_evidence_id=derived_from_evidence_id,
+            content_sha256=content_sha256,
+            model_id=model_id,
+        )
 
 
 class ClaimRepairRecord(BaseModel):
@@ -73,6 +124,7 @@ class SupportScorerMetadata(BaseModel):
     thresholds_calibrated: bool = False
     supported_threshold: float = 0.50
     partial_threshold: float = 0.25
+    threshold_profile_id: str | None = None
 
 
 class AtomicClaim(BaseModel):
@@ -99,6 +151,8 @@ class AtomicClaim(BaseModel):
     second_pass_status: EntailmentStatus | None = None
     final_start: int | None = None
     final_end: int | None = None
+    scorer: SupportScorerMetadata = Field(default_factory=SupportScorerMetadata)
+    requires_human_pixel_judgment: bool = False
 
 
 class VerificationReport(BaseModel):
@@ -110,6 +164,7 @@ class VerificationReport(BaseModel):
     partial_count: int = 0
     unsupported_count: int = 0
     contradicted_count: int = 0
+    unverified_visual_count: int = 0
     has_abstained: bool = False
     abstention_reason: str | None = None
     final_verified_response: str = ""

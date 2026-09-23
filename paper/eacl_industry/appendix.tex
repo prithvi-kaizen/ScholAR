@@ -1,25 +1,36 @@
-\section{Release Artifact Contract}
-The evaluation release package contains: (1)~a frozen expected-key registry \texttt{expected\_}\allowbreak\texttt{keys.json}; (2)~raw execution JSONL traces and post-scoring JSONL evaluations; (3)~hierarchically aggregated results in \texttt{aggregate.json}; (4)~auto-rendered \LaTeX{} tables carrying SHA-256 provenance binds; (5)~an execution manifest logging code commit, invocation flags, dataset identity, model hashes, quantization settings, prompt hashes, random seeds, hardware specs, timestamp, and status counts; and (6)~a complete SHA-256 artifact manifest. The validator enforces strict key equality, rejects duplicate or truncated rows, verifies denominator preservation, checks table checksums against aggregate summaries, and audits for anonymity compliance.
+\section{Reproducibility and Diagnostic Detail}
+\paragraph{Trace accounting.}
+Each expected (condition, case) pair has exactly one terminal row; interrupted runs resume missing keys and reject duplicates. The retained fields include source, model digest and quantization, prompt hash, raw completion, final text, retrieved evidence identities, citation origins, edit actions, terminal status, and stage timings. Aggregation reads immutable traces rather than regenerating answers. The answerable and cross-paper pairs have identical raw completions and prompt hashes within all 50 paired cases. The five-case control pilot with an adapter classification defect is retained with its checksum and excluded from the corrected 20-case comparison.
 
-\section{Answer Trace Fields}
-Every query processed by \texttt{AnswerPipeline}\allowbreak\texttt{Service} produces a structured \texttt{AnswerTrace} recording:
-\begin{itemize}
-    \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
-    \item \textbf{Provenance:} Request ID, document ID, session ID, user question, random seed, model tag, prompt hash, and Git commit SHA.
-    \item \textbf{Retrieval Telemetry:} Per-chunk candidate scores and ranks across lexical (BM25), dense text, crop CLIP, full-page ColQwen2, and modality channels; RRF fused ranks; sufficiency decisions and reason codes.
-    \item \textbf{Prompts \& Completions:} Exact prompt text, evidence block content hashes, raw model completion, normalized text, and final post-repair text.
-    \item \textbf{Citation Metadata:} Source-scoped evidence identities, resolved document pages and bounding coordinates, and citation origins (\textsc{ModelEmitted}, \textsc{ApplicationImputed}, or \textsc{Remapped}).
-    \item \textbf{Verification \& Repair:} Pre- and post-repair atomic claims with character spans $[s_c, e_c)$, lexical overlap scores, numerical contradiction flags, support labels, concrete text diffs, and abstention codes.
-    \item \textbf{System Metrics:} Stage-by-stage execution latencies (retrieval, generation, verification, repair), token throughput, and hardware tier descriptor.
-\end{itemize}
+\paragraph{Uncertainty and denominators.}
+The retrieval rows cover 100 questions/25 papers and 500 condition outputs. Answerable rows cover 30 cases/19 papers per repair setting; control rows cover 20 cases/16 target papers per setting. All corrected rows have zero terminal errors. Paired intervals resample papers, not individual questions, 10,000 times. The citation-page diagnostic uses the 20 cases whose gold locus specifies a page in both answerable conditions. The remaining 10 gold loci name a figure or table but no page; they are missing labels, not zero-scored failures. Four controls per condition abstain before generation. Consequently, the 13/20 versus 5/20 status comparison cannot be interpreted as a pure post-generation classifier experiment.
 
-\section{Human-Evidence Safety}
-Template directories for claim calibration, judge validation, researcher pilots, and institutional ethics determinations begin with an explicit no-data banner. Machine envelopes enforce strict metadata guards:
-\begin{itemize}
-    \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
-    \item \texttt{artifact\_type}: \texttt{"template"}
-    \item \texttt{study\_status}: \texttt{"NOT\_STARTED"}
-    \item \texttt{contains\_completed\_data}: \texttt{false}
-    \item \texttt{records}: empty list \texttt{[]}
-\end{itemize}
-Continuous integration automatically fails if any template directory contains populated participant or outcome records, ensuring unreviewed or non-existent human empirical data cannot be merged or reported.
+\begin{table}[h]
+\centering
+\scriptsize
+\begin{tabular}{lrrr}
+\toprule
+Type & $n$ & Ref.-unit F1 off/on & Page labels \\
+\midrule
+Visual & 10 & .129/.200 & 0/10 \\
+Mathematical & 10 & .173/.218 & 10/10 \\
+Textual & 10 & .175/.254 & 10/10 \\
+\bottomrule
+\end{tabular}
+\caption{Exploratory subgroup diagnostics. Automatic reference-unit overlap is not factual correctness; gold-page counts mark cases eligible for the page-alignment score. Visual outputs do cite pages, but the gold visual loci do not supply page labels.}
+\label{app:subgroups}
+\end{table}
+
+\paragraph{Observed failure patterns.}
+The modality heuristic can promote intent-matched visual or table candidates ahead of a gold page. Lexical repair edits all 30 answerable responses and can change citation mapping as well as wording. Some final outputs with pipeline \textsc{Success} contain refusal prose; others address target-paper material that does not answer the swapped question. These patterns motivated the explicit distinction among status, lexical overlap, cited-page alignment, and independently judged support. We omit document excerpts and raw completions from this review artifact because source permissions and anonymity have not been cleared.
+
+\paragraph{Artifact scope.}
+The reproducibility package contains source code, schema and protocol definitions, tests, a small synthetic fixture for trace-accounting checks, and instructions to rerun authorized local evaluation. It excludes private PDFs, document databases, raw local completions, user records, model weights, and cached embeddings. The printed numbers are trace-audited retrospective findings; the public fixture validates accounting software, not the empirical scores.
+
+\paragraph{LLM-evaluation accounting.}
+The LLM-evaluation manifest contains 150 unique cases, 15 from each of 10 papers, and is the exact complement of a 50-case human-study packet. It binds the source dataset, legacy result file, and annotation bundle by SHA-256. The public receipt contains 150 judgments and records 113 reference-eligible and 37 reference-ineligible cases. We retain two audit exceptions. First, the judgment rows and public aggregate use the generic model identity \texttt{manual-assistant-proxy}, which does not verify the model named in the planning protocol. Second, the later visual pass introduced \texttt{partly\_supported}, although the frozen visual schema permits only supported, unsupported, not applicable, or not judgeable. We therefore use only the non-visual categorical counts in Table~\ref{tab:llm} and do not present the LLM judge as independently validated.
+
+\ifreleasetables
+\input{../../evaluation/releases/eacl_industry_v1/tables/appendix_results.tex}
+\else
+\fi

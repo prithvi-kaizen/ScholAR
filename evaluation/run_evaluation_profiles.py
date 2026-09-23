@@ -45,7 +45,7 @@ def smoke_commands() -> list[Command]:
         py_command("abstention evaluator", "evaluation/run_abstention_eval.py", "--selfcheck"),
         py_command("efficiency evaluator", "evaluation/run_efficiency_eval.py", "--selfcheck"),
         py_command("M3SciQA evaluator", "evaluation/m3sciqa/run_m3sciqa_eval.py", "--selfcheck"),
-        Command("unit tests", (PYTHON, "-m", "unittest", "discover", "-s", "tests")),
+        Command("unit tests", (PYTHON, "-m", "pytest")),
     ]
 
 
@@ -187,16 +187,33 @@ def ensure_backend_policy(backend_url: str) -> None:
         )
 
 
-def ensure_local_model(ollama_url: str, model: str) -> None:
+def ensure_local_model(
+    ollama_url: str,
+    model: str,
+    expected_digest: str | None = None,
+    expected_quantization: str | None = None,
+) -> None:
     ensure_socket(ollama_url, "Ollama")
     try:
         with urllib.request.urlopen(f"{ollama_url.rstrip('/')}/api/tags", timeout=5) as response:
             models = json.loads(response.read().decode()).get("models", [])
     except Exception as exc:
         raise SystemExit(f"Cannot query local Ollama models at {ollama_url}: {exc}") from exc
-    names = {item.get("name") or item.get("model") for item in models}
-    if model not in names:
-        raise SystemExit(f"Ollama model {model!r} is not installed locally; available: {sorted(names)}")
+    by_name = {
+        name: item
+        for item in models
+        if (name := item.get("name") or item.get("model"))
+    }
+    if model not in by_name:
+        raise SystemExit(
+            f"Ollama model {model!r} is not installed locally; available: {sorted(by_name)}"
+        )
+    installed = by_name[model]
+    if expected_digest and installed.get("digest") != expected_digest:
+        raise SystemExit(f"Ollama model {model!r} digest differs from the pinned asset")
+    details = installed.get("details") if isinstance(installed.get("details"), dict) else {}
+    if expected_quantization and details.get("quantization_level") != expected_quantization:
+        raise SystemExit(f"Ollama model {model!r} quantization differs from the pinned asset")
 
 
 def ensure_prepared_papers() -> None:
@@ -316,6 +333,8 @@ def parse_args() -> argparse.Namespace:
         help="acknowledge that an executing non-smoke profile may rewrite current result artifacts",
     )
     parser.add_argument("--model", help="already-installed local Ollama model for model-backed/full")
+    parser.add_argument("--model-digest", help="required immutable digest in pinned-model CI")
+    parser.add_argument("--quantization", help="required quantization level in pinned-model CI")
     parser.add_argument("--backend", default="http://127.0.0.1:8000")
     parser.add_argument("--ollama", default=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434"))
     parser.add_argument("--limit", type=int, default=5, help="positive smoke-sized model sample")
@@ -356,7 +375,7 @@ def main() -> int:
         if not args.model:
             raise SystemExit("--model is required when executing model-backed or full")
         ensure_backend_policy(args.backend)
-        ensure_local_model(args.ollama, args.model)
+        ensure_local_model(args.ollama, args.model, args.model_digest, args.quantization)
         ensure_prepared_papers()
     if args.profile == "measured-retrieval":
         ensure_prepared_papers()

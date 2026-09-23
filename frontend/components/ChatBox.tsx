@@ -13,6 +13,7 @@ import type {
   Citation,
   CustomSnippet,
   ReasoningPathStep,
+  VisualInspectionSummary,
 } from "../types/paper";
 import type { ChatRequest } from "../types/api";
 import {
@@ -340,7 +341,7 @@ function ReasoningBadge({ level }: { level?: string }) {
     L2_SAME_SECTION: { label: "L2 Same-Section", bg: "bg-cyan-500/15", text: "text-cyan-400" },
     L3_CROSS_SECTION: { label: "L3 Cross-Section", bg: "bg-purple-500/15", text: "text-purple-400" },
     L4_CROSS_MODAL: { label: "L4 Cross-Modal", bg: "bg-emerald-500/15", text: "text-emerald-400" },
-    L5_MULTI_HOP_SYNTHESIS: { label: "L5 Multi-Hop Synthesis", bg: "bg-amber-500/15", text: "text-amber-400" },
+    L5_MULTI_HOP_SYNTHESIS: { label: "L5 Multi-part Route", bg: "bg-amber-500/15", text: "text-amber-400" },
   };
   const c = config[level] || { label: level.replace(/_/g, " "), bg: "bg-zinc-700/50", text: "text-zinc-300" };
   return (
@@ -364,7 +365,7 @@ function ReasoningTrail({ steps, onStepClick, onOpenGraph }: {
       <div className="flex items-center justify-between font-medium text-purple-300 text-[11px] mb-1.5">
         <div className="flex items-center gap-1.5">
           <Network size={12} className="text-purple-400 shrink-0" />
-          <span>Evidence Reasoning Chain</span>
+          <span>Evidence Selection Audit</span>
         </div>
         {onOpenGraph && (
           <button
@@ -372,7 +373,7 @@ function ReasoningTrail({ steps, onStepClick, onOpenGraph }: {
             onClick={onOpenGraph}
             className="flex items-center gap-1 text-[10px] text-purple-300 hover:text-white transition font-normal"
           >
-            <span>View Graph</span>
+            <span>Inspect Selection</span>
             <ChevronRight size={10} />
           </button>
         )}
@@ -404,25 +405,67 @@ function ReasoningTrail({ steps, onStepClick, onOpenGraph }: {
           </div>
         ))}
       </div>
+      <p className="mt-1.5 text-[10px] text-zinc-500">
+        Explanatory ordering of selected evidence; not a proof of model reasoning.
+      </p>
     </div>
   );
 }
 
-function NumericPlanBadge({ plan }: { plan?: { operation: string; computed_value: number; formatted_value: string; formatted_statement: string; is_exact: boolean } }) {
+function NumericPlanBadge({ plan, usedForGeneration }: {
+  plan?: { operation: string; computed_value: number; formatted_value: string; formatted_statement: string; is_exact: boolean };
+  usedForGeneration?: boolean;
+}) {
   if (!plan) return null;
   return (
     <div className="mt-2.5 rounded-lg border border-emerald-500/20 bg-emerald-950/20 p-2.5 text-xs text-zinc-200">
       <div className="flex items-center gap-1.5 font-medium text-emerald-300 text-[11px] mb-1">
         <Calculator size={12} className="text-emerald-400 shrink-0" />
-        <span>Deterministic Tabular Arithmetic</span>
-        {plan.is_exact && <span className="ml-auto rounded bg-emerald-500/30 px-1 text-[9px] font-mono text-emerald-200">EXACT</span>}
+        <span>Diagnostic Table Arithmetic</span>
+        <span className="ml-auto rounded bg-zinc-700 px-1 text-[9px] font-mono text-zinc-300">
+          {usedForGeneration ? "USED" : "NOT USED IN ANSWER"}
+        </span>
       </div>
       <p className="text-[11px] leading-relaxed text-zinc-300">{plan.formatted_statement}</p>
     </div>
   );
 }
 
-function VerificationReportBadge({ report }: { report?: { overall_supported: boolean; supported_count: number; unsupported_count: number; contradicted_count: number; has_abstained: boolean } }) {
+function VisualInspectionBadge({ summary }: { summary: VisualInspectionSummary }) {
+  const pages = Array.from(new Set(summary.inputs.map((item) => item.page).filter((page) => page != null)));
+  const sources = Array.from(new Set(summary.inputs.map((item) => item.source_paper_id).filter((source) => source)));
+  const firstRegion = summary.inputs.find((item) => item.region)?.region;
+  const statusStyle = summary.status === "completed"
+    ? "border-teal-500/25 bg-teal-950/20 text-teal-300"
+    : "border-amber-500/25 bg-amber-950/20 text-amber-300";
+  return (
+    <div className={`mt-2.5 rounded-lg border p-2.5 text-[11px] ${statusStyle}`}>
+      <div className="flex flex-wrap items-center gap-1.5 font-medium">
+        <Camera size={12} />
+        <span>Visual inspection: {summary.status}</span>
+        <span className="rounded bg-black/20 px-1.5 py-0.5 font-mono text-[9px] uppercase">
+          {summary.inspection_mode.replace(/_/g, " ")}
+        </span>
+      </div>
+      <div className="mt-1 text-zinc-400">
+        Backend: {summary.retrieval_backends.join(", ") || "none"} · Model: {summary.inspection_model || "none"}
+        {pages.length > 0 && ` · Page ${pages.join(", ")}`}
+      </div>
+      {sources.length > 0 && <div className="mt-0.5 text-zinc-500">Source: {sources.join(", ")}</div>}
+      {firstRegion && (
+        <div className="mt-0.5 font-mono text-[9px] text-zinc-500">
+          Region: [{firstRegion.x0}, {firstRegion.y0}, {firstRegion.x1}, {firstRegion.y1}]
+        </div>
+      )}
+      {summary.verification_origins.length > 0 && (
+        <div className="mt-0.5 text-zinc-500">Evidence origin: {summary.verification_origins.join(", ")}</div>
+      )}
+      {summary.fallback_reason && <div className="mt-1 text-amber-300">{summary.fallback_reason}</div>}
+    </div>
+  );
+}
+
+function VerificationReportBadge({ report }: { report?: { overall_supported: boolean; supported_count: number; unsupported_count: number; contradicted_count: number; unverified_visual_count?: number; has_abstained: boolean } }) {
   if (!report) return null;
   return (
     <div className="mt-2 flex items-center gap-2 text-[10px] text-zinc-400">
@@ -431,6 +474,7 @@ function VerificationReportBadge({ report }: { report?: { overall_supported: boo
         {report.supported_count} verified
         {report.unsupported_count > 0 && ` · ${report.unsupported_count} caveats`}
         {report.contradicted_count > 0 && ` · ${report.contradicted_count} contradictions`}
+        {(report.unverified_visual_count ?? 0) > 0 && ` · ${report.unverified_visual_count} visual pending`}
       </span>
     </div>
   );
@@ -446,6 +490,9 @@ function VerificationBadge({ label }: { label?: string }) {
   }
   if (label === "CONTRADICTED") {
     return <span className="ml-auto rounded bg-rose-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-rose-300">Contradicted</span>;
+  }
+  if (label === "UNVERIFIED_VISUAL") {
+    return <span className="ml-auto rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-amber-300">Visual check needed</span>;
   }
   return <span className="ml-auto rounded bg-zinc-700/50 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-400">Uncertain</span>;
 }
@@ -732,6 +779,8 @@ export function ChatBox({
           reasoning_level: payload.reasoning_level,
           reasoning_steps: payload.reasoning_steps,
           numeric_plan: payload.numeric_plan ?? undefined,
+          numeric_plan_used_for_generation: payload.numeric_plan_used_for_generation,
+          visual_inspection: payload.visual_inspection ?? undefined,
           verification_report: payload.verification_report ?? undefined,
         },
       ]);
@@ -866,7 +915,13 @@ export function ChatBox({
                       )}
                     </div>
                   )}
-                  {msg.numeric_plan && <NumericPlanBadge plan={msg.numeric_plan} />}
+                  {msg.visual_inspection && <VisualInspectionBadge summary={msg.visual_inspection} />}
+                  {msg.numeric_plan && (
+                    <NumericPlanBadge
+                      plan={msg.numeric_plan}
+                      usedForGeneration={msg.numeric_plan_used_for_generation}
+                    />
+                  )}
                   {msg.reasoning_steps && (
                     <ReasoningTrail
                       steps={msg.reasoning_steps}
@@ -874,7 +929,7 @@ export function ChatBox({
                       onOpenGraph={() =>
                         setGraphModal({
                           isOpen: true,
-                          query: messages[idx - 1]?.content || "Multi-Level Evidence Query",
+                          query: messages[idx - 1]?.content || "Evidence selection audit",
                           level: msg.reasoning_level,
                           steps: msg.reasoning_steps,
                         })
@@ -915,6 +970,16 @@ export function ChatBox({
                             <span className="rounded bg-acid/20 px-1.5 py-0.5 text-[10px] font-semibold text-acid">ref</span>
                           )}
                           <VerificationBadge label={cit.verification} />
+                          {cit.evidence_origin && (
+                            <span className="rounded bg-zinc-800 px-1 py-0.5 text-[9px] text-zinc-400">
+                              {cit.evidence_origin.replace(/_/g, " ").toLowerCase()}
+                            </span>
+                          )}
+                          {cit.vision_input_kind && (
+                            <span className="rounded bg-teal-950 px-1 py-0.5 text-[9px] text-teal-400">
+                              {cit.vision_input_kind.replace(/_/g, " ")}
+                            </span>
+                          )}
                         </div>
                         {cit.is_figure && (cit.figure_id || cit.image_file) ? (
                           <FigureThumbnail
@@ -958,7 +1023,7 @@ export function ChatBox({
                       type="button"
                       onClick={() => exportReport(msg, "markdown")}
                       className="inline-flex items-center gap-1 rounded px-2 py-0.5 transition hover:bg-zinc-800 hover:text-zinc-200"
-                      title="Export verified reasoning report as Markdown"
+                      title="Export evidence audit report as Markdown"
                     >
                       <Download size={11} />
                       .md
@@ -967,7 +1032,7 @@ export function ChatBox({
                       type="button"
                       onClick={() => exportReport(msg, "latex")}
                       className="inline-flex items-center gap-1 rounded px-2 py-0.5 transition hover:bg-zinc-800 hover:text-zinc-200"
-                      title="Export verified reasoning report as LaTeX document"
+                      title="Export evidence audit report as LaTeX document"
                     >
                       <Download size={11} />
                       .tex

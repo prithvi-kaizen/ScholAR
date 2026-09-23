@@ -165,8 +165,8 @@ class TestPhase2ReasoningIntegrity(unittest.TestCase):
                 self.assertEqual(len(retrieved), 1)
                 self.assertEqual(retrieved[0]["subquery_id"], "SQ1")
 
-    def test_numeric_result_injected_into_prompt(self):
-        """Precomputed deterministic numeric result must be injected into the LLM prompt."""
+    def test_only_validated_numeric_result_is_injected_into_prompt(self):
+        """Arithmetic is causal only after entity/metric resolution is validated."""
         from backend.services.routing_service import QuestionRouteType
         request = AnswerPipelineRequest(paper_id="test", query="What is the difference?")
         numeric_res = NumericExecutionResult(
@@ -183,10 +183,23 @@ class TestPhase2ReasoningIntegrity(unittest.TestCase):
             secondary_meta={},
             route_type=QuestionRouteType.TABLE_NUMERIC,
             numeric_result=numeric_res,
+            numeric_result_validated=True,
         )
         self.assertIn("Deterministic Calculation Result", prompt)
         self.assertIn("+3.24", prompt)
         self.assertIn("The difference in performance is +3.24", prompt)
+
+        diagnostic_prompt = _build_prompt(
+            request=request,
+            metadata={"title": "Test Paper"},
+            evidence_items=[{"evidence_id": "E1", "quote": "Test quote"}],
+            secondary_meta={},
+            route_type=QuestionRouteType.TABLE_NUMERIC,
+            numeric_result=numeric_res,
+            numeric_result_validated=False,
+        )
+        self.assertNotIn("Deterministic Calculation Result", diagnostic_prompt)
+        self.assertNotIn("+3.24", diagnostic_prompt)
 
 
 if __name__ == "__main__":

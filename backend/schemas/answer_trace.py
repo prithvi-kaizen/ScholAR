@@ -8,7 +8,12 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 from backend.schemas.capabilities import CapabilityMode, EvidenceBudget, ModelCapabilities
-from backend.schemas.claims import ClaimRepairRecord, VerificationReport
+from backend.schemas.claims import (
+    ClaimRepairRecord,
+    DerivedEvidenceArtifact,
+    EvidenceOrigin,
+    VerificationReport,
+)
 from backend.schemas.evidence_graph import EvidenceGraph, ReasoningPathStep
 from backend.schemas.numeric_plan import NumericExecutionResult, NumericPlan
 from backend.schemas.reasoning import QuestionAnalysis, SubQuery
@@ -89,6 +94,7 @@ class EvaluationContext(BaseModel):
     dataset_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     corpus_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     prompt_hashes: dict[str, str] = Field(default_factory=dict)
+    experiment_identity_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
     model_config = ConfigDict(extra="forbid")
 
@@ -97,7 +103,34 @@ class EvaluationContext(BaseModel):
         payload = handler(self)
         if self.corpus_sha256 is None:
             payload.pop("corpus_sha256", None)
+        if self.experiment_identity_sha256 is None:
+            payload.pop("experiment_identity_sha256", None)
         return payload
+
+
+class RetrievalControls(BaseModel):
+    """Typed, traceable retrieval/inspection controls for measured ablations."""
+
+    condition_id: Literal["S0", "S1", "S2", "S3", "S4", "S5"] | None = None
+    include_bm25: Literal[True] = True
+    include_dense: Literal[True] = True
+    include_reranker: Literal[True] = True
+    include_modality_channel: bool = True
+    include_crop_image_channel: bool = True
+    visual_page_backend: Literal["configured", "auto", "colqwen2", "clip", "disabled"] = "configured"
+    pixel_inspection: bool = True
+    strict_components: bool = False
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def measured_conditions_are_explicit(self) -> "RetrievalControls":
+        if self.condition_id is not None:
+            if self.visual_page_backend in {"configured", "auto"}:
+                raise ValueError("measured S0-S5 conditions forbid configured/auto page retrieval")
+            if not self.strict_components:
+                raise ValueError("measured S0-S5 conditions require strict_components=true")
+        return self
 
 
 class AnswerPipelineRequest(BaseModel):
@@ -120,6 +153,7 @@ class AnswerPipelineRequest(BaseModel):
     visual_page_backend: Literal[
         "configured", "auto", "colqwen2", "clip", "disabled"
     ] = "configured"
+    retrieval: RetrievalControls | None = None
 
     model_config = ConfigDict(extra="forbid")
 
@@ -246,6 +280,8 @@ class CitationTrace(BaseModel):
     confidence: float | None = None
     origin: CitationOrigin = CitationOrigin.MODEL_EMITTED
     identity: EvidenceIdentity | None = None
+    evidence_origin: EvidenceOrigin | None = None
+    derived_artifacts: list[DerivedEvidenceArtifact] = Field(default_factory=list)
     extra: dict[str, Any] = Field(default_factory=dict)
 
     def to_api_dict(self) -> dict[str, Any]:
@@ -328,6 +364,7 @@ class AnswerTrace(BaseModel):
     timings: list[StageTiming] = Field(default_factory=list)
     latency_ms: float = 0.0
     hardware_tier: str = ""
+    hardware_device: str = ""
     persistence_succeeded: bool = False
     response_metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -343,6 +380,7 @@ class AnswerTrace(BaseModel):
             "reasoning_level": self.reasoning_level,
             "reasoning_steps": [step.model_dump() for step in self.reasoning_path],
             "numeric_plan": self.numeric_plan.model_dump() if self.numeric_plan else None,
+            "numeric_plan_used_for_generation": self.numeric_plan_used_for_generation,
             "verification_report": self.verification_report.model_dump() if self.verification_report else None,
             "abstained": self.abstention.abstained,
             "uncertainty_reason": self.abstention.reason_code,

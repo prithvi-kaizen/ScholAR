@@ -1,5 +1,10 @@
 # ScholAR Human Evaluation Pipeline
 
+**Current plan: [50-question, five-evaluator offline study](STUDY_50_FIVE_RATERS_README.md).**
+One shared ZIP produces five separate 50-case JSON returns. The older
+[200-question plan](STUDY_200_README.md) and the 100-case score sheet below
+are separate workflows and must not be mixed with this study.
+
 A blinded, citation-grounded human evaluation for ScholAR. Each of 100 questions
 is answered by several local models running the same ScholAR pipeline (only the
 generation model changes), and expert evaluators score every answer on four 1-5

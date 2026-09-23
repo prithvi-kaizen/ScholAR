@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import platform
 import re
 import subprocess
 import time
@@ -87,6 +88,22 @@ def _git_identity() -> tuple[str | None, bool | None]:
         return None, None
 
 
+def _hardware_device_identity() -> str:
+    """Describe the accelerator/CPU device used by the local pipeline."""
+    base = f"{platform.system()} {platform.machine()}"
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            return f"{base}; CUDA {torch.cuda.get_device_name(0)}"
+        if torch.backends.mps.is_available():
+            return f"{base}; Apple Metal Performance Shaders"
+    except Exception:
+        pass
+    processor = platform.processor().strip()
+    return f"{base}; CPU {processor or 'unspecified'}"
+
+
 def _paper_paths(paper_id: str) -> tuple[Path, Path, Path, Path]:
     directory = paper_dir(safe_paper_id(paper_id))
     paths = (
@@ -98,6 +115,36 @@ def _paper_paths(paper_id: str) -> tuple[Path, Path, Path, Path]:
     if not all(path.is_file() for path in paths):
         raise FileNotFoundError(f"Paper {paper_id!r} has not been completely prepared")
     return paths
+
+
+def _source_bundle_identity(source_id: str) -> dict[str, Any]:
+    """Return trace-safe hashes for the exact ingested source bundle used."""
+    directory = paper_dir(source_id)
+    manifest_path = directory / "ingestion_manifest.json"
+    metadata_path = directory / "metadata.json"
+    if not manifest_path.is_file():
+        return {"paper_id": source_id, "status": "missing_ingestion_manifest"}
+    manifest_bytes = manifest_path.read_bytes()
+    manifest = read_json(manifest_path)
+    metadata = read_json(metadata_path) if metadata_path.is_file() else {}
+    ingestion_identity = manifest.get("ingestion_policy_identity")
+    chunking_identity = manifest.get("chunking_policy_identity")
+    if not isinstance(ingestion_identity, dict):
+        ingestion_identity = {}
+    if not isinstance(chunking_identity, dict):
+        chunking_identity = {}
+    return {
+        "paper_id": source_id,
+        "status": "loaded",
+        "ingestion_manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+        "ingestion_schema_version": str(manifest.get("schema_version") or ""),
+        "generation_id": str(manifest.get("generation_id") or ""),
+        "pdf_sha256": str(manifest.get("pdf_sha256") or ""),
+        "chunks_sha256": str(manifest.get("chunks_sha256") or ""),
+        "parser_engine": str(metadata.get("parser_engine") or ""),
+        "ingestion_policy_identity_sha256": str(ingestion_identity.get("identity_sha256") or ""),
+        "chunking_policy_identity_sha256": str(chunking_identity.get("identity_sha256") or ""),
+    }
 
 
 def _merge_source_figure_chunks(
@@ -485,7 +532,7 @@ def _citation_trace(
     known = {
         "ref_id", "page", "chunk_id", "section_title", "chunk_type", "quote",
         "source_paper_id", "document_id", "source_evidence_id", "verification", "confidence",
-        "repair_origin",
+        "repair_origin", "evidence_origin", "derived_artifacts",
     }
     if citation.get("repair_origin") == CitationOrigin.REMAPPED.value:
         origin = CitationOrigin.REMAPPED
@@ -511,6 +558,8 @@ def _citation_trace(
         confidence=_safe_float(citation.get("confidence")),
         origin=origin,
         identity=_identity_model(identity_payload, paper_id),
+        evidence_origin=citation.get("evidence_origin"),
+        derived_artifacts=citation.get("derived_artifacts") or [],
         extra={key: value for key, value in citation.items() if key not in known},
     )
 
@@ -522,6 +571,7 @@ def _build_prompt(
     secondary_meta: dict[str, dict[str, Any]],
     route_type: QuestionRouteType,
     numeric_result: Any | None = None,
+    numeric_result_validated: bool = False,
     effective_query: str | None = None,
 ) -> str:
     recent_history = "\n".join(
@@ -544,7 +594,11 @@ Special Tabular / Numeric Instructions:
 """
 
     numeric_context = ""
-    if numeric_result and getattr(numeric_result, "is_exact", False):
+    if (
+        numeric_result
+        and numeric_result_validated
+        and getattr(numeric_result, "is_exact", False)
+    ):
         op_val = getattr(numeric_result.operation, "value", str(numeric_result.operation))
         numeric_context = f"""
 Deterministic Calculation Result (Precomputed exact arithmetic):
@@ -650,6 +704,124 @@ def resolve_conversational_query(query: str, history: list[dict[str, Any]] | Non
     return f"{clean_q} (context: {clean_candidate})"
 
 
+def _expand_source_scoped_visual_references(
+    selected: list[dict[str, Any]],
+    all_chunks: list[dict[str, Any]],
+    *,
+    anchor_paper_id: str,
+    limit: int,
+) -> list[dict[str, Any]]:
+    """Resolve figure/table mentions only inside the chunk's source paper."""
+    if limit <= 0:
+        return []
+
+    existing = {
+        (
+            str(chunk.get("source_paper_id") or chunk.get("document_id") or anchor_paper_id),
+            _normalize_figure_label(str(chunk.get("label") or "")),
+        )
+        for chunk in selected
+        if chunk.get("is_figure_chunk") and chunk.get("label")
+    }
+    references: list[tuple[str, str]] = []
+    for chunk in selected[:8]:
+        if chunk.get("is_figure_chunk"):
+            continue
+        source_id = str(
+            chunk.get("source_paper_id") or chunk.get("document_id") or anchor_paper_id
+        )
+        for label in extract_figure_refs(str(chunk.get("text") or "")):
+            key = (source_id, label)
+            if key not in existing and key not in references:
+                references.append(key)
+
+    expanded: list[dict[str, Any]] = []
+    for source_id, reference_label in references:
+        if len(expanded) >= limit:
+            break
+        for chunk in all_chunks:
+            chunk_source = str(
+                chunk.get("source_paper_id") or chunk.get("document_id") or anchor_paper_id
+            )
+            if chunk_source != source_id or not chunk.get("is_figure_chunk"):
+                continue
+            if _normalize_figure_label(str(chunk.get("label") or "")) != reference_label:
+                continue
+            expanded_chunk = dict(chunk)
+            expanded_chunk["is_bridged_visual"] = True
+            expanded_chunk["graph_expanded"] = True
+            expanded_chunk["reasoning_role"] = "cross_modal_grounding"
+            expanded.append(expanded_chunk)
+            existing.add((source_id, reference_label))
+            break
+    return expanded
+
+
+def _visual_execution_metadata(
+    citations: list[dict[str, Any]],
+    *,
+    inspection_model: str | None,
+    status: str,
+    fallback_reason: str | None = None,
+    retrieval_candidates: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Build the public audit record for the visual work actually executed."""
+    pixel_citations = [
+        citation
+        for citation in citations
+        if str(citation.get("evidence_origin") or "") == "SOURCE_PIXELS"
+    ]
+    def inspection_scope(citation: dict[str, Any]) -> str:
+        kind = str(citation.get("vision_input_kind") or "full_visual")
+        if kind in {"retrieval_crop", "user_crop"}:
+            return "crop"
+        if citation.get("is_page_visual") is True:
+            return "full_page"
+        return "extracted_figure"
+
+    inspection_scopes = {inspection_scope(citation) for citation in pixel_citations}
+    if not inspection_scopes:
+        inspection_mode = "none"
+    elif inspection_scopes == {"full_page", "crop"}:
+        inspection_mode = "both"
+    elif len(inspection_scopes) > 1:
+        inspection_mode = "mixed"
+    else:
+        inspection_mode = next(iter(inspection_scopes))
+
+    retrieval_records = [*citations, *(retrieval_candidates or [])]
+
+    def distinct(records: list[dict[str, Any]], key: str) -> list[str]:
+        return sorted({
+            str(record[key])
+            for record in records
+            if record.get(key) not in (None, "")
+        })
+
+    return {
+        "status": status,
+        "inspection_mode": inspection_mode,
+        "inspection_model": inspection_model,
+        "retrieval_backends": distinct(retrieval_records, "visual_retrieval_backend"),
+        "retrieval_models": distinct(retrieval_records, "visual_retrieval_model"),
+        "fallback_reason": fallback_reason,
+        "verification_origins": distinct(citations, "evidence_origin"),
+        "inputs": [
+            {
+                "source_paper_id": citation.get("source_paper_id"),
+                "page": citation.get("page"),
+                "region": citation.get("bbox_normalized"),
+                "input_kind": citation.get("vision_input_kind") or "full_visual",
+                "inspection_scope": inspection_scope(citation),
+                "evidence_origin": citation.get("evidence_origin"),
+                "verification": citation.get("verification"),
+                "figure_id": citation.get("figure_id"),
+            }
+            for citation in pixel_citations
+        ],
+    }
+
+
 class AnswerPipelineService:
     """Executes the exact answer path shared by the API and claim-bearing evaluations."""
 
@@ -693,12 +865,19 @@ class AnswerPipelineService:
             target_modalities=[item.value for item in analysis.target_modalities],
             subqueries=analysis.subqueries,
             hardware_tier=evidence_budget.hardware_tier.value,
+            hardware_device=_hardware_device_identity(),
             generation=LocalGenerationMetadata(
                 requested_model=requested_model,
                 resolved_model=requested_model,
                 prompt_version=ANSWER_PROMPT_VERSION,
             ),
             intervention=InterventionExecutionTrace(requested=request.intervention),
+            response_metadata={
+                "evidence_graph_role": "context_selection_audit",
+                "reasoning_path_role": "explanatory_evidence_order",
+                "reasoning_path_used_for_generation": False,
+                "numeric_plan_role": "diagnostic_only",
+            },
         )
 
         def stage(name: str, stage_started: float, error: Exception | None = None) -> None:
@@ -767,6 +946,10 @@ class AnswerPipelineService:
                 ))
             if secondary_metadata_path.exists():
                 secondary_meta[secondary_id] = read_json(secondary_metadata_path)
+        trace.response_metadata["source_bundle_identities"] = [
+            _source_bundle_identity(source_id)
+            for source_id in [paper_id, *sorted(secondary_meta)]
+        ]
         stage("load_sources", source_started)
 
         # Snippet requests are still represented by the same trace contract even though
@@ -787,6 +970,13 @@ class AnswerPipelineService:
                     decoding_options=request.decoding.model_dump(mode="json"),
                 )
                 raw_answer = str(result.get("answer") or "")
+                is_fallback = bool(result.get("fallback"))
+                trace.response_metadata["visual_inspection"] = _visual_execution_metadata(
+                    list(result.get("citations") or []),
+                    inspection_model=str(result.get("model_used") or requested_model),
+                    status="fallback" if is_fallback else "completed",
+                    fallback_reason=result.get("fallback_reason"),
+                )
                 verification = ClaimVerifierService.verify_and_repair_detailed(
                     answer=raw_answer,
                     citations=result.get("citations", []),
@@ -795,7 +985,6 @@ class AnswerPipelineService:
                 )
                 answer = verification.final_answer
                 citations = verification.citations
-                is_fallback = bool(result.get("fallback"))
                 if is_fallback and request.execution_policy == ExecutionPolicy.REQUIRE_LOCAL_MODEL:
                     raise RuntimeError("Snippet vision model fell back instead of executing")
                 trace.generation.mode = GenerationMode.EXTRACTIVE_FALLBACK if is_fallback else GenerationMode.VISION_MODEL
@@ -827,13 +1016,19 @@ class AnswerPipelineService:
                         reason_code="NO_SUPPORTED_CLAIMS_AFTER_REPAIR",
                         user_message=answer,
                     )
-                trace.response_metadata = {
+                trace.response_metadata.update({
                     "vision": True,
                     "is_snippet": True,
                     "snippet_id": request.snippet_id,
                     "figure_label": f"Snippet (Page {request.snippet_page})",
                     "figure_image_url": f"/api/papers/{paper_id}/snippets/{request.snippet_id}.png",
-                }
+                    "visual_inspection": _visual_execution_metadata(
+                        citations,
+                        inspection_model=trace.generation.resolved_model,
+                        status="fallback" if is_fallback else "completed",
+                        fallback_reason=result.get("fallback_reason"),
+                    ),
+                })
                 stage("generation", generation_started)
                 return finish()
             except Exception as exc:
@@ -848,9 +1043,16 @@ class AnswerPipelineService:
         provenance: dict[tuple[str, str, str], dict[str, Any]] = {}
         seen: set[tuple[str, str, str]] = set()
         visual_page_query_traces: list[dict[str, Any]] = []
+        channel_execution_traces: list[dict[str, Any]] = []
 
         async def retrieve(query: str, limit: int, subquery_id: str) -> list[dict[str, Any]]:
             call_metadata: dict[str, Any] = {}
+            controls = request.retrieval
+            page_backend = (
+                controls.visual_page_backend
+                if controls is not None
+                else request.visual_page_backend
+            )
             hits = await asyncio.to_thread(
                 retrieve_chunks,
                 query,
@@ -858,11 +1060,17 @@ class AnswerPipelineService:
                 limit,
                 page_hints,
                 paper_id,
-                visual_page_backend=(
-                    None
-                    if request.visual_page_backend == "configured"
-                    else request.visual_page_backend
+                include_crop_image_channel=(
+                    controls.include_crop_image_channel if controls is not None else None
                 ),
+                include_page_image_channel=(
+                    controls.visual_page_backend != "disabled" if controls is not None else None
+                ),
+                include_modality_channel=(
+                    controls.include_modality_channel if controls is not None else True
+                ),
+                visual_page_backend=(None if page_backend == "configured" else page_backend),
+                strict_components=(controls.strict_components if controls is not None else False),
                 retrieval_metadata=call_metadata,
             )
             visual_page_query_traces.append({
@@ -870,6 +1078,13 @@ class AnswerPipelineService:
                 "subquery_id": subquery_id,
                 **dict(call_metadata.get("visual_page_retrieval") or {}),
             })
+            channel_execution_traces.append({
+                "retrieval_query": query,
+                "subquery_id": subquery_id,
+                "channels": dict(call_metadata.get("channel_execution") or {}),
+            })
+            if "reranker" in call_metadata:
+                trace.retrieval_metadata["reranker"] = call_metadata["reranker"]
             return hits
 
         if len(analysis.subqueries) > 1:
@@ -901,49 +1116,29 @@ class AnswerPipelineService:
                     seen.add(key)
                     selected.append(hit)
 
-        # Active Cross-Modal Evidence Graph Expansion:
-        # If retrieved text chunks cite figures or tables (e.g. 'Table 3', 'Figure 2')
-        # that are not yet in selected, actively pull in their canonical visual/table chunks.
-        existing_fig_labels = {
-            _normalize_figure_label(str(chunk.get("label") or ""))
-            for chunk in selected
-            if chunk.get("is_figure_chunk") and chunk.get("label")
-        }
-        referenced_labels: list[str] = []
-        for chunk in selected[:8]:
-            if not chunk.get("is_figure_chunk"):
-                for ref in extract_figure_refs(str(chunk.get("text") or "")):
-                    if ref not in referenced_labels and ref not in existing_fig_labels:
-                        referenced_labels.append(ref)
-
-        if referenced_labels:
-            expanded_count = 0
-            for ref in referenced_labels:
-                if expanded_count >= evidence_budget.max_visual_crops:
-                    break
-                for chunk in all_chunks:
-                    if chunk.get("is_figure_chunk") and chunk.get("label"):
-                        norm_label = _normalize_figure_label(str(chunk["label"]))
-                        if norm_label == ref:
-                            key = evidence_key(chunk, paper_id=paper_id)
-                            if key not in seen:
-                                seen.add(key)
-                                expanded_chunk = dict(chunk)
-                                expanded_chunk["is_bridged_visual"] = True
-                                expanded_chunk["graph_expanded"] = True
-                                expanded_chunk["reasoning_role"] = "cross_modal_grounding"
-                                selected.append(expanded_chunk)
-                                provenance[key] = {
-                                    "queries": ["GRAPH_COREF_EXPANSION"],
-                                    "subquery_ids": ["GRAPH_COREF"],
-                                    "query_channel_results": [],
-                                }
-                                expanded_count += 1
-                                break
+        # Source-scoped structural-reference expansion: a retrieved text chunk may
+        # pull in the Figure/Table it names, but never the same label from another paper.
+        for expanded_chunk in _expand_source_scoped_visual_references(
+            selected,
+            all_chunks,
+            anchor_paper_id=paper_id,
+            limit=evidence_budget.max_visual_crops,
+        ):
+            key = evidence_key(expanded_chunk, paper_id=paper_id)
+            if key in seen:
+                continue
+            seen.add(key)
+            selected.append(expanded_chunk)
+            provenance[key] = {
+                "queries": ["SOURCE_SCOPED_FIGURE_REFERENCE"],
+                "subquery_ids": ["STRUCTURAL_REFERENCE"],
+                "query_channel_results": [],
+            }
 
         stage("retrieval", retrieval_started)
         trace.retrieval_metadata["image_embedding"] = VisualEmbeddingService.status()
         trace.retrieval_metadata["visual_page_retrieval"] = visual_page_query_traces
+        trace.retrieval_metadata["channel_execution"] = channel_execution_traces
         trace.retrieval_hits = []
         for rank, hit in enumerate(selected, start=1):
             record = provenance[evidence_key(hit, paper_id=paper_id)]
@@ -968,7 +1163,7 @@ class AnswerPipelineService:
         context_started = time.perf_counter()
         candidate_chunks: list[dict[str, Any]] = []
         candidate_seen: set[tuple[str, str, str]] = set()
-        for chunk in chunks[:2] + selected:
+        for chunk in selected:
             key = evidence_key(chunk, paper_id=paper_id)
             if key not in candidate_seen:
                 candidate_seen.add(key)
@@ -1003,6 +1198,10 @@ class AnswerPipelineService:
                     entity_b=entity_b,
                     op=NumericOp.DIFFERENCE,
                 )
+        # Automatic entity/metric resolution is heuristic. Keep this arithmetic
+        # in the audit trace, but do not inject it into the answer until a typed,
+        # source-bound plan and numeric evaluation gate exist.
+        trace.numeric_plan_used_for_generation = False
         stage("reasoning_artifacts", reasoning_started)
 
         sufficiency_started = time.perf_counter()
@@ -1065,7 +1264,16 @@ class AnswerPipelineService:
             )
             for item in evidence_items
         ]
-        prompt = _build_prompt(request, metadata, evidence_items, secondary_meta, route_budget.route_type, numeric_result=trace.numeric_plan, effective_query=effective_query)
+        prompt = _build_prompt(
+            request,
+            metadata,
+            evidence_items,
+            secondary_meta,
+            route_budget.route_type,
+            numeric_result=trace.numeric_plan,
+            numeric_result_validated=False,
+            effective_query=effective_query,
+        )
         trace.generation.prompt_sha256 = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
         stage("context_assembly", context_started)
 
@@ -1130,6 +1338,8 @@ class AnswerPipelineService:
             for chunk in selected_figures
         )
         should_use_vision = bool(
+            (request.retrieval is None or request.retrieval.pixel_inspection)
+            and
             selected_figures
             and capabilities.can_process_images()
             and (
@@ -1145,6 +1355,7 @@ class AnswerPipelineService:
                 }
             )
         )
+        visual_attempt_metadata: dict[str, Any] | None = None
         if should_use_vision:
             shown_visual_ids = {
                 _identity_string(chunk, paper_id) for chunk in selected_figures
@@ -1158,7 +1369,9 @@ class AnswerPipelineService:
                 vision_result = await answer_with_multimodal_evidence(
                     question=request.query,
                     figure_chunks=selected_figures,
-                    context_chunks=[chunk for chunk in selected if not chunk.get("is_figure_chunk")],
+                    context_chunks=[
+                        chunk for chunk in context_chunks if not chunk.get("is_figure_chunk")
+                    ],
                     paper_id=paper_id,
                     paper_metadata=metadata,
                     source_metadata={paper_id: metadata, **secondary_meta},
@@ -1168,6 +1381,13 @@ class AnswerPipelineService:
                 )
                 raw_vision_answer = str(vision_result.get("answer") or "")
                 is_fallback = bool(vision_result.get("fallback"))
+                visual_attempt_metadata = _visual_execution_metadata(
+                    list(vision_result.get("citations") or []),
+                    inspection_model=vision_result.get("model_used") or requested_model,
+                    status="fallback" if is_fallback else "completed",
+                    fallback_reason=vision_result.get("fallback_reason"),
+                    retrieval_candidates=selected_figures,
+                )
                 if (
                     not is_uninformative_visual_answer(raw_vision_answer)
                     and not (visual_inspection_required and is_fallback)
@@ -1217,7 +1437,7 @@ class AnswerPipelineService:
                     vision_source_id = str(
                         vision_result.get("source_paper_id") or paper_id
                     )
-                    trace.response_metadata = {
+                    trace.response_metadata.update({
                         "vision": True,
                         "vision_fallback": is_fallback,
                         "visual_retrieval_triggered": has_ranked_image_evidence,
@@ -1234,18 +1454,54 @@ class AnswerPipelineService:
                                 if vision_result.get("figure_id") else None
                             )
                         ),
-                    }
+                        "visual_inspection": _visual_execution_metadata(
+                            verified_citations,
+                            inspection_model=trace.generation.resolved_model,
+                            status="fallback" if is_fallback else "completed",
+                            fallback_reason=vision_result.get("fallback_reason"),
+                            retrieval_candidates=selected_figures,
+                        ),
+                    })
                     stage("generation", generation_started)
                     return finish()
             except Exception as exc:
+                trace.response_metadata.update({
+                    "vision": True,
+                    "vision_fallback": True,
+                    "visual_inspection": _visual_execution_metadata(
+                        [],
+                        inspection_model=requested_model,
+                        status="failed",
+                        fallback_reason=f"{type(exc).__name__}: {exc}",
+                        retrieval_candidates=selected_figures,
+                    ),
+                })
                 if request.execution_policy == ExecutionPolicy.REQUIRE_LOCAL_MODEL:
                     stage("generation", generation_started, exc)
                     trace.status = PipelineStatus.ERROR
                     trace.generation.error = f"{type(exc).__name__}: {exc}"
                     return finish()
             stage("generation", generation_started)
+            if visual_attempt_metadata is not None:
+                trace.response_metadata.update({
+                    "vision": True,
+                    "vision_fallback": visual_attempt_metadata["status"] != "completed",
+                    "visual_inspection": visual_attempt_metadata,
+                })
 
         if visual_inspection_required:
+            if "visual_inspection" not in trace.response_metadata:
+                trace.response_metadata.update({
+                    "vision": True,
+                    "vision_fallback": True,
+                    "visual_inspection": _visual_execution_metadata(
+                        [],
+                        inspection_model=requested_model,
+                        status="failed",
+                        fallback_reason="no eligible source-scoped pixel input was inspected",
+                        retrieval_candidates=selected_figures,
+                    ),
+                })
             message = (
                 "**Abstained**\n\nThe retrieved text is insufficient, and local pixel "
                 "inspection did not produce usable source-scoped visual evidence."

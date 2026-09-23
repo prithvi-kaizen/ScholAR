@@ -20,6 +20,7 @@ from backend.schemas.answer_trace import (
     EvaluationContext,
     ExecutionPolicy,
     InterventionControls,
+    RetrievalControls,
 )
 from backend.schemas.capabilities import CapabilityMode, ModelRegistry
 from backend.schemas.evidence import EvidenceAST
@@ -121,6 +122,7 @@ class ChatInput(BaseModel):
     visual_page_backend: Literal[
         "configured", "auto", "colqwen2", "clip", "disabled"
     ] = "configured"
+    retrieval: RetrievalControls | None = None
     # Optional user-cropped snippet from a specific PDF page
     snippet_id: str | None = None
     snippet_page: int | None = None
@@ -327,7 +329,7 @@ class ExportReasoningRequest(BaseModel):
 
 @app.post("/api/papers/{paper_id}/export/reasoning")
 async def export_reasoning_report(paper_id: str, req: ExportReasoningRequest) -> dict[str, Any]:
-    """Export verified multi-level reasoning report in Markdown or LaTeX format."""
+    """Export an answer and evidence-selection audit in Markdown or LaTeX."""
     from backend.services.export_service import ExportService
     from backend.schemas.reasoning import QuestionAnalysis, ReasoningLevel
     from backend.schemas.evidence_graph import ReasoningPath, ReasoningPathStep
@@ -917,6 +919,7 @@ def _answer_request_from_chat(paper_id: str, payload: ChatInput) -> AnswerPipeli
         evaluation_context=payload.evaluation_context,
         experiment_id=payload.experiment_id,
         visual_page_backend=payload.visual_page_backend,
+        retrieval=payload.retrieval,
         snippet_id=payload.snippet_id,
         snippet_page=payload.snippet_page,
         snippet_bbox=payload.snippet_bbox,
@@ -940,7 +943,7 @@ async def chat(paper_id: str, payload: ChatInput) -> dict[str, Any]:
 
 @app.post("/api/papers/{paper_id}/chat/stream")
 async def chat_stream(paper_id: str, payload: ChatInput) -> StreamingResponse:
-    """Expose the shared verified answer trace as server-sent events.
+    """Deliver completed-answer stages over SSE; this is not token streaming.
 
     Predictable request and paper errors are validated before the response is
     opened, preserving `/chat` HTTP status semantics. Runtime failures after
@@ -964,6 +967,11 @@ async def chat_stream(paper_id: str, payload: ChatInput) -> StreamingResponse:
 
         task = asyncio.create_task(
             AnswerPipelineService.answer(request, stage_callback=on_stage)
+        )
+
+        yield (
+            "event: stream_info\n"
+            'data: {"mode":"staged_trace_delivery","token_streaming":false}\n\n'
         )
 
         try:
@@ -991,10 +999,14 @@ async def chat_stream(paper_id: str, payload: ChatInput) -> StreamingResponse:
             yield f"event: stage\ndata: {json.dumps(st)}\n\n"
         if trace.numeric_plan is not None:
             yield f"event: numeric_math\ndata: {json.dumps(trace.numeric_plan.model_dump(mode='json'))}\n\n"
-        yield f"event: token\ndata: {json.dumps({'token': trace.final_answer})}\n\n"
+        yield f"event: answer\ndata: {json.dumps({'answer': trace.final_answer})}\n\n"
         yield f"event: trace\ndata: {json.dumps(trace.model_dump(mode='json'))}\n\n"
         if trace.verification_report is not None:
             yield f"event: verification\ndata: {json.dumps(trace.verification_report.model_dump(mode='json'))}\n\n"
         yield 'event: done\ndata: {"status":"ok"}\n\n'
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"X-Scholar-Stream-Mode": "staged-trace-delivery"},
+    )

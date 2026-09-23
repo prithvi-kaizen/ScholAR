@@ -1,4 +1,4 @@
-"""Recompute release-v1 scored rows from raw rows without generation."""
+"""Recompute scored release rows from immutable raw rows without generation."""
 
 from __future__ import annotations
 
@@ -12,7 +12,14 @@ if str(ROOT) not in sys.path:
 
 from evaluation.release.gates import validate_gate_registry  # noqa: E402
 from evaluation.release.identity import validate_row_against_condition  # noqa: E402
-from evaluation.release.io import load_cases, load_config, read_json, read_jsonl, resolve_repo_path  # noqa: E402
+from evaluation.release.io import (  # noqa: E402
+    load_cases,
+    load_config,
+    load_corpus_manifest,
+    read_json,
+    read_jsonl,
+    resolve_repo_path,
+)
 from evaluation.release.manifest import load_manifest, update_manifest  # noqa: E402
 from evaluation.release.schemas import ExpectedKeySet, RawReleaseRow  # noqa: E402
 from evaluation.release.scoring import score_release  # noqa: E402
@@ -27,8 +34,11 @@ def run(config_path: Path) -> Path:
         raise ValueError("scoring requires one immutable raw row per expected key")
     manifest = load_manifest(release_dir / "manifest.json")
     cases = {case.case_id: case for case in load_cases(config)}
+    corpus_manifest = load_corpus_manifest(config)
     for row in raw:
-        identity_errors = validate_row_against_condition(row, config, cases[row.key.case_id], manifest)
+        identity_errors = validate_row_against_condition(
+            row, config, cases[row.key.case_id], manifest, corpus_manifest
+        )
         if identity_errors:
             raise ValueError(
                 f"scoring rejected row identity for {row.key.as_string()}: "
@@ -41,7 +51,12 @@ def run(config_path: Path) -> Path:
         )
         if gate_errors:
             raise ValueError("scoring blocked by evidence gates:\n- " + "\n- ".join(gate_errors))
-    score_release(release_dir / "raw/rows.jsonl", release_dir / "scored/rows.jsonl", config.metrics)
+    score_release(
+        release_dir / "raw/rows.jsonl",
+        release_dir / "scored/rows.jsonl",
+        config.metrics,
+        cases,
+    )
     update_manifest(manifest, release_dir, raw_rows=raw, lifecycle_status="SCORED")
     return release_dir
 

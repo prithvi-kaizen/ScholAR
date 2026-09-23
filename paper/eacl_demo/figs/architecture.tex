@@ -1,3 +1,4 @@
+<<<<<<< ours
 \documentclass[border=5pt]{standalone}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning}
@@ -24,4 +25,352 @@
   \node[note,below=3mm of generate] {Local generation};
   \node[note,below=3mm of repair] {Deterministic checking};
 \end{tikzpicture}
+=======
+\documentclass[border=4pt]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc,positioning}
+
+% ---------- Restrained academic palette ----------
+\definecolor{ink}{HTML}{263238}
+\definecolor{muted}{HTML}{66747D}
+\definecolor{line}{HTML}{7C8992}
+
+\definecolor{bluepanel}{HTML}{EDF5FA}
+\definecolor{lavpanel}{HTML}{F3F1FA}
+\definecolor{greenpanel}{HTML}{EEF7F1}
+
+\definecolor{blueaccent}{HTML}{4D7EA8}
+\definecolor{lavaccent}{HTML}{6E6AA6}
+\definecolor{greenaccent}{HTML}{4F8A6D}
+
+\definecolor{footerbg}{HTML}{F5F6F7}
+
+\tikzset{
+  >={Stealth[length=4pt,width=2.5pt]},
+  panel/.style={draw=black!70, line width=.55pt, rounded corners=3pt, minimum width=54mm, minimum height=70mm},
+  stage title/.style={font=\sffamily\bfseries\scriptsize, text=ink, anchor=west},
+  card/.style={draw=line!72, fill=white, line width=.5pt, rounded corners=1.8pt, minimum height=8mm, align=center, font=\sffamily\scriptsize, text=ink, inner xsep=4pt, inner ysep=3pt},
+  wide/.style={card, text width=42mm},
+  medium/.style={card, text width=28mm},
+  retrieval/.style={card, text width=17mm},
+  chip/.style={draw=line!58, fill=white, line width=.45pt, rounded corners=1.5pt, minimum width=12mm, minimum height=6mm, font=\sffamily\tiny, text=ink, align=center},
+  output/.style={card, text width=19mm, minimum height=10mm},
+  flow/.style={->, draw=ink!82, line width=.65pt},
+  tinynote/.style={font=\sffamily\tiny, text=muted, align=center},
+  footer/.style={draw=line!42, fill=footerbg, rounded corners=2pt, minimum height=8mm, font=\sffamily\bfseries\scriptsize, text=ink, align=center}
+}
+
+\begin{document}
+
+\begin{tikzpicture}[x=1mm,y=1mm]
+
+% =========================================================
+% Three main stages
+% =========================================================
+
+\node[
+  panel,
+  fill=bluepanel,
+  anchor=north west
+] (s1) at (0,0) {};
+
+\node[
+  panel,
+  fill=lavpanel,
+  anchor=north west
+] (s2) at (58,0) {};
+
+\node[
+  panel,
+  fill=greenpanel,
+  anchor=north west
+] (s3) at (116,0) {};
+
+% Stage titles
+\node[stage title]
+at ($(s1.north west)+(5mm,-5mm)$)
+{
+  \textcolor{blueaccent}{1}
+  \quad DOCUMENT REPRESENTATION
+};
+
+\node[stage title]
+at ($(s2.north west)+(5mm,-5mm)$)
+{
+  \textcolor{lavaccent}{2}
+  \quad RETRIEVAL + LOCAL ANSWERING
+};
+
+\node[stage title]
+at ($(s3.north west)+(5mm,-5mm)$)
+{
+  \textcolor{greenaccent}{3}
+  \quad VERIFICATION + INSPECTION
+};
+
+
+% =========================================================
+% Stage 1: Document representation
+% =========================================================
+
+\node[wide]
+(pdf)
+at ($(s1.north)+(0,-16mm)$)
+{
+  Scientific PDF
+};
+
+\node[wide]
+(parse)
+at ($(s1.north)+(0,-31mm)$)
+{
+  Layout-aware parsing
+};
+
+% Evidence container
+\node[
+  wide,
+  minimum height=22mm
+]
+(objects)
+at ($(s1.north)+(0,-51mm)$)
+{};
+
+\node[
+  font=\sffamily\bfseries\scriptsize,
+  text=ink
+]
+at ($(objects.center)+(0,6mm)$)
+{
+  Evidence objects
+};
+
+% Evidence types
+\node[chip]
+(textobj)
+at ($(objects.center)+(-14mm,0mm)$)
+{
+  Text
+};
+
+\node[chip]
+(figobj)
+at ($(objects.center)+(0mm,0mm)$)
+{
+  Figure
+};
+
+\node[chip]
+(tableobj)
+at ($(objects.center)+(14mm,0mm)$)
+{
+  Table
+};
+
+\node[tinynote]
+at ($(objects.center)+(0,-7mm)$)
+{
+  page + bounding box + source ID
+};
+
+% Stage 1 flow
+\draw[flow] (pdf) -- (parse);
+\draw[flow] (parse) -- (objects);
+
+
+% =========================================================
+% Stage 2: Retrieval + local answering
+% =========================================================
+
+\node[wide]
+(question)
+at ($(s2.north)+(0,-15mm)$)
+{
+  User question
+};
+
+\node[retrieval]
+(bm25)
+at ($(s2.north)+(-12mm,-28mm)$)
+{
+  BM25
+};
+
+\node[retrieval]
+(dense)
+at ($(s2.north)+(12mm,-28mm)$)
+{
+  Dense
+};
+
+\node[medium]
+(select)
+at ($(s2.north)+(0,-40mm)$)
+{
+  Evidence selection
+  \\[-1pt]
+  {\tiny RRF}
+};
+
+\node[medium]
+(model)
+at ($(s2.north)+(0,-52mm)$)
+{
+  Local model
+};
+
+\node[medium]
+(draft)
+at ($(s2.north)+(0,-64mm)$)
+{
+  Cited draft
+  \\[-1pt]
+  {\tiny [1]\;[2]\;[...]}
+};
+
+% Retrieval flow
+\draw[flow]
+(question.south west)
+--
+(bm25.north);
+
+\draw[flow]
+(question.south east)
+--
+(dense.north);
+
+\draw[flow]
+(bm25)
+--
+(select);
+
+\draw[flow]
+(dense)
+--
+(select);
+
+\draw[flow]
+(select)
+--
+(model);
+
+\draw[flow]
+(model)
+--
+(draft);
+
+% Document evidence feeds retrieval
+\draw[flow]
+(objects.east)
+--
++(3mm,0)
+|-
+(select.west);
+
+
+% =========================================================
+% Stage 3: Verification + inspection
+% =========================================================
+
+\node[
+  wide,
+  minimum height=12mm
+]
+(checks)
+at ($(s3.north)+(0,-18mm)$)
+{
+  \textbf{Deterministic checks}
+  \\[-1pt]
+  {\tiny lexical + numerical}
+};
+
+\node[wide]
+(answer)
+at ($(s3.north)+(0,-36mm)$)
+{
+  Final cited answer
+};
+
+\node[output]
+(highlight)
+at ($(s3.north)+(-13mm,-55mm)$)
+{
+  PDF region
+  \\
+  highlight
+};
+
+\node[output]
+(trace)
+at ($(s3.north)+(13mm,-55mm)$)
+{
+  Evidence Graph
+  \\
+  audit trace
+};
+
+% Verification flow
+\draw[flow]
+(checks)
+--
+(answer);
+
+\draw[flow]
+(answer.south west)
+--
+(highlight.north);
+
+\draw[flow]
+(answer.south east)
+--
+(trace.north);
+
+\node[tinynote]
+at ($(highlight.south)+(0,-3.2mm)$)
+{
+  click citation $\rightarrow$ source region
+};
+
+% Cited draft enters verification through the gap
+% between Stage 2 and Stage 3.
+\coordinate (gutter23low) at (114,-64mm);
+\coordinate (gutter23high) at (114,-18mm);
+
+\draw[flow]
+(draft.east)
+--
+(gutter23low)
+--
+(gutter23high)
+--
+(checks.west);
+
+
+% =========================================================
+% Source identity footer
+% =========================================================
+
+\node[
+  footer,
+  text width=162mm
+]
+at (84,-78mm)
+{
+  Source identity preserved across the pipeline
+  \\[-1pt]
+  {
+    \normalfont\tiny
+    document
+    \;\textbullet\;
+    page
+    \;\textbullet\;
+    bounding box
+    \;\textbullet\;
+    evidence ID
+  }
+};
+
+\end{tikzpicture}
+
+>>>>>>> theirs
 \end{document}

@@ -3,7 +3,7 @@
 
 Executes real inference on 50 curated multi-level questions across 10 papers
 using the local Qwen 3.5 9B VLM, captures complete telemetry and evidence,
-computes multi-dimensional metrics against 4 baselines, and exports artifacts.
+computes transparent automatic diagnostics, and exports artifacts.
 """
 
 import asyncio
@@ -83,8 +83,8 @@ def compute_exact_match(prediction: str, ground_truth: str) -> float:
     return 1.0 if normalize_text(prediction) == normalize_text(ground_truth) else 0.0
 
 
-def compute_atomic_fact_score(prediction: str, ground_truth: str, evidence: str) -> tuple[float, float, float]:
-    """Calculate atomic claim precision and recall based on ground truth and evidence key terms."""
+def compute_reference_unit_overlap(prediction: str, ground_truth: str, evidence: str) -> tuple[float, float, float]:
+    """Calculate lexical overlap with automatically segmented reference units."""
     # Extract substantive clauses/entities from evidence
     key_clauses = [
         c.strip() for c in re.split(r"[,.;\n]", evidence)
@@ -126,10 +126,10 @@ def compute_atomic_fact_score(prediction: str, ground_truth: str, evidence: str)
     return precision, recall, f1
 
 
-def evaluate_expert_correctness(prediction: str, ground_truth: str, evidence: str) -> float:
-    """Grade free-form technical answer as 1.0 (correct), 0.5 (partially correct), or 0.0."""
+def compute_key_term_coverage(prediction: str, ground_truth: str, evidence: str) -> float:
+    """Automatic key-term diagnostic; not a human or entailment judgment."""
     _, token_rec, token_f1 = compute_token_f1(prediction, ground_truth)
-    _, fact_rec, fact_f1 = compute_atomic_fact_score(prediction, ground_truth, evidence)
+    _, fact_rec, fact_f1 = compute_reference_unit_overlap(prediction, ground_truth, evidence)
 
     # Check key numeric / architectural tokens
     gt_numbers = re.findall(r"\b\d+(?:\.\d+)?\b", ground_truth)
@@ -140,11 +140,7 @@ def evaluate_expert_correctness(prediction: str, ground_truth: str, evidence: st
     )
 
     combined_score = 0.4 * token_f1 + 0.4 * fact_rec + 0.2 * num_match_rate
-    if combined_score >= 0.55 or (fact_rec >= 0.65 and num_match_rate >= 0.6):
-        return 1.0
-    elif combined_score >= 0.30 or fact_rec >= 0.35:
-        return 0.5
-    return 0.0
+    return max(0.0, min(1.0, combined_score))
 
 
 async def run_single_query(item: dict[str, Any], index: int, total: int) -> dict[str, Any]:
@@ -199,8 +195,8 @@ async def run_single_query(item: dict[str, Any], index: int, total: int) -> dict
             "metrics": {
                 "exact_match": 0.0,
                 "token_f1": 0.0,
-                "atomic_f1": 0.0,
-                "expert_correctness": 0.0,
+                "reference_unit_overlap_f1": 0.0,
+                "automatic_key_term_coverage": 0.0,
                 "retrieval_recall_at_1": 0.0,
                 "retrieval_recall_at_5": 0.0,
                 "mrr_at_5": 0.0,
@@ -234,8 +230,8 @@ async def run_single_query(item: dict[str, Any], index: int, total: int) -> dict
     # Answer correctness metrics
     em = compute_exact_match(final_answer, gt_answer)
     _, _, token_f1 = compute_token_f1(final_answer, gt_answer)
-    fact_prec, fact_rec, fact_f1 = compute_atomic_fact_score(final_answer, gt_answer, gt_evidence)
-    expert_score = evaluate_expert_correctness(final_answer, gt_answer, gt_evidence)
+    unit_prec, unit_rec, unit_f1 = compute_reference_unit_overlap(final_answer, gt_answer, gt_evidence)
+    key_term_coverage = compute_key_term_coverage(final_answer, gt_answer, gt_evidence)
 
     # Citation metrics
     verified_claims = [
@@ -315,10 +311,10 @@ async def run_single_query(item: dict[str, Any], index: int, total: int) -> dict
         "metrics": {
             "exact_match": em,
             "token_f1": round(token_f1, 4),
-            "atomic_precision": round(fact_prec, 4),
-            "atomic_recall": round(fact_rec, 4),
-            "atomic_f1": round(fact_f1, 4),
-            "expert_correctness": expert_score,
+            "reference_unit_overlap_precision": round(unit_prec, 4),
+            "reference_unit_overlap_recall": round(unit_rec, 4),
+            "reference_unit_overlap_f1": round(unit_f1, 4),
+            "automatic_key_term_coverage": round(key_term_coverage, 4),
             "retrieval_recall_at_1": recall_at_1,
             "retrieval_recall_at_5": recall_at_5,
             "mrr_at_5": round(mrr_at_5, 4),
@@ -391,11 +387,13 @@ async def main():
 
     total_duration = round(time.perf_counter() - total_start, 2)
     successful_results = [r for r in results if r["success"]]
+    if not successful_results:
+        raise RuntimeError("No successful cases; refusing to emit aggregate metrics")
 
     # Aggregate ScholAR Metrics
     mean_token_f1 = sum(r["metrics"]["token_f1"] for r in successful_results) / len(successful_results)
-    mean_atomic_f1 = sum(r["metrics"]["atomic_f1"] for r in successful_results) / len(successful_results)
-    mean_expert = sum(r["metrics"]["expert_correctness"] for r in successful_results) / len(successful_results)
+    mean_unit_f1 = sum(r["metrics"]["reference_unit_overlap_f1"] for r in successful_results) / len(successful_results)
+    mean_key_coverage = sum(r["metrics"]["automatic_key_term_coverage"] for r in successful_results) / len(successful_results)
     mean_r1 = sum(r["metrics"]["retrieval_recall_at_1"] for r in successful_results) / len(successful_results)
     mean_r5 = sum(r["metrics"]["retrieval_recall_at_5"] for r in successful_results) / len(successful_results)
     mean_mrr = sum(r["metrics"]["mrr_at_5"] for r in successful_results) / len(successful_results)
@@ -406,71 +404,12 @@ async def main():
     p95_latency = latencies[int(len(latencies) * 0.95)]
     mean_latency = round(sum(latencies) / len(latencies), 2)
 
-    # Baselines Comparison Matrix (Empirical benchmarks scaled from literature & local ablations)
-    baselines_comparison = {
-        "Lexical BM25 + SLM": {
-            "token_f1": 31.2,
-            "atomic_f1": 28.4,
-            "expert_correctness": 38.0,
-            "recall_at_1": 41.5,
-            "recall_at_5": 58.2,
-            "mrr_at_5": 0.46,
-            "bundle_recall": 26.5,
-            "unsupported_claim_rate": 28.4,
-            "p50_latency_s": 1.4,
-            "vram_gb": 5.9,
-        },
-        "Dense BGE-M3 + SLM": {
-            "token_f1": 38.6,
-            "atomic_f1": 36.1,
-            "expert_correctness": 48.0,
-            "recall_at_1": 52.0,
-            "recall_at_5": 68.4,
-            "mrr_at_5": 0.58,
-            "bundle_recall": 39.0,
-            "unsupported_claim_rate": 21.2,
-            "p50_latency_s": 2.1,
-            "vram_gb": 5.9,
-        },
-        "Visual ColPali-Only": {
-            "token_f1": 42.4,
-            "atomic_f1": 40.8,
-            "expert_correctness": 54.0,
-            "recall_at_1": 61.2,
-            "recall_at_5": 74.5,
-            "mrr_at_5": 0.65,
-            "bundle_recall": 48.2,
-            "unsupported_claim_rate": 18.5,
-            "p50_latency_s": 4.8,
-            "vram_gb": 8.2,
-        },
-        "Naive Hybrid RAG (No AST)": {
-            "token_f1": 45.1,
-            "atomic_f1": 43.5,
-            "expert_correctness": 58.0,
-            "recall_at_1": 63.8,
-            "recall_at_5": 77.2,
-            "mrr_at_5": 0.69,
-            "bundle_recall": 52.4,
-            "unsupported_claim_rate": 16.8,
-            "p50_latency_s": 3.6,
-            "vram_gb": 5.9,
-        },
-        "ScholAR (Full Pipeline - Ours)": {
-            "token_f1": round(mean_token_f1 * 100, 1),
-            "atomic_f1": round(mean_atomic_f1 * 100, 1),
-            "expert_correctness": round(mean_expert * 100, 1),
-            "recall_at_1": round(mean_r1 * 100, 1),
-            "recall_at_5": round(mean_r5 * 100, 1),
-            "mrr_at_5": round(mean_mrr, 3),
-            "bundle_recall": round(mean_bundle * 100, 1),
-            "unsupported_claim_rate": round(mean_unsupported * 100, 1),
-            "p50_latency_s": p50_latency,
-            "vram_gb": 5.9,
-        },
-    }
-
     summary = {
+        "status": "MEASURED_RETROSPECTIVE_DIAGNOSTIC",
+        "measurement_note": (
+            "No baseline answer scores or human correctness judgments are inferred. "
+            "Automatic overlap metrics are diagnostics only."
+        ),
         "total_questions": len(questions),
         "successful_runs": len(successful_results),
         "failed_runs": len(questions) - len(successful_results),
@@ -480,15 +419,14 @@ async def main():
         "p95_latency_s": p95_latency,
         "metrics_summary": {
             "mean_token_f1": round(mean_token_f1, 4),
-            "mean_atomic_f1": round(mean_atomic_f1, 4),
-            "mean_expert_correctness": round(mean_expert, 4),
+            "mean_reference_unit_overlap_f1": round(mean_unit_f1, 4),
+            "mean_automatic_key_term_coverage": round(mean_key_coverage, 4),
             "mean_retrieval_recall_at_1": round(mean_r1, 4),
             "mean_retrieval_recall_at_5": round(mean_r5, 4),
             "mean_mrr_at_5": round(mean_mrr, 4),
             "mean_bundle_recall": round(mean_bundle, 4),
             "mean_unsupported_claim_rate": round(mean_unsupported, 4),
         },
-        "baselines_comparison": baselines_comparison,
         "query_results": results,
     }
 
@@ -497,7 +435,12 @@ async def main():
 
     logger.info("=== 50-QUESTION BENCHMARK COMPLETE ===")
     logger.info("Total Duration: %.1f s (P50: %.1f s, P95: %.1f s)", total_duration, p50_latency, p95_latency)
-    logger.info("Expert Correctness: %.1f%% | Token F1: %.1f%% | Atomic F1: %.1f%%", mean_expert * 100, mean_token_f1 * 100, mean_atomic_f1 * 100)
+    logger.info(
+        "Key-term coverage: %.1f%% | Token F1: %.1f%% | Reference-unit overlap F1: %.1f%%",
+        mean_key_coverage * 100,
+        mean_token_f1 * 100,
+        mean_unit_f1 * 100,
+    )
     logger.info("Recall@1: %.1f%% | Recall@5: %.1f%% | MRR@5: %.3f | Bundle Recall: %.1f%%", mean_r1 * 100, mean_r5 * 100, mean_mrr, mean_bundle * 100)
     logger.info("Saved complete results to %s", RESULTS_JSON)
 

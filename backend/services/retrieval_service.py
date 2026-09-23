@@ -304,13 +304,30 @@ def retrieve_chunks(
     include_image_channel: bool = True,
     include_crop_image_channel: bool | None = None,
     include_page_image_channel: bool | None = None,
+    include_modality_channel: bool = True,
     visual_page_backend: str | None = None,
+    strict_components: bool = False,
     retrieval_metadata: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Run lexical, text-dense, modality, crop-image, and page-image retrieval."""
     base_query_terms = tokenize(message)
     if not base_query_terms or not chunks:
         return []
+
+    channel_execution: dict[str, dict[str, Any]] = {
+        "bm25": {"requested": True, "executed": False, "result_count": 0},
+        "dense": {"requested": True, "executed": False, "result_count": 0},
+        "modality": {
+            "requested": include_modality_channel,
+            "executed": False,
+            "result_count": 0,
+        },
+        "crop_image": {"requested": False, "executed": False, "result_count": 0},
+        "page_image": {"requested": False, "executed": False, "result_count": 0},
+        "reranker": {"requested": True, "executed": False, "result_count": 0},
+    }
+    if retrieval_metadata is not None:
+        retrieval_metadata["channel_execution"] = channel_execution
 
     has_visual_intent, has_tabular_intent = _is_implicit_visual_or_tabular_query(
         message, base_query_terms
@@ -349,8 +366,22 @@ def retrieve_chunks(
             bm25_ranked, start=1
         )
     ]
+    channel_execution["bm25"].update(executed=True, result_count=len(lexical_list))
 
     default_source = paper_id or str(chunks[0].get("document_id") or "default")
+    dense_status = DenseEmbeddingService.status()
+    if strict_components and (
+        dense_status.get("model_loaded") is not True
+        or dense_status.get("fallback_mode") is True
+    ):
+        channel_execution["dense"].update(
+            executed=False,
+            component_identity=dense_status,
+        )
+        raise RuntimeError(
+            "Measured dense retrieval requires the frozen transformer encoder; "
+            "feature-hashing fallback is forbidden"
+        )
     dense_results = DenseEmbeddingService.search_dense(
         default_source,
         message,
@@ -361,6 +392,20 @@ def retrieve_chunks(
         {**chunk, "dense_score": round(score, 6), "dense_rank": rank}
         for rank, (chunk, score) in enumerate(dense_results, start=1)
     ]
+    dense_status = DenseEmbeddingService.status()
+    channel_execution["dense"].update(
+        executed=True,
+        result_count=len(dense_list),
+        component_identity=dense_status,
+    )
+    if strict_components and (
+        dense_status.get("model_loaded") is not True
+        or dense_status.get("fallback_mode") is True
+    ):
+        raise RuntimeError(
+            "Measured dense retrieval requires the frozen transformer encoder; "
+            "feature-hashing fallback is forbidden"
+        )
 
     # Unlike modality heuristics, paired image retrieval is attempted for every
     # query containing image-bearing evidence and never downloads at runtime.
@@ -374,6 +419,8 @@ def retrieve_chunks(
         if include_page_image_channel is None
         else include_page_image_channel
     )
+    channel_execution["crop_image"]["requested"] = crop_image_enabled
+    channel_execution["page_image"]["requested"] = page_image_enabled
     minimum_image_similarity = VisualEmbeddingService.minimum_similarity()
     if crop_image_enabled:
         image_results = VisualEmbeddingService.search_visual(
@@ -384,6 +431,18 @@ def retrieve_chunks(
         )
     else:
         image_results = []
+    crop_status = VisualEmbeddingService.status()
+    channel_execution["crop_image"].update(
+        executed=crop_image_enabled,
+        result_count=len(image_results),
+        component_identity=crop_status if crop_image_enabled else None,
+    )
+    if strict_components and crop_image_enabled:
+        if crop_status.get("last_request_attempted") and crop_status.get("last_request_succeeded") is False:
+            raise RuntimeError(
+                "Measured crop-image retrieval failed: "
+                + str(crop_status.get("fallback_reason") or "paired visual encoder unavailable")
+            )
     qualified_image_results = [
         (chunk, score)
         for chunk, score in image_results
@@ -418,6 +477,16 @@ def retrieve_chunks(
         )
     if retrieval_metadata is not None:
         retrieval_metadata["visual_page_retrieval"] = page_search.status.as_dict()
+    channel_execution["page_image"].update(
+        executed=page_image_enabled,
+        result_count=len(page_search.hits),
+        component_identity=page_search.status.as_dict() if page_image_enabled else None,
+    )
+    if strict_components and page_image_enabled and page_search.status.succeeded is not True:
+        raise RuntimeError(
+            f"Measured {page_search.status.requested_backend} page retrieval did not execute: "
+            f"{page_search.status.failure_reason or 'no complete page index was available'}"
+        )
     page_list = [
         {
             **chunk,
@@ -476,9 +545,13 @@ def retrieve_chunks(
         {**chunk, "modality_score": round(score, 6), "modality_rank": rank}
         for rank, (score, chunk) in enumerate(modality_ranked, start=1)
     ]
+    channel_execution["modality"].update(
+        executed=include_modality_channel,
+        result_count=len(modality_list),
+    )
 
     channel_lists = [lexical_list, dense_list]
-    if modality_list:
+    if include_modality_channel and modality_list:
         channel_lists.append(modality_list)
     if image_list:
         channel_lists.append(image_list)
@@ -511,7 +584,20 @@ def retrieve_chunks(
                 for item in lexical_list[:5] + dense_list[:5]
             )
 
-    reranked = RerankerService.rerank(message, top_candidates, top_k=limit)
+    if strict_components:
+        reranked = RerankerService.rerank(
+            message, top_candidates, top_k=limit, require_model=True
+        )
+    else:
+        reranked = RerankerService.rerank(message, top_candidates, top_k=limit)
+    if retrieval_metadata is not None:
+        retrieval_metadata["reranker"] = RerankerService.status()
+    reranker_status = RerankerService.status()
+    channel_execution["reranker"].update(
+        executed=True,
+        result_count=len(reranked),
+        component_identity=reranker_status,
+    )
 
     # A score-floor-qualified, uncorroborated image is retained only as a
     # bounded inspection candidate. It receives no reranker prior and does not

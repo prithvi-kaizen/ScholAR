@@ -1,15 +1,17 @@
 {
   "artifact_type": "compiled_pdf_compliance_report",
   "checks": [
-    "qpdf",
     "A4",
-    "embedded_fonts",
-    "no_type3",
     "anonymous_review",
-    "six_content_pages"
+    "embedded_fonts_pymupdf",
+    "official_style_provenance",
+    "pdf_parse",
+    "six_content_pages",
+    "submission_placeholders"
   ],
+  "errors": [],
   "pdf_path": "paper/eacl_industry/main.pdf",
-  "pdf_sha256": "3c7830e81c57283e2f0ef11e54c6428ce6060bb4c2bafb9e8f5345446586369b",
+  "pdf_sha256": "df364109cd46c37a44a98b18317dbf0c6045e35deac3d9bc428a899cfedce8b7",
   "schema_version": "1.0",
   "status": "PASS",
   "style_manifest_sha256": "977a4b70bf3ad866b5218abeca6d8e42527e783323fb6029dbf4a3a5a54c7124"

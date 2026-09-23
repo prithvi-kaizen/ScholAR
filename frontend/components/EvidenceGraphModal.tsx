@@ -111,13 +111,16 @@ export function EvidenceGraphModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-semibold text-white">Multi-Level Evidence Graph</h2>
+                <h2 className="text-base font-semibold text-white">Evidence Selection Audit</h2>
                 <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-semibold text-purple-300">
                   {reasoningLevel.replace(/_/g, " ")}
                 </span>
               </div>
               <p className="text-xs text-zinc-400 mt-0.5 truncate max-w-xl">
                 &ldquo;{query}&rdquo;
+              </p>
+              <p className="text-[10px] text-zinc-500 mt-0.5">
+                Heuristic context ordering; not a verified reasoning proof.
               </p>
             </div>
           </div>
@@ -136,7 +139,7 @@ export function EvidenceGraphModal({
           <div className="flex-1 overflow-y-auto p-6 space-y-4 border-r border-line bg-zinc-900/20">
             <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
               <Layers size={13} />
-              Reasoning Traversal Path ({reasoningSteps.length} Nodes)
+              Ordered Evidence View ({reasoningSteps.length} Nodes)
             </div>
 
             <div className="space-y-3 pt-2">
@@ -149,7 +152,7 @@ export function EvidenceGraphModal({
                       <div className="flex items-center justify-center my-1.5 text-zinc-600">
                         <div className="flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-zinc-800/80 border border-zinc-700/50 text-[10px] text-zinc-400">
                           <span>
-                            {idx === 1 ? "supports mechanism" : "explains result"}
+                            candidate relation
                           </span>
                           <ArrowRight size={10} className="text-purple-400" />
                         </div>
@@ -203,7 +206,7 @@ export function EvidenceGraphModal({
               <div className="space-y-4">
                 <div>
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-purple-400 mb-1">
-                    Step {currentStep.step_index} of {reasoningSteps.length}
+                    Evidence {currentStep.step_index} of {reasoningSteps.length}
                   </div>
                   <h3 className="text-sm font-semibold text-white">
                     {currentStep.section || currentStep.evidence_id}
@@ -217,7 +220,7 @@ export function EvidenceGraphModal({
 
                 {currentStep.subgoal && (
                   <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3 text-xs">
-                    <div className="text-[11px] font-semibold text-purple-300 mb-1">MLR Step Subgoal</div>
+                    <div className="text-[11px] font-semibold text-purple-300 mb-1">Heuristic Inspection Label</div>
                     <p className="text-zinc-200 leading-relaxed">{currentStep.subgoal}</p>
                     {currentStep.reasoning_mode && (
                       <div className="mt-2 pt-2 border-t border-purple-500/20 flex items-center justify-between text-[11px]">
@@ -229,7 +232,7 @@ export function EvidenceGraphModal({
                 )}
 
                 <div className="rounded-xl border border-line bg-zinc-900/60 p-3 text-xs text-zinc-300 leading-relaxed">
-                  <div className="font-medium text-white mb-1">Semantic Contribution:</div>
+                  <div className="font-medium text-white mb-1">Displayed Evidence Role:</div>
                   <p>{currentStep.claim_contribution}</p>
                 </div>
 

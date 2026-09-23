@@ -8,8 +8,10 @@
 \usepackage{graphicx}
 \usepackage{enumitem}
 \usepackage{url}
+\usepackage{balance}
+\usepackage{needspace}
 
-\title{\textsc{ScholAR}: Inspectable Local-First Question Answering for Scientific Papers}
+\title{\textsc{SCHOLAR}: Inspectable Local-First Question Answering for Scientific Papers}
 
 \author{Prithviraj Patil \\
   Independent Researcher \\
@@ -29,11 +31,15 @@
 \input{sections/introduction}
 \input{sections/system}
 \input{sections/demo}
+\input{sections/implementation}
 \input{sections/evaluation}
 \input{sections/availability}
 \input{sections/conclusion}
 
 \input{limitations}
+\Needspace{0.28\textheight}
+\input{sections/evaluation_details}
+\balance
 \clearpage
 \input{ethics}
 

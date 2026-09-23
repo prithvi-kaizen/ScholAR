@@ -10,10 +10,15 @@ from backend.services.pdf_service import (
     extract_figures,
 )
 
+PDF_PATH = Path(__file__).resolve().parents[1] / "backend/data/papers/1706.03762/paper.pdf"
+pytestmark = pytest.mark.skipif(
+    not PDF_PATH.is_file(),
+    reason="optional locally acquired Transformer PDF is not part of the clean repository",
+)
+
 
 def test_find_matching_table_bbox_attention_table3():
-    pdf_path = Path("backend/data/papers/1706.03762/paper.pdf")
-    assert pdf_path.exists(), "Test PDF 1706.03762 must exist"
+    pdf_path = PDF_PATH
 
     doc = fitz.open(pdf_path)
     page_9 = doc[8]  # 0-indexed page 9
@@ -37,7 +42,7 @@ def test_find_matching_table_bbox_attention_table3():
 
 
 def test_extract_figures_table3_full_content():
-    pdf_path = Path("backend/data/papers/1706.03762/paper.pdf")
+    pdf_path = PDF_PATH
     scratch_dir = Path("scratch/test_figures_verify")
     scratch_dir.mkdir(parents=True, exist_ok=True)
 

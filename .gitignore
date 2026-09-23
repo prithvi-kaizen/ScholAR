@@ -17,6 +17,12 @@ backend/data/papers/*/
 backend/data/papers/.*.lock
 backend/data/traces/
 backend/data/search_cache.json
+backend/data/*.db
+backend/data/**/*.db
+backend/data/**/*.sqlite
+backend/data/**/*.sqlite3
+backend/data/**/*.npy
+backend/data/**/*.npz
 !backend/data/papers/.gitkeep
 
 # Local tooling / editor working directories
@@ -35,6 +41,8 @@ docs/reference_papers/
 evaluation/human_eval/score_sheet.html
 evaluation/human_eval/exports/
 evaluation/human_eval/answers.json
+evaluation/human_eval/private/
+evaluation/calibration/private/
 
 # M3SciQA dataset clone (74MB, re-fetchable: see evaluation/m3sciqa/build_m3sciqa.py)
 evaluation/m3sciqa/data/
@@ -44,8 +52,17 @@ evaluation/results/*
 !evaluation/results/.gitkeep
 evaluation/visual_eval_results.json
 evaluation/mined_cases.json
+evaluation/reports/*.aux
+evaluation/reports/*.log
+evaluation/reports/*.out
+evaluation/reports/*_preview.png
 
 # reference papers kept locally for figure/table study (not ours to redistribute)
 /m3sciqa.pdf
 /paperqa.pdf
+/eacl-pyp-2026/
+/release/*.zip
+/release/*.zip.sha256
+paper/eacl_industry/page_*_rendered.png
+paper/eacl_industry/*_preview.png
 scratch/

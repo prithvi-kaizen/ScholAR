@@ -31,25 +31,66 @@
       "sources": ["backend/services/verifier_service.py", "tests/test_verifier_and_repair.py"]
     },
     {
-      "claim_id": "EMP-001",
-      "text": "Selective repair improves independently judged supported-claim rate under the predeclared coverage bound.",
-      "claim_type": "empirical",
-      "status": "PENDING",
-      "sources": []
+      "claim_id": "EMP-R01",
+      "text": "Retrospective retrieval: BM25+dense has an uncertain Hit@1 gain over BM25, while modality boosting harms first-page ranking.",
+      "claim_type": "empirical_retrospective",
+      "status": "SUPPORTED",
+      "sources": ["evaluation/PHASE2_AGGREGATE_PUBLIC.json"]
     },
     {
-      "claim_id": "EMP-002",
-      "text": "The system improves researcher task outcomes or time to verified answers.",
-      "claim_type": "empirical",
-      "status": "PENDING",
-      "sources": []
+      "claim_id": "EMP-R02",
+      "text": "Paired repair raises automatic overlap while lowering cited-page alignment on the answerable cases.",
+      "claim_type": "empirical_retrospective",
+      "status": "SUPPORTED",
+      "sources": ["evaluation/PHASE2_AGGREGATE_PUBLIC.json"]
     },
     {
-      "claim_id": "EMP-003",
-      "text": "The final production configuration has a measured resource and reliability envelope on named available hardware.",
-      "claim_type": "empirical",
-      "status": "PENDING",
-      "sources": []
+      "claim_id": "EMP-R03",
+      "text": "The pipeline ABSTAINED status declines in cross-paper controls after repair; semantic refusal is unjudged.",
+      "claim_type": "empirical_retrospective",
+      "status": "SUPPORTED",
+      "sources": ["evaluation/PHASE2_AGGREGATE_PUBLIC.json"]
+    },
+    {
+      "claim_id": "EMP-R04",
+      "text": "Local operational timings are measured on one 18 GB M3 Pro without peak RSS or controlled cache profiling.",
+      "claim_type": "empirical_retrospective",
+      "status": "SUPPORTED",
+      "sources": ["evaluation/PHASE2_AGGREGATE_PUBLIC.json"]
+    },
+    {
+      "claim_id": "EMP-R05",
+      "text": "A completed 150-case LLM-based evaluation records 59 correct, 33 partly correct, 20 incorrect, and 38 not-judgeable correctness labels; only 113 cases passed the reference-eligibility gate.",
+      "claim_type": "empirical_retrospective_llm_judge",
+      "status": "SUPPORTED",
+      "sources": [
+        "evaluation/EACL_DEMO_150_LUNA_PUBLIC.json",
+        "evaluation/results/eacl_demo_150_luna/judgments.jsonl",
+        "evaluation/results/eacl_demo_150_luna/manifest.json"
+      ]
+    },
+    {
+      "claim_id": "EMP-R06",
+      "text": "The 150-case LLM-based evaluation is not attributed to a named judge model in the manuscript, and its visual-grounding distribution is excluded because retained model identity and visual-rubric values do not match the planning protocol.",
+      "claim_type": "evaluation_governance",
+      "status": "SUPPORTED",
+      "sources": [
+        "evaluation/protocols/eacl_demo_150_llm_judge.json",
+        "evaluation/results/eacl_demo_150_luna/judgments.jsonl",
+        "evaluation/aggregate_eacl_demo_150_luna_judge.py",
+        "evaluation/update_luna_visual_judgments.py"
+      ]
+    },
+    {
+      "claim_id": "HUM-P01",
+      "text": "The prepared human study assigns 50 questions to five evaluators for 250 planned ratings, but contained zero submitted ratings across zero cases at the September 21, 2026 manuscript freeze.",
+      "claim_type": "evaluation_governance",
+      "status": "SUPPORTED",
+      "sources": [
+        "evaluation/HUMAN_EVAL_50_STATUS_PUBLIC.json",
+        "evaluation/human_eval/STUDY_50_FIVE_RATERS_README.md",
+        "evaluation/human_eval/offline_50_import.py"
+      ]
     }
   ]
 }

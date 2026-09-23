@@ -78,8 +78,9 @@ evidence:
 
 1. `run_release_suite.py` records raw production `AnswerTrace` rows.
 2. `score_release.py` creates scored rows without changing raw traces.
-3. `aggregate_release.py` creates case-balanced aggregates and tables.
-4. `validate_release.py` checks schemas, checksums, identity, provenance, and gates.
+3. `score_human_gate.py` computes the predeclared support/coverage decision from adjudicated labels.
+4. `aggregate_release.py` creates case-balanced aggregates and schema-v2 tables only after that gate passes.
+5. `validate_release.py` checks schemas, checksums, trace-executed channels, source bundles, identities, provenance, and gates.
 
 `reproduce_release_fixture.py` rebuilds the model-free toy fixture under
 `fixtures/releases/release_v1_minimal/`. The real `releases/eacl_industry_v1/` skeleton
@@ -96,3 +97,39 @@ evaluator exports are local-only. Validate templates with:
 ```
 
 No toy fixture or empty template is empirical submission evidence.
+
+## EACL protocol and held-out benchmark
+
+The preregistration candidate is `protocols/eacl_industry_v1_protocol.json`. It
+predeclares conditions S0--S5, primary metrics, paper-clustered paired bootstrap
+inference, human-label requirements, and immutable failure accounting. It remains
+`DRAFT` while dataset, model, prompt, hardware, and annotation identities are open.
+
+The claim-bearing release config now uses schema v2 and encodes S0--S5 as typed retrieval controls. Measured
+conditions reject automatic backend selection, a missing required page retriever,
+feature-hashed dense retrieval, and heuristic reranker fallback. Each row binds the
+corpus manifest, ingestion/chunking policies, retrieval controls, component and
+generator identities, calibration hashes, exact device, prompt hashes, verifier,
+and fallback policy. Validation reads channel execution from `AnswerTrace`; it does
+not infer execution from environment settings. Scoring reads gold pages and regions only from the
+frozen case file; citation relevance is distinct from citation-page provenance.
+Aggregation treats papers as independent clusters, emits per-paper effects, and
+applies Holm--Bonferroni correction to the declared paired family.
+
+Visual verification is origin-aware. Source pixels remain the cited evidence;
+the vision model's transcription is a linked derived artifact and is never added
+to lexical or semantic support text. Pixel-only claims are labeled
+`UNVERIFIED_VISUAL` for independent human review. `support_calibration.py` can fit
+a strict-local semantic diagnostic only from a schema-validated development split;
+raw calibration labels stay under the ignored `calibration/private/` directory.
+
+```bash
+make eacl-protocol-check
+make eacl-heldout-audit
+make eacl-heldout-ready  # intentionally fails until both artifacts are final
+```
+
+The legacy 200-question file is development-only. Its generated quality audit records
+paper leakage, corpus coverage, missing adjudication fields, modality balance, and
+answerability coverage. Only `audit_heldout_candidate.py --freeze-to ...` may create
+the release case file, and it refuses to write when any readiness rule fails.

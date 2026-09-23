@@ -48,7 +48,7 @@ class TestExportService(unittest.TestCase):
         )
 
     def test_export_markdown(self):
-        """Verify Markdown output contains all structured reasoning sections."""
+        """Verify Markdown labels heuristic artifacts as an evidence audit."""
         md = ExportService.export_to_markdown(
             paper_id="attention_vaswani_2017",
             query=self.analysis.original_query,
@@ -59,12 +59,13 @@ class TestExportService(unittest.TestCase):
             verification=self.verification,
         )
 
-        self.assertIn("# ScholAR Multi-Level Reasoning Report", md)
+        self.assertIn("# ScholAR Answer and Evidence Audit", md)
         self.assertIn("L5_MULTI_HOP_SYNTHESIS", md)
-        self.assertIn("Deterministic Tabular Arithmetic Proof", md)
+        self.assertIn("Diagnostic Table Arithmetic", md)
         self.assertIn("+3.24", md)
-        self.assertIn("Evidence Reasoning Path (DAG)", md)
-        self.assertIn("3-Way Atomic Claim Entailment Audit", md)
+        self.assertIn("Explanatory Evidence Ordering", md)
+        self.assertIn("not a reasoning proof", md)
+        self.assertIn("Atomic Claim Support Audit", md)
 
     def test_export_latex(self):
         """Verify LaTeX output contains TikZ figure and document structure."""
@@ -81,7 +82,8 @@ class TestExportService(unittest.TestCase):
         self.assertIn("\\documentclass{article}", tex)
         self.assertIn("\\usepackage{tikz}", tex)
         self.assertIn("\\begin{tikzpicture}", tex)
-        self.assertIn("ScholAR Multi-Level Reasoning Report", tex)
+        self.assertIn("ScholAR Answer and Evidence Audit", tex)
+        self.assertIn("not a reasoning proof", tex)
 
 
 if __name__ == "__main__":

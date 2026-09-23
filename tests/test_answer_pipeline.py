@@ -91,12 +91,64 @@ class TestAnswerPipeline(unittest.TestCase):
         response = restored.to_chat_response()
         self.assertEqual(response["trace_schema_version"], "1.0")
         self.assertIn("trace", response)
+        self.assertFalse(response["numeric_plan_used_for_generation"])
+        self.assertEqual(response["evidence_graph_role"], "context_selection_audit")
+        self.assertEqual(response["reasoning_path_role"], "explanatory_evidence_order")
+        self.assertFalse(response["reasoning_path_used_for_generation"])
 
     def test_measured_policy_rejects_extractively_degraded_execution(self) -> None:
         trace = self._run(ExecutionPolicy.REQUIRE_LOCAL_MODEL)
         self.assertEqual(trace.status, PipelineStatus.ERROR)
         self.assertEqual(trace.generation.mode, GenerationMode.NO_GENERATION)
         self.assertIn("unavailable", trace.generation.error or "")
+
+    def test_generation_context_contains_only_retrieved_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            irrelevant = {
+                "chunk_id": "chunk_irrelevant",
+                "evidence_id": "E_IRRELEVANT",
+                "document_id": "paper",
+                "source_paper_id": "paper",
+                "page": 1,
+                "section_title": "Introduction",
+                "text": "This unrelated introduction describes historical background in detail.",
+            }
+            retrieved = {
+                "chunk_id": "chunk_retrieved",
+                "evidence_id": "E_RETRIEVED",
+                "document_id": "paper",
+                "source_paper_id": "paper",
+                "page": 2,
+                "section_title": "Results",
+                "text": "The reported method improves retrieval accuracy on the benchmark.",
+            }
+            (root / "metadata.json").write_text(
+                json.dumps({"title": "Context Test", "authors": []}), encoding="utf-8"
+            )
+            (root / "pages.json").write_text("[]", encoding="utf-8")
+            (root / "chunks.json").write_text(
+                json.dumps([irrelevant, retrieved]), encoding="utf-8"
+            )
+            (root / "paper.pdf").write_bytes(b"%PDF-test")
+            with (
+                patch("backend.services.answer_pipeline.paper_dir", return_value=root),
+                patch("backend.services.answer_pipeline.retrieve_chunks", return_value=[retrieved]),
+                patch("backend.services.answer_pipeline.ollama_available", AsyncMock(return_value=False)),
+                patch.object(TelemetryService, "persist_trace", side_effect=lambda trace: trace),
+            ):
+                trace = asyncio.run(AnswerPipelineService.answer(AnswerPipelineRequest(
+                    paper_id="paper",
+                    query="What improves retrieval accuracy?",
+                )))
+
+        prompt_ids = {item.identity.local_id for item in trace.prompt_evidence}
+        self.assertIn("chunk_retrieved", prompt_ids)
+        self.assertNotIn("chunk_irrelevant", prompt_ids)
+        self.assertFalse(any(
+            hit.identity.local_id == "chunk_irrelevant" and hit.shown_to_generator
+            for hit in trace.retrieval_hits
+        ))
 
     def test_chat_route_delegates_once_and_returns_the_v1_trace(self) -> None:
         trace = self._run(ExecutionPolicy.ALLOW_EXTRACTIVE_FALLBACK)

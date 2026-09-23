@@ -1,31 +1,6 @@
-\section{Claim Support and Selective Repair}
-\subsection{Span-preserving claims}
-The verifier segments model-generated text into atomic factual claims while retaining zero-based, half-open character offsets $[s_c, e_c)$ into the exact generated text. Citation markers $[E_k]$ are parsed as distinct citation spans $[s_m, e_m)$, decoupling factual assertions from citation pointers. Each atomic claim records its textual span, associated citation IDs, resolved evidence references, first- and second-pass labels, confidence score, and repair action.
+\section{Claim Checking and Bounded Repair}
+The post-processor splits generated text into factual spans while retaining character offsets and treating citation markers as separate spans. It resolves cited evidence IDs to source pages and records whether a citation came from the model, mapping, or repair. A deterministic token-overlap score compares each claim with its cited source text; numeric mismatch and threshold rules assign operational labels. These labels are \emph{lexical routing decisions}, not validated entailment or contradiction judgments. Pixel-only claims remain explicitly unverified. A negative-control test of the lexical support rule failed, so we do not use its labels as the paper's correctness endpoint.
 
-\subsection{Support and contradiction scoring}
-The implemented scorer (\texttt{LexicalSupportScorer}) is a deterministic, reproducible baseline rather than an uncalibrated black-box language model. Let $T_{\text{claim}}$ denote the non-citation tokens of an atomic claim and $T_{\text{evidence}}$ denote the tokens of cited evidence chunks. The token overlap ratio is computed as:
-\begin{equation}
-\text{Overlap}(T_{\text{claim}}, T_{\text{evidence}}) = \frac{|T_{\text{claim}} \cap T_{\text{evidence}}|}{|T_{\text{claim}}|}
-\end{equation}
+Repair uses a bounded action set: keep a span, narrow a partial clause, attempt one citation remap, delete a span, or abstain if no claim remains. It does not generate replacement facts. A second pass records the resulting spans and edits, but reusing the same lexical rule is not independent confirmation. The paired study isolates this post-processing intervention by applying both settings to the same raw completion and prompt. It asks whether the rule changes observable overlap, page alignment, and status; whether humans find the repaired answer better is unmeasured.
 
-To detect factual hallucinations, the verifier extracts numerical quantities, filtering out structural identifiers (e.g., ``Figure 1'', ``Table 2'', ``Equation 3'', ``page 4''). If the claim contains non-structural numbers $N_{\text{claim}}$ disjoint from evidence numbers $N_{\text{evidence}}$ ($N_{\text{claim}} \cap N_{\text{evidence}} = \emptyset$) and exhibits high topical lexical overlap ($\text{Overlap} > 0.40$), it is categorized as \textsc{Contradicted} ($\text{confidence} = 0.90$). Defining $\text{Ov} \equiv \text{Overlap}(T_{\text{claim}}, T_{\text{evidence}})$, the claim is otherwise classified by versioned thresholds:
-\begin{equation}
-\text{Label} = \begin{cases}
-\textsc{Supported}, & \text{Ov} \ge 0.50, \\
-\textsc{Partial}, & 0.25 \le \text{Ov} < 0.50, \\
-\textsc{Unsupported}, & \text{Ov} < 0.25.
-\end{cases}
-\end{equation}
-
-\subsection{Conservative deterministic repair actions}
-Rather than invoking unconstrained LLM regenerations that risk introducing secondary hallucinations, ScholAR executes deterministic, span-preserving text mutations from a bounded action vocabulary:
-\begin{itemize}
-    \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
-    \item \texttt{NONE}: \textsc{Supported} claims are preserved without modification.
-    \item \texttt{CLAIM\_}\allowbreak\texttt{NARROWING}: For \textsc{Partial} multi-clause claims, the verifier splits clauses and deletes unsupported sub-clauses, retaining only lexical spans supported by cited evidence.
-    \item \texttt{CITATION\_}\allowbreak\texttt{REMAP}: For an \textsc{Unsupported} claim, the engine attempts one remap to unused candidate evidence in the retrieved pool; if a candidate meets the $0.50$ threshold, citation markers are updated.
-    \item \texttt{NUMERIC\_}\allowbreak\texttt{CORRECTION} / \texttt{CLAIM\_}\allowbreak\texttt{DELETION}: Contradicted or stubbornly unsupported claims are excised entirely by deleting their span $[s_c, e_c)$.
-    \item \texttt{ABSTAIN}: If repair excises all factual claims, the entire answer is deterministically replaced by the canonical abstention string: \emph{``The paper does not provide sufficient evidence to answer this question.''}
-\end{itemize}
-
-Following repair, the text undergoes a second full verification pass. The trace records initial and final reports, exact character diffs, and verification metrics, ensuring complete operational auditability.
+This separation between an unchanged raw answer and a bounded post-processor determines the comparisons and denominators in the evaluation design.

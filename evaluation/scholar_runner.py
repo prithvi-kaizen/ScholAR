@@ -17,6 +17,7 @@ from backend.schemas.answer_trace import (
     GenerationMode,
     InterventionControls,
     PipelineStatus,
+    RetrievalControls,
 )
 
 
@@ -32,6 +33,26 @@ class ScholarRunResult:
     @property
     def citations(self) -> list[dict[str, Any]]:
         return [citation.to_api_dict() for citation in self.trace.citations]
+
+
+def _validate_required_local_execution(trace: AnswerTrace, require_local_model: bool) -> None:
+    """Reject fallbacks while allowing a deliberate abstention before generation."""
+    deliberate_pre_generation_abstention = (
+        trace.status == PipelineStatus.ABSTAINED
+        and trace.generation.mode == GenerationMode.NO_GENERATION
+    )
+    if (
+        require_local_model
+        and trace.status != PipelineStatus.ERROR
+        and not deliberate_pre_generation_abstention
+        and trace.generation.mode not in {
+            GenerationMode.LOCAL_MODEL,
+            GenerationMode.VISION_MODEL,
+        }
+    ):
+        raise RuntimeError(
+            f"Measured run required a local model but executed {trace.generation.mode.value}"
+        )
 
 
 def run_scholar_http(
@@ -51,6 +72,7 @@ def run_scholar_http(
     evaluation_context: EvaluationContext | None = None,
     allow_error_trace: bool = False,
     visual_page_backend: str = "configured",
+    retrieval: RetrievalControls | None = None,
 ) -> ScholarRunResult:
     """Call the loopback API route that delegates to AnswerPipelineService and validate v1."""
     if not NetworkPolicyService.is_loopback_url(backend):
@@ -77,6 +99,8 @@ def run_scholar_http(
         body["decoding"] = decoding.model_dump(mode="json")
     if evaluation_context is not None:
         body["evaluation_context"] = evaluation_context.model_dump(mode="json")
+    if retrieval is not None:
+        body["retrieval"] = retrieval.model_dump(mode="json")
     request = urllib.request.Request(
         f"{backend.rstrip('/')}/api/papers/{paper_id}/chat",
         data=json.dumps(body).encode("utf-8"),
@@ -97,11 +121,5 @@ def run_scholar_http(
     trace = AnswerTrace.model_validate(trace_payload)
     if trace.status == PipelineStatus.ERROR and not allow_error_trace:
         raise RuntimeError(trace.generation.error or "ScholAR answer pipeline failed")
-    if require_local_model and trace.status != PipelineStatus.ERROR and trace.generation.mode not in {
-        GenerationMode.LOCAL_MODEL,
-        GenerationMode.VISION_MODEL,
-    }:
-        raise RuntimeError(
-            f"Measured run required a local model but executed {trace.generation.mode.value}"
-        )
+    _validate_required_local_execution(trace, require_local_model)
     return ScholarRunResult(response=payload, trace=trace)

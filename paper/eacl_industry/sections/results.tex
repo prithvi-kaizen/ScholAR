@@ -1,10 +1,84 @@
-\section{Results}
-\ifreleasetables
-  \input{../../evaluation/releases/eacl_industry_v1/tables/summary.tex}
-\else
-  \GatePending{The claim-bearing release does not yet exist. Development claim labels, frozen held-out cases, judge validation, ethics determination, researcher pilot, final model-backed intervention runs, and named-hardware profiling remain pending. No historical, simulated, toy, or development-only number is substituted here.}
-\fi
+\section{Evaluation Results}
+\begin{table}[t]
+\centering
+\scriptsize
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Retriever & Hit@1 & Hit@5 & MRR & nDCG@5 \\
+\midrule
+Keyword & .71 & .91 & .796 & .757 \\
+BM25 & .84 & .97 & .892 & .855 \\
+Dense text & .76 & .95 & .838 & .796 \\
+BM25+dense RRF & \textbf{.85} & \textbf{.98} & \textbf{.905} & .853 \\
+RRF+modality & .59 & .95 & .734 & .714 \\
+\bottomrule
+\end{tabular}
+\caption{\textbf{The modality heuristic harms first-page retrieval.} Retrospective page-level results on 100 questions/25 papers. Hit@k means any gold page at k, not fractional recall.}
+\label{tab:retrieval}
+\end{table}
 
-The implemented artifact gates already enforce four reporting properties. First, a failed generation cannot disappear from the denominator. Second, an abstention remains distinct from an infrastructure or model error. Third, tables carry the hash of the aggregate JSON from which they were rendered. Fourth, the submission claim map cannot mark an empirical claim supported without a validated release source. These are reproducibility properties of the evaluation system, not findings about answer quality or user benefit.
+BM25+dense improves Hit@1 over BM25 by only .01 (paired 95\% CI $[-.054,.078]$), so its incremental benefit is unresolved. Adding the modality heuristic lowers Hit@1 by .26 (CI $[-.388,-.136]$) and MRR by .172 (CI $[-.253,-.092]$) relative to BM25+dense. This negative ablation is consequential: extra visual intent and structural boosts can displace a correct first page even while Hit@5 remains relatively high. It does not isolate which sub-rule caused the loss.
 
-The final version of this section will report the paired repair comparison, support--coverage curve, human--judge agreement, user-task result, resource envelope, and failure taxonomy only after their gates clear. If a gate does not clear, the corresponding claim and table will be removed or reported as a null result rather than estimated from development artifacts.
+\begin{table}[t]
+\centering
+\scriptsize
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Automatic diagnostic & Off & On & $\Delta$ (95\% CI) \\
+\midrule
+Token F1 & .047 & .067 & +.020 [.015,.027] \\
+Ref.-unit F1 & .159 & .224 & +.065 [.042,.091] \\
+Key-term coverage & .759 & .742 & $-$.017 [$-$.038,.000] \\
+Cited-page alignment & .670 & .618 & $-$.052 [$-$.091,$-$.015] \\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Repair improves lexical overlap but worsens measured page alignment.} Thirty paired answerable cases; intervals are paper-clustered paired bootstraps. Page alignment is defined for only the 20 cases with a gold page label. All metrics are automatic proxies.}
+\label{tab:repair}
+\end{table}
+
+Repair changes the final text in all 30 answerable cases. Its overlap gains are small in absolute terms and do not establish human-judged factual support. The 10 remaining cases name a figure or table as the gold locus but provide no gold page, so treating their unscored alignment as zero would be invalid. The pipeline records 28/30 \textsc{Success} without repair and 30/30 with repair, but success is not correctness.
+
+The missing \emph{gold page labels} are concentrated entirely in the 10 visual questions: none has a paired page-alignment value, whereas all 10 mathematical and all 10 textual questions do. All 10 visual outputs have page-bearing citations in both conditions; those pages cannot be checked against a gold visual locus with this annotation. Exploratory category-level overlap gains appear in all three groups (Appendix Table~\ref{app:subgroups}), but they do not establish visual support.
+
+For the 20 cross-paper controls, \textsc{Abstained} falls from 13/20 without repair to 5/20 with repair (paired change $-$.40, CI $[-.619,-.188]$). Four cases in each condition abstain before generation. Some \textsc{Success} outputs nevertheless refuse in prose, while others discuss unrelated target-paper content; status is thus not a valid semantic-refusal measure. The observed direction is adverse for a status-based safety story, and no hallucination-reduction claim follows.
+
+\begin{table}[t]
+\centering
+\scriptsize
+\begin{tabular}{@{}p{.24\columnwidth}p{.68\columnwidth}@{}}
+\toprule
+LLM-judge aspect & Recorded distribution \\
+\midrule
+Correctness ($n=113$) & 59 correct; 33 partly correct; 20 incorrect; 1 not judgeable \\
+Grounding ($n=150$) & 112 supported; 26 partly supported; 10 unsupported; 2 not judgeable \\
+Citation quality ($n=150$) & 110 accurate; 28 partly accurate; 10 inaccurate; 2 missing \\
+\bottomrule
+\end{tabular}
+\caption{\textbf{The LLM judge identifies both answer and evidence failures.} Correctness uses only reference-eligible cases; 37 additional cases failed the reference gate. Counts are post-hoc model labels, not human ratings.}
+\label{tab:llm}
+\end{table}
+
+Table~\ref{tab:llm} reports the completed LLM-based evaluation without turning its ordinal labels into a single score. One reference-eligible case was still marked not judgeable because the recorded reason incorrectly called its reference ineligible; we preserve that outcome rather than recoding it. Across all 150 cases, the most frequent non-\texttt{none} failure label is \texttt{missing\_fact} (53 cases), followed by \texttt{wrong\_fact} (14). These labels are mutually exclusive judgments from one LLM, not error rates with independent adjudication. The visual labels are omitted for the protocol mismatch described in Section~5.
+
+\paragraph{Human evaluation analysis (pending).}
+At the September 21, 2026 manuscript freeze, the reserved 50-question study has 0 of 250 planned ratings and 0 of 50 cases with any rating. Accordingly, there are no human means, confidence intervals, agreement estimates, reference-verification outcomes, or evidence-support counts to analyze. This paragraph is the explicit insertion point for those planned outputs after all five independently completed files have been validated and imported; until then, Table~\ref{tab:llm} must not be described as human evaluation.
+
+Table~\ref{tab:latency} profiles 100 valid requests; end-to-end p90 is 41.61\,s. Generation dominates the median, while first-use index construction contributes to the retrieval tail. We observed no terminal errors in the corrected batches. We did not measure peak process memory or controlled cold/warm latency; a batch-order difference cannot be interpreted as a repair speedup.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lrr}
+\toprule
+Measured duration & p50 (s) & p95 (s) \\
+\midrule
+End-to-end & 27.34 & 149.54 \\
+Retrieval stage & 0.52 & 112.85 \\
+Generation stage & 26.59 & 37.48 \\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Generation dominates the median; first-use retrieval contributes to the tail.} One local workstation, 100 valid requests, uncontrolled cache state. Stage quantiles need not add to end-to-end quantiles.}
+\label{tab:latency}
+\end{table}
+
+Taken together, the results distinguish what is inspectable from what is supported: the trace exposes each decision, while the negative ablations and incomplete human evidence constrain the conclusions. The next section turns those constraints into deployment lessons.

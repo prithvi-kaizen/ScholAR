@@ -198,6 +198,7 @@ class PaperFinalizeService:
         }
         pdf_sha256 = cls._sha256_file(stage / "paper.pdf")
         chunks_sha256 = cls._sha256_file(stage / "chunks.json")
+        metadata = read_json(stage / "metadata.json")
         counts = {
             "pages": len(pages),
             "chunks": len(chunks),
@@ -218,6 +219,8 @@ class PaperFinalizeService:
             "figure_count": len(figures),
             "visual_unit_count": len(visual_units),
             "counts": counts,
+            "ingestion_policy_identity": metadata.get("ingestion_policy_identity"),
+            "chunking_policy_identity": metadata.get("chunking_policy_identity"),
             "derived_artifacts_excluded": [
                 "embeddings",
                 "visual_embeddings",
@@ -336,6 +339,12 @@ class PaperFinalizeService:
             raise RuntimeError("Manifest PDF hash is inconsistent")
         if manifest.get("chunks_sha256") != cls._sha256_file(stage / "chunks.json"):
             raise RuntimeError("Manifest chunk artifact hash is inconsistent")
+        for identity_name in (
+            "ingestion_policy_identity",
+            "chunking_policy_identity",
+        ):
+            if manifest.get(identity_name) != metadata.get(identity_name):
+                raise RuntimeError(f"Manifest {identity_name} is inconsistent")
         expected_chunk_hashes = cls._build_manifest(
             stage,
             paper_id,

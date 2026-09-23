@@ -2,6 +2,7 @@ import type {
   Citation,
   NumericExecutionResult,
   ReasoningPathStep,
+  VisualInspectionSummary,
   VerificationReport,
 } from "./paper";
 
@@ -57,6 +58,8 @@ export type ChatResponse = {
   reasoning_level?: string;
   reasoning_steps?: ReasoningPathStep[];
   numeric_plan?: NumericExecutionResult | null;
+  numeric_plan_used_for_generation?: boolean;
+  visual_inspection?: VisualInspectionSummary | null;
   verification_report?: VerificationReport | null;
 };
 
@@ -238,12 +241,32 @@ function isNumericExecutionResult(value: unknown): value is NumericExecutionResu
   );
 }
 
+function isVisualInspectionSummary(value: unknown): value is VisualInspectionSummary {
+  return (
+    isRecord(value) &&
+    ["completed", "fallback", "failed"].includes(String(value.status)) &&
+    typeof value.inspection_mode === "string" &&
+    isOptionalString(value.inspection_model) &&
+    isStringArray(value.retrieval_backends) &&
+    isStringArray(value.retrieval_models) &&
+    isOptionalString(value.fallback_reason) &&
+    isStringArray(value.verification_origins) &&
+    Array.isArray(value.inputs) &&
+    value.inputs.every((item) =>
+      isRecord(item) &&
+      typeof item.input_kind === "string" &&
+      (item.page === undefined || item.page === null || typeof item.page === "number")
+    )
+  );
+}
+
 const verificationLabels = new Set([
   "SUPPORTED",
   "PARTIAL",
   "PARTIALLY_SUPPORTED",
   "UNSUPPORTED",
   "CONTRADICTED",
+  "UNVERIFIED_VISUAL",
 ]);
 const repairActions = new Set([
   "none",
@@ -346,6 +369,7 @@ function isVerificationReport(value: unknown): value is VerificationReport {
     (value.partial_count === undefined || typeof value.partial_count === "number") &&
     typeof value.unsupported_count === "number" &&
     typeof value.contradicted_count === "number" &&
+    (value.unverified_visual_count === undefined || typeof value.unverified_visual_count === "number") &&
     typeof value.has_abstained === "boolean" &&
     isOptionalString(value.abstention_reason) &&
     isOptionalString(value.final_verified_response) &&
@@ -369,6 +393,8 @@ export function isChatResponse(value: unknown): value is ChatResponse {
     (value.reasoning_steps === undefined ||
       (Array.isArray(value.reasoning_steps) && value.reasoning_steps.every(isReasoningPathStep))) &&
     (value.numeric_plan === undefined || value.numeric_plan === null || isNumericExecutionResult(value.numeric_plan)) &&
+    (value.numeric_plan_used_for_generation === undefined || typeof value.numeric_plan_used_for_generation === "boolean") &&
+    (value.visual_inspection === undefined || value.visual_inspection === null || isVisualInspectionSummary(value.visual_inspection)) &&
     (value.verification_report === undefined ||
       value.verification_report === null ||
       isVerificationReport(value.verification_report))

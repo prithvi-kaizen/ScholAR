@@ -123,7 +123,41 @@ def load_cases(config: ReleaseConfig) -> list[CaseRecord]:
     identities = [item.case_id for item in cases]
     if len(identities) != len(set(identities)):
         raise ValueError("release case IDs must be unique")
+    if config.dataset.evidence_class == "measured":
+        readiness_errors = [
+            f"{case.case_id}: {error}"
+            for case in cases
+            for error in case.measured_readiness_errors()
+        ]
+        if readiness_errors:
+            preview = "; ".join(readiness_errors[:20])
+            remainder = len(readiness_errors) - 20
+            if remainder > 0:
+                preview += f"; ... and {remainder} more"
+            raise ValueError(f"measured held-out cases are not release-ready: {preview}")
     return sorted(cases, key=lambda item: item.case_id)
+
+
+def load_corpus_manifest(config: ReleaseConfig) -> dict[str, Any]:
+    """Load and hash-check the schema-v2 corpus manifest."""
+    if config.schema_version != "2.0":
+        return {}
+    path_value = config.dataset.corpus_manifest_path
+    if not path_value or not config.dataset.corpus_sha256:
+        raise ValueError("schema-v2 release lacks a frozen corpus manifest path/hash")
+    path = resolve_repo_path(path_value)
+    if not path.is_file():
+        raise ValueError(f"frozen corpus manifest is missing: {path_value}")
+    actual_hash = sha256_file(path)
+    if actual_hash != config.dataset.corpus_sha256:
+        raise ValueError(
+            f"corpus manifest hash mismatch for {path_value}: "
+            f"expected {config.dataset.corpus_sha256}, got {actual_hash}"
+        )
+    payload = read_json(path)
+    if not isinstance(payload, dict) or not isinstance(payload.get("papers"), list):
+        raise ValueError("frozen corpus manifest has an invalid shape")
+    return payload
 
 
 def build_expected_keys(config: ReleaseConfig, cases: list[CaseRecord]) -> ExpectedKeySet:
@@ -138,6 +172,7 @@ def build_expected_keys(config: ReleaseConfig, cases: list[CaseRecord]) -> Expec
         key=lambda item: item.as_tuple(),
     )
     return ExpectedKeySet(
+        schema_version=config.schema_version,
         release_id=config.release_id,
         run_id=config.run_id,
         dataset_sha256=config.dataset.sha256 or "",

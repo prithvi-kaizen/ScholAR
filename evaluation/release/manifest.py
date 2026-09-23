@@ -13,7 +13,14 @@ from typing import Any
 
 import psutil
 
-from evaluation.release.io import read_json, sha256_file, write_checksums, write_json
+from evaluation.release.io import (
+    canonical_json_bytes,
+    read_json,
+    sha256_bytes,
+    sha256_file,
+    write_checksums,
+    write_json,
+)
 from evaluation.release.schemas import ArtifactHash, RawReleaseRow, ReleaseConfig, ReleaseManifest
 
 
@@ -55,12 +62,18 @@ def artifact_records(release_dir: Path) -> list[ArtifactHash]:
     names = (
         "expected_keys.json",
         "configs/release_config.json",
+        "configs/protocol.json",
+        "configs/corpus_manifest.json",
+        "gates.json",
         "raw/rows.jsonl",
         "scored/rows.jsonl",
         "aggregates/summary.json",
         "tables/summary.csv",
         "tables/summary.tex",
         "tables/provenance.json",
+        "human/primary_gate.json",
+        "human/annotations.json",
+        "human/paired_gate_spec.json",
     )
     records: list[ArtifactHash] = []
     for name in names:
@@ -75,6 +88,7 @@ def create_manifest(config: ReleaseConfig, release_dir: Path, n_expected: int, r
     hardware, software = runtime_identity()
     now = utc_now()
     return ReleaseManifest(
+        schema_version=config.schema_version,
         release_id=config.release_id,
         run_id=config.run_id,
         evidence_class=config.dataset.evidence_class,
@@ -87,6 +101,7 @@ def create_manifest(config: ReleaseConfig, release_dir: Path, n_expected: int, r
         systems=[item.model_dump(mode="json") for item in config.systems],
         models=[item.model_dump(mode="json") for item in config.models],
         prompt_hashes=config.prompt_hashes,
+        experiment=config.experiment,
         seeds=config.seeds,
         hardware=hardware,
         software=software,
@@ -100,6 +115,23 @@ def create_manifest(config: ReleaseConfig, release_dir: Path, n_expected: int, r
 
 def load_manifest(path: Path) -> ReleaseManifest:
     return ReleaseManifest.model_validate(read_json(path))
+
+
+def manifest_identity_sha256(manifest: ReleaseManifest) -> str:
+    """Hash stable run identity while excluding lifecycle and artifact inventory."""
+    payload = manifest.model_dump(
+        mode="json",
+        exclude={
+            "lifecycle_status",
+            "started_at",
+            "updated_at",
+            "completed_at",
+            "status_counts",
+            "artifacts",
+        },
+        exclude_none=True,
+    )
+    return sha256_bytes(canonical_json_bytes(payload))
 
 
 def update_manifest(

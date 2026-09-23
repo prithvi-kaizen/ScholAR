@@ -1,71 +1,44 @@
-\section{Prompt Templates and Generation Protocol}
-\label{app:prompts}
+\section{Supplementary Audit Artifacts}
+\label{app:artifacts}
 
-The answer generation pipeline utilizes a structured system prompt designed to enforce factual citations and prevent hallucinated references.
+The release preserves the machine-readable evaluation tables, the guarded human-evaluation macros, and the JSON trace schema used by the demonstration. These supplementary artifacts support reproduction without adding provisional human outcomes to the paper.
 
-\begin{quote}
-\small\ttfamily
-You are a precise scientific research assistant. You are given a user question and a numbered set of verified evidence excerpts from a scientific paper.
+\subsection{Execution-trace schema}
+\label{app:trace-schema}
 
-Answer the question strictly using the provided evidence excerpts. Every factual claim, quantitative value, or mathematical statement MUST be followed immediately by one or more citation markers referencing the exact excerpt number, e.g., [1] or [1, 2].
-
-Do not introduce external knowledge or facts not present in the excerpts. If the provided excerpts do not contain sufficient evidence to answer the question, state clearly: "The provided paper sections do not contain sufficient information to answer this question."
-\end{quote}
-
-Evidence items presented in the prompt follow a strict template:
-\begin{quote}
-\small\ttfamily
-[Excerpt 1] (Page 4, Section 3.2)\\
-"We train our model using Adam with beta1=0.9, beta2=0.999, and a learning rate of 2e-4..."
-\end{quote}
-
-\section{Artifact Schema and Execution Trace}
-\label{app:trace_schema}
-
-Every question answering interaction produces a validated JSON execution trace recorded under \texttt{backend/data/traces/}. The trace structure includes:
-\begin{itemize}[leftmargin=*,itemsep=1pt,topsep=2pt]
-    \item \texttt{query\_id}: Unique UUID for the transaction;
-    \item \texttt{paper\_id}: Ingested document identifier;
-    \item \texttt{raw\_query}: Raw natural language question;
-    \item \texttt{retrieved\_chunks}: Ranked list of chunk IDs, fusion scores, page numbers, and normalized bounding boxes $[x_0, y_0, x_1, y_1]$;
-    \item \texttt{raw\_completion}: Unmodified text emitted by the generator;
-    \item \texttt{verifier\_actions}: List of remapping or pruning operations executed by the consistency verifier;
-    \item \texttt{final\_answer}: Verified answer with synchronized citation chips;
-    \item \texttt{latency\_breakdown}: Latency in milliseconds across retrieval, inference, and verification.
-\end{itemize}
-
-\section{Evaluation Protocols and Sampling Breakdowns}
-\label{app:protocols}
-
-This section records the sampling strata, case-eligibility partitions, repair diagnostic, and language-model audit used to characterize the system. The human-study protocol is included for transparency; no human ratings had been returned at the manuscript freeze, so it is not reported as an outcome.
+Each completed query is serialized as a validated JSON trace. The fields below are the stable inspection boundary exposed by the backend and Evidence Graph; values are recorded per request rather than aggregated into a new evaluation result.
 
 \begin{table}[h]
 \centering
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{lcccc}
+\small
+\begin{tabular}{@{}p{0.34\columnwidth}@{\hspace{0.03\columnwidth}}p{0.55\columnwidth}@{}}
 \toprule
-\textbf{Question Category} & \textbf{Easy} & \textbf{Medium} & \textbf{Hard} & \textbf{Total} \\
+\textbf{Field} & \textbf{Recorded information} \\
 \midrule
-Direct text lookup & 1 & 5 & 4 & 10 \\
-Multi-passage synthesis & 4 & 10 & 9 & 23 \\
-Figure / visual evidence & 2 & 2 & 4 & 8 \\
-Mathematical mechanism & 1 & 1 & 1 & 3 \\
-Table / quantitative & 2 & 2 & 2 & 6 \\
-\midrule
-\textbf{Total Stratified Sample} & \textbf{10} & \textbf{20} & \textbf{20} & \textbf{50} \\
+\begin{tabular}[t]{@{}l@{}}\texttt{query\_id},\\[-1pt]\texttt{paper\_id}\end{tabular} & Transaction and source-document identities. \\
+\texttt{raw\_query} & User question supplied to the pipeline. \\
+\begin{tabular}[t]{@{}l@{}}\texttt{retrieved\_}\\[-1pt]\texttt{chunks}\end{tabular} & Ranked evidence IDs, fusion scores, page numbers, modalities, and normalized boxes. \\
+\begin{tabular}[t]{@{}l@{}}\texttt{raw\_}\\[-1pt]\texttt{completion}\end{tabular} & Unmodified local-model completion before repair. \\
+\begin{tabular}[t]{@{}l@{}}\texttt{verifier\_}\\[-1pt]\texttt{actions}\end{tabular} & Citation remapping, pruning, and abstention decisions. \\
+\begin{tabular}[t]{@{}l@{}}\texttt{final\_}\\[-1pt]\texttt{answer}\end{tabular} & User-visible answer and retained citation markers. \\
+\begin{tabular}[t]{@{}l@{}}\texttt{latency\_}\\[-1pt]\texttt{breakdown}\end{tabular} & Timing recorded for each pipeline stage. \\
 \bottomrule
-\end{tabular}%
-}
-\caption{\textbf{Stratified Sampling Breakdown of the 50-Question Human Evaluation}. Five independent raters evaluate the same 50 questions across 10 papers ($n=250$ total ratings planned).}
-\label{tab:human_50_protocol}
+\end{tabular}
+\caption{Stable fields in the inspectable execution trace. Page and bounding-box identity is carried by the retrieved evidence objects, not generated by the local model.}
+\label{tab:trace-schema}
 \end{table}
 
-\ifllmresults
-\input{tables/repair_ablation}
-\fi
+\subsection{Generation contract}
+\label{app:generation-contract}
 
+The generator receives a numbered set of application-owned evidence excerpts. The release prompt instructs the model to answer only from those excerpts, attach one or more markers (for example, \texttt{[1]} or \texttt{[1, 2]}) to each factual, numerical, or mathematical claim, and state explicitly when the supplied evidence is insufficient. The model proposes markers but never assigns page numbers or coordinates; the application resolves markers to the source-scoped evidence identities retained in the trace.
 
-\section{Detailed Hardware Profiling}
-\label{app:hardware}
+\subsection{Reproduction checklist}
+\label{app:reproduction}
 
-Profiling was conducted on an Apple M3 Pro (12 CPU cores, 18 GPU cores, 18\,GB unified memory, macOS 15.1). The local model backend was Ollama v0.5.12 serving \texttt{qwen3.5:9b} with Q4\_K\_M quantization. The audited 100-request local profile is reported in Section~\ref{sec:evaluation}; it establishes feasibility on this workstation, not throughput or responsiveness at scale.
+The installable package is intended to make the demonstration inspectable in four steps: (i) start the local backend and frontend, (ii) load the self-authored example PDF included with the release, (iii) ask a text or visual question and open a citation, and (iv) export the JSON trace and inspect the linked page region. The tested local profile is documented in Section~\ref{sec:evaluation-details}; private papers, caches, traces, and model weights are not bundled.
+
+\subsection{Evaluation-status boundary}
+\label{app:evaluation-boundary}
+
+The machine-readable retrieval, language-model audit, repair diagnostic, and hardware-profile artifacts are included for reproducibility. The human-evaluation gate remains closed until the planned ratings and quality checks are complete; this appendix therefore contains no provisional human aggregates.

@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "release_id": "eacl_industry_v1",
   "run_id": "BLOCKED_UNTIL_EXTERNAL_GATES_CLEAR",
   "study_status": "NOT_READY",
@@ -9,16 +9,17 @@
     "version": "NOT_FROZEN",
     "cases_path": "evaluation/releases/eacl_industry_v1/data_cards/heldout_cases.json",
     "sha256": null,
-    "corpus_sha256": "2acc1c3c948ce029f8e069601d09491a664b7d2ad82df382a1a184d03e009fe3",
+    "corpus_sha256": "1bc70080d437f554135bcd214c92755a9377e3479e13fbb9ddffa86a49bc525e",
+    "corpus_manifest_path": "evaluation/corpus/eacl_industry_v1_manifest.json",
     "evidence_class": "measured",
     "claim_status": "current",
     "paper_disjoint_from_development": false
   },
   "systems": [
     {
-      "name": "scholar_no_repair_v1",
+      "name": "S0",
       "runner": "scholar_http",
-      "description": "Production AnswerPipelineService with verification recorded but no answer mutation.",
+      "description": "BM25, dense retrieval, and the frozen cross-encoder reranker only.",
       "options": {
         "execution_policy": "REQUIRE_LOCAL_MODEL",
         "intervention": {
@@ -30,24 +31,110 @@
           "top_p": 0.9,
           "num_ctx": 16000,
           "num_predict": 1650
+        },
+        "retrieval": {
+          "condition_id": "S0",
+          "include_bm25": true,
+          "include_dense": true,
+          "include_reranker": true,
+          "include_modality_channel": false,
+          "include_crop_image_channel": false,
+          "visual_page_backend": "disabled",
+          "pixel_inspection": false,
+          "strict_components": true
         }
       }
     },
     {
-      "name": "scholar_selective_repair_v2",
+      "name": "S1",
       "runner": "scholar_http",
-      "description": "Production AnswerPipelineService with deterministic selective repair.",
+      "description": "S0 plus extracted-crop CLIP retrieval; no pixel generation and no repair.",
       "options": {
         "execution_policy": "REQUIRE_LOCAL_MODEL",
         "intervention": {
-          "repair_mode": "SELECTIVE",
-          "abstain_on_no_supported_claims": true
+          "repair_mode": "NONE",
+          "abstain_on_no_supported_claims": false
         },
         "decoding": {
           "temperature": 0.1,
           "top_p": 0.9,
           "num_ctx": 16000,
           "num_predict": 1650
+        },
+        "retrieval": {
+          "condition_id": "S1",
+          "include_bm25": true,
+          "include_dense": true,
+          "include_reranker": true,
+          "include_modality_channel": false,
+          "include_crop_image_channel": true,
+          "visual_page_backend": "disabled",
+          "pixel_inspection": false,
+          "strict_components": true
+        }
+      }
+    },
+    {
+      "name": "S2",
+      "runner": "scholar_http",
+      "description": "S0 plus frozen full-page CLIP retrieval; no pixel generation and no repair.",
+      "options": {
+        "execution_policy": "REQUIRE_LOCAL_MODEL",
+        "intervention": {"repair_mode": "NONE", "abstain_on_no_supported_claims": false},
+        "decoding": {"temperature": 0.1, "top_p": 0.9, "num_ctx": 16000, "num_predict": 1650},
+        "retrieval": {
+          "condition_id": "S2", "include_bm25": true, "include_dense": true,
+          "include_reranker": true, "include_modality_channel": false,
+          "include_crop_image_channel": false, "visual_page_backend": "clip",
+          "pixel_inspection": false, "strict_components": true
+        }
+      }
+    },
+    {
+      "name": "S3",
+      "runner": "scholar_http",
+      "description": "S0 plus frozen ColQwen2 page retrieval; no pixel generation and no repair.",
+      "options": {
+        "execution_policy": "REQUIRE_LOCAL_MODEL",
+        "intervention": {"repair_mode": "NONE", "abstain_on_no_supported_claims": false},
+        "decoding": {"temperature": 0.1, "top_p": 0.9, "num_ctx": 16000, "num_predict": 1650},
+        "retrieval": {
+          "condition_id": "S3", "include_bm25": true, "include_dense": true,
+          "include_reranker": true, "include_modality_channel": false,
+          "include_crop_image_channel": false, "visual_page_backend": "colqwen2",
+          "pixel_inspection": false, "strict_components": true
+        }
+      }
+    },
+    {
+      "name": "S4",
+      "runner": "scholar_http",
+      "description": "S3 plus full-page or attributed-region pixel inspection; no repair.",
+      "options": {
+        "execution_policy": "REQUIRE_LOCAL_MODEL",
+        "intervention": {"repair_mode": "NONE", "abstain_on_no_supported_claims": false},
+        "decoding": {"temperature": 0.1, "top_p": 0.9, "num_ctx": 16000, "num_predict": 1650},
+        "retrieval": {
+          "condition_id": "S4", "include_bm25": true, "include_dense": true,
+          "include_reranker": true, "include_modality_channel": false,
+          "include_crop_image_channel": false, "visual_page_backend": "colqwen2",
+          "pixel_inspection": true, "strict_components": true
+        }
+      }
+    },
+    {
+      "name": "S5",
+      "runner": "scholar_http",
+      "description": "S4 plus deterministic selective repair.",
+      "options": {
+        "execution_policy": "REQUIRE_LOCAL_MODEL",
+        "intervention": {"repair_mode": "SELECTIVE", "abstain_on_no_supported_claims": true},
+        "decoding": {"temperature": 0.1, "top_p": 0.9, "num_ctx": 16000, "num_predict": 1650},
+        "retrieval": {
+          "condition_id": "S5", "include_bm25": true, "include_dense": true,
+          "include_reranker": true, "include_modality_channel": false,
+          "include_crop_image_channel": false, "visual_page_backend": "colqwen2",
+          "pixel_inspection": true, "strict_components": true
         }
       }
     }
@@ -55,51 +142,63 @@
   "models": [
     {
       "tag": "qwen3.5:9b",
-      "digest": null,
-      "quantization": null
+      "digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+      "quantization": "Q4_K_M"
     }
   ],
   "seeds": [11, 29, 47],
   "metrics": [
     {
-      "name": "success_rate",
-      "source": "success_rate",
-      "denominator": "all_expected",
+      "name": "page_recall_at_1", "source": "page_recall_at_1",
+      "denominator": "all_answerable_cases",
       "on_error": 0.0,
-      "on_abstained": 0.0,
-      "description": "Fraction of expected generations returning a non-abstained answer."
+      "on_abstained": null,
+      "description": "Gold-page hit among the first deduplicated final retrieved page."
     },
     {
-      "name": "abstention_rate",
-      "source": "abstention_rate",
-      "denominator": "all_expected",
-      "on_error": 0.0,
-      "on_abstained": 1.0,
-      "description": "Fraction of expected generations ending in explicit abstention."
+      "name": "page_recall_at_3", "source": "page_recall_at_3", "denominator": "all_answerable_cases",
+      "on_error": 0.0, "on_abstained": null,
+      "description": "Gold-page hit among the first three deduplicated final retrieved pages."
     },
     {
-      "name": "error_rate",
-      "source": "error_rate",
-      "denominator": "all_expected",
-      "on_error": 1.0,
-      "on_abstained": 0.0,
-      "description": "Fraction of expected generations ending in an immutable error row."
+      "name": "page_recall_at_5", "source": "page_recall_at_5", "denominator": "all_answerable_cases",
+      "on_error": 0.0, "on_abstained": null,
+      "description": "Gold-page hit among the first five deduplicated final retrieved pages."
     },
     {
-      "name": "supported_claim_rate",
-      "source": "supported_claim_rate",
-      "denominator": "all_expected",
-      "on_error": 0.0,
-      "on_abstained": 0.0,
-      "description": "Lexical verifier support outcome; not human-validated entailment."
+      "name": "mrr", "source": "mrr", "denominator": "all_answerable_cases",
+      "on_error": 0.0, "on_abstained": null,
+      "description": "Reciprocal rank of the first gold page after page deduplication."
     },
     {
-      "name": "retained_claim_rate",
-      "source": "retained_claim_rate",
-      "denominator": "all_expected",
-      "on_error": 0.0,
-      "on_abstained": 0.0,
-      "description": "Final claim count divided by initial claim count."
+      "name": "region_recall_iou_0_5", "source": "region_recall_iou_0_5",
+      "denominator": "all_answerable_visual_cases", "on_error": 0.0, "on_abstained": null,
+      "description": "At least one same-page attributed region overlaps a gold region at IoU >= 0.5."
+    },
+    {
+      "name": "citation_precision", "source": "citation_precision", "denominator": "all_emitted_citations",
+      "on_error": null, "on_abstained": null,
+      "description": "Fraction of emitted citations that point to an exact gold page in the gold source paper."
+    },
+    {
+      "name": "citation_page_accuracy", "source": "citation_page_accuracy", "denominator": "all_emitted_citations",
+      "on_error": null, "on_abstained": null,
+      "description": "Fraction of emitted citations whose source identity and page resolve to a retrieved evidence item."
+    },
+    {
+      "name": "answerable_coverage", "source": "answerable_coverage", "denominator": "all_answerable_cases",
+      "on_error": 0.0, "on_abstained": 0.0,
+      "description": "Successful non-abstained answers over all answerable cases."
+    },
+    {
+      "name": "unanswerable_abstention", "source": "unanswerable_abstention", "denominator": "all_unanswerable_cases",
+      "on_error": 0.0, "on_abstained": 1.0,
+      "description": "Explicit abstentions over all unanswerable cases."
+    },
+    {
+      "name": "error_rate", "source": "error_rate", "denominator": "all_expected",
+      "on_error": 1.0, "on_abstained": 0.0,
+      "description": "Immutable errors over every expected row; failures are never dropped."
     },
     {
       "name": "latency_ms",
@@ -117,5 +216,7 @@
     "--config",
     "evaluation/configs/eacl_industry_v1.json"
   ],
-  "prompt_hashes": {}
+  "prompt_hashes": {},
+  "protocol_path": "evaluation/protocols/eacl_industry_v1_protocol.json",
+  "protocol_sha256": null
 }

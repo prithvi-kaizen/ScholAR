@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "venue": "EACL 2027 Industry Track",
-  "checked_on": "2026-08-29",
+  "checked_on": "2026-09-21",
   "official_call": "https://2027.eacl.org/calls/industry/",
   "official_style_repository": "https://github.com/acl-org/acl-style-files",
   "official_formatting_guidance": "https://acl-org.github.io/ACLPUB/formatting.html",
@@ -19,5 +19,5 @@
   "paper_size": "A4",
   "abstract_max_words": 200,
   "style_modification_allowed": false,
-  "notes": "The Industry Track call is authoritative where it differs from general ACL formatting guidance."
+  "notes": "The Industry Track call is authoritative where it differs from general ACL formatting guidance. The review deadline had passed when these requirements were rechecked on 2026-09-21."
 }

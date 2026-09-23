@@ -127,6 +127,7 @@ class Phase4StreamingTelemetryTest(unittest.TestCase):
                 )
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["x-scholar-stream-mode"], "staged-trace-delivery")
         events = []
         event_payloads = {}
         for block in response.text.strip().split("\n\n"):
@@ -138,10 +139,15 @@ class Phase4StreamingTelemetryTest(unittest.TestCase):
             event_payloads.setdefault(event, []).append(parsed_data)
 
         # Standard API ordering preserved
-        self.assertEqual(events[0:2], ["analysis", "evidence_path"])
+        self.assertEqual(events[0:3], ["stream_info", "analysis", "evidence_path"])
         self.assertIn("stage", events)
-        self.assertIn("token", events)
+        self.assertIn("answer", events)
+        self.assertNotIn("token", events)
         self.assertEqual(events[-2:], ["verification", "done"])
+        self.assertEqual(
+            event_payloads["stream_info"],
+            [{"mode": "staged_trace_delivery", "token_streaming": False}],
+        )
 
         # Real stage events were emitted
         stage_names = [st["stage"] for st in event_payloads["stage"]]

@@ -1,4 +1,4 @@
-"""Fail-closed validation for complete release-v1 directories."""
+"""Fail-closed validation for complete v1 or schema-v2 release directories."""
 
 from __future__ import annotations
 
@@ -12,14 +12,20 @@ from evaluation.release.identity import validate_row_against_condition
 from evaluation.release.io import (
     key_index,
     load_cases,
+    load_corpus_manifest,
     read_checksums,
     read_json,
     read_jsonl,
     sha256_file,
 )
+from evaluation.release.manifest import manifest_identity_sha256
+from evaluation.release.human_scoring import score_primary_gate
 from evaluation.release.schemas import (
     ExpectedKeySet,
     RawReleaseRow,
+    HumanEvaluationBundle,
+    PairedComparisonSpec,
+    PrimaryGateResult,
     ReleaseConfig,
     ReleaseManifest,
     ScoredReleaseRow,
@@ -46,9 +52,8 @@ FORBIDDEN_RELEASE_TOKENS = (
     "user_study_results.json",
 )
 ANONYMITY_PATTERNS = (
-    re.compile(r"/Users/", re.I),
-    re.compile(r"github\.com/prithvi-kaizen", re.I),
-    re.compile(r"prithviraj", re.I),
+    re.compile(r"/(?:Users|home)/[A-Za-z0-9._-]+/", re.I),
+    re.compile(r"[A-Za-z]:\\Users\\[^\\\s]+\\", re.I),
 )
 
 
@@ -85,8 +90,31 @@ def validate_release_directory(release_dir: Path) -> list[str]:
     identities.add((aggregate.get("release_id"), aggregate.get("run_id")))
     if len(identities) != 1:
         _error(errors, f"release/run identity mismatch: {sorted(identities)}")
+    schema_versions = {
+        config.schema_version,
+        expected.schema_version,
+        manifest.schema_version,
+        *(row.schema_version for row in raw_rows),
+        *(row.schema_version for row in scored_rows),
+        aggregate.get("schema_version"),
+        provenance.get("schema_version"),
+    }
+    if len(schema_versions) != 1:
+        _error(errors, f"release schema-version mismatch: {sorted(str(item) for item in schema_versions)}")
     if config.study_status.value != "READY":
         _error(errors, "complete release config is not READY")
+    if config.dataset.evidence_class != "toy":
+        protocol_path = root / "configs/protocol.json"
+        if not protocol_path.is_file():
+            _error(errors, "empirical release is missing configs/protocol.json")
+        elif config.protocol_sha256 != sha256_file(protocol_path):
+            _error(errors, "frozen protocol hash differs from release config")
+        if config.schema_version == "2.0":
+            corpus_snapshot = root / "configs/corpus_manifest.json"
+            if not corpus_snapshot.is_file():
+                _error(errors, "schema-v2 release is missing configs/corpus_manifest.json")
+            elif config.dataset.corpus_sha256 != sha256_file(corpus_snapshot):
+                _error(errors, "frozen corpus snapshot hash differs from release config")
     if manifest.lifecycle_status not in {"AGGREGATED", "VALIDATED"}:
         _error(errors, f"manifest lifecycle is incomplete: {manifest.lifecycle_status}")
     if config.dataset.evidence_class != manifest.evidence_class or config.dataset.claim_status != manifest.claim_status:
@@ -105,12 +133,19 @@ def validate_release_directory(release_dir: Path) -> list[str]:
         _error(errors, "manifest model snapshot differs from release config")
     if manifest.seeds != config.seeds or manifest.prompt_hashes != config.prompt_hashes:
         _error(errors, "manifest seed or prompt identity differs from release config")
+    if manifest.experiment != config.experiment:
+        _error(errors, "manifest experiment identity differs from release config")
     try:
         cases = load_cases(config)
         cases_by_id = {case.case_id: case for case in cases}
     except Exception as exc:
         _error(errors, f"frozen dataset validation failed: {exc}")
         cases_by_id = {}
+    try:
+        corpus_manifest = load_corpus_manifest(config)
+    except Exception as exc:
+        _error(errors, f"frozen corpus validation failed: {exc}")
+        corpus_manifest = {}
 
     try:
         raw_index = key_index(raw_rows)
@@ -147,6 +182,41 @@ def validate_release_directory(release_dir: Path) -> list[str]:
     aggregate_hash = sha256_file(root / "aggregates/summary.json")
     if provenance.get("aggregate_sha256") != aggregate_hash:
         _error(errors, "table provenance does not match aggregate JSON")
+    if config.schema_version == "2.0":
+        primary_path = root / "human/primary_gate.json"
+        if not primary_path.is_file():
+            _error(errors, "schema-v2 table provenance lacks the human primary gate")
+        else:
+            if provenance.get("primary_gate_sha256") != sha256_file(primary_path):
+                _error(errors, "schema-v2 table provenance has a stale human gate hash")
+            annotations_path = root / "human/annotations.json"
+            spec_path = root / "human/paired_gate_spec.json"
+            if not annotations_path.is_file() or not spec_path.is_file():
+                _error(errors, "schema-v2 release lacks frozen human-gate inputs")
+            else:
+                if provenance.get("human_annotations_sha256") != sha256_file(annotations_path):
+                    _error(errors, "schema-v2 table provenance has a stale human-annotation hash")
+                if provenance.get("paired_gate_spec_sha256") != sha256_file(spec_path):
+                    _error(errors, "schema-v2 table provenance has a stale human-gate-spec hash")
+                try:
+                    declared_gate = PrimaryGateResult.model_validate(read_json(primary_path))
+                    if (
+                        declared_gate.decision != "PASS"
+                        or declared_gate.evidence_class != "measured"
+                        or declared_gate.claim_status != "current"
+                    ):
+                        _error(errors, "schema-v2 tables require a current measured PASS human gate")
+                    reproduced_gate = score_primary_gate(
+                        HumanEvaluationBundle.model_validate(read_json(annotations_path)),
+                        PairedComparisonSpec.model_validate(read_json(spec_path)),
+                        raw_rows,
+                    )
+                    if declared_gate != reproduced_gate:
+                        _error(errors, "schema-v2 human primary gate does not reproduce")
+                except Exception as exc:
+                    _error(errors, f"schema-v2 human primary gate validation failed: {exc}")
+        if provenance.get("release_manifest_identity_sha256") != manifest_identity_sha256(manifest):
+            _error(errors, "schema-v2 table provenance has a stale release-manifest identity")
     for table_name in ("summary.csv", "summary.tex"):
         text = (root / "tables" / table_name).read_text(encoding="utf-8")
         if aggregate_hash not in text:
@@ -194,7 +264,9 @@ def validate_release_directory(release_dir: Path) -> list[str]:
         if case is None:
             _error(errors, f"row references missing frozen case: {row.key.as_string()}")
             continue
-        for identity_error in validate_row_against_condition(row, config, case, manifest):
+        for identity_error in validate_row_against_condition(
+            row, config, case, manifest, corpus_manifest
+        ):
             _error(errors, f"row identity {row.key.as_string()}: {identity_error}")
         if row.trace is not None:
             try:

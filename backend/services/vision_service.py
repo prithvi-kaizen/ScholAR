@@ -9,6 +9,7 @@ to its execution policy.
 from __future__ import annotations
 
 import base64
+import hashlib
 import io
 import json
 import logging
@@ -485,6 +486,7 @@ async def answer_with_multimodal_evidence(
                     "is_page_visual": bool(fig_match.get("is_page_visual_chunk")),
                     "source_paper_id": _figure_source_id(fig_match, paper_id),
                     "document_id": _figure_source_id(fig_match, paper_id),
+                    "evidence_origin": "SOURCE_TABLE" if fig_match.get("figure_type") == "table" else "SOURCE_TEXT",
                 })
             return {
                 "answer":     mlr_res["answer"],
@@ -498,6 +500,7 @@ async def answer_with_multimodal_evidence(
                 "source_paper_id": primary_source_id,
                 "model_used": "mlr_multimodal_synthesis",
                 "fallback":   True,
+                "fallback_reason": reason,
                 "citations":  mlr_citations or [
                     {
                         "ref_id": i + 1,
@@ -515,6 +518,7 @@ async def answer_with_multimodal_evidence(
                         "is_page_visual": bool(f.get("is_page_visual_chunk")),
                         "source_paper_id": _figure_source_id(f, paper_id),
                         "document_id": _figure_source_id(f, paper_id),
+                        "evidence_origin": "SOURCE_TABLE" if f.get("figure_type") == "table" else "SOURCE_TEXT",
                     }
                     for i, f in enumerate(figure_chunks)
                 ],
@@ -539,6 +543,7 @@ async def answer_with_multimodal_evidence(
             "source_paper_id": primary_source_id,
             "model_used": "caption_fallback",
             "fallback":   True,
+            "fallback_reason": reason,
             "citations":  [
                 {
                     "ref_id": i + 1,
@@ -556,6 +561,7 @@ async def answer_with_multimodal_evidence(
                     "is_page_visual": bool(f.get("is_page_visual_chunk")),
                     "source_paper_id": _figure_source_id(f, paper_id),
                     "document_id": _figure_source_id(f, paper_id),
+                    "evidence_origin": "SOURCE_TABLE" if f.get("figure_type") == "table" else "SOURCE_TEXT",
                 }
                 for i, f in enumerate(figure_chunks)
             ],
@@ -638,6 +644,7 @@ async def answer_with_multimodal_evidence(
 
     # -- Two-pass visual analysis: transcribe pixels, then synthesize an answer --
     visual_observations: dict[str, str] = {}
+    observation_model_id: str | None = None
     try:
         observation_generation = await generate_result(
             _build_visual_observation_prompt(
@@ -663,6 +670,7 @@ async def answer_with_multimodal_evidence(
                 for figure in loaded_figures
             },
         )
+        observation_model_id = observation_generation.resolved_model
         if not visual_observations:
             logger.warning(
                 "First-pass visual transcription did not return valid source-scoped JSON"
@@ -706,6 +714,12 @@ async def answer_with_multimodal_evidence(
         f_id = fig.get("figure_id", str(idx))
         visual_evidence_id = str(fig.get("_vision_evidence_id") or f"V{idx}")
         visual_observation = visual_observations.get(visual_evidence_id, "")
+        source_evidence_id = str(
+            fig.get("evidence_id")
+            or fig.get("source_evidence_id")
+            or fig.get("chunk_id")
+            or visual_evidence_id
+        )
         source_id = _figure_source_id(fig, paper_id)
         raw_bbox = (
             fig.get("_retrieval_bbox_normalized")
@@ -749,9 +763,19 @@ async def answer_with_multimodal_evidence(
             "section_title": fig.get("label") or ("Figure" if fig.get("figure_type") == "figure" else "Table"),
             "chunk_type": fig.get("figure_type", "figure"),
             "quote": (str(fig.get("caption") or fig.get("label") or ""))[:520],
+            "source_evidence_id": source_evidence_id,
+            "evidence_origin": "SOURCE_PIXELS",
             "visual_evidence_id": visual_evidence_id,
             "visual_observation": visual_observation or None,
             "visual_observation_model_generated": bool(visual_observation),
+            "observation_model_id": observation_model_id,
+            "derived_artifacts": ([{
+                "artifact_id": f"{source_evidence_id}:visual-observation",
+                "origin": "MODEL_VISUAL_OBSERVATION",
+                "derived_from_evidence_id": source_evidence_id,
+                "content_sha256": hashlib.sha256(visual_observation.encode("utf-8")).hexdigest(),
+                "model_id": observation_model_id,
+            }] if visual_observation else []),
             "figure_id": f_id,
             "image_file": fig.get("image_file"),
             "image_relpath": fig.get("image_relpath"),
@@ -795,6 +819,10 @@ async def answer_with_multimodal_evidence(
             "source_paper_id": source_id,
             "source_title": _source_title(source_id, source_registry),
             "document_id": tc.get("document_id") or source_id,
+            "evidence_origin": (
+                "SOURCE_TABLE" if tc.get("chunk_type") == "table" or tc.get("is_table_chunk")
+                else "SOURCE_TEXT"
+            ),
         })
 
     import re
@@ -855,6 +883,7 @@ async def answer_with_multimodal_evidence(
         "quantization": generation.quantization,
         "generation_options": generation.options,
         "fallback": False,
+        "fallback_reason": None,
         "citations": all_citations,
         "loaded_figures": loaded_figures,
         "visual_observations": visual_observations,
@@ -906,6 +935,7 @@ async def answer_with_custom_snippet(
             "answer": f"The visual snippet on page {page_number} could not be loaded.",
             "citations": [],
             "fallback": True,
+            "fallback_reason": "snippet image not found on disk",
         }
 
     image_b64 = _image_to_base64(snippet_path)
@@ -914,6 +944,7 @@ async def answer_with_custom_snippet(
             "answer": f"Failed to encode snippet on page {page_number}.",
             "citations": [],
             "fallback": True,
+            "fallback_reason": "snippet image could not be encoded",
         }
 
     paper_title = (paper_metadata or {}).get("title", "Research Paper")
@@ -963,6 +994,7 @@ Question: {question}"""
             "answer": f"Vision analysis failed for this snippet: {exc}",
             "citations": [],
             "fallback": True,
+            "fallback_reason": "snippet vision model error: " + type(exc).__name__,
         }
 
     import re
@@ -991,6 +1023,8 @@ Question: {question}"""
                 "x1": bbox_norm[2],
                 "y1": bbox_norm[3],
             },
+            "vision_input_kind": "user_crop",
+            "evidence_origin": "SOURCE_PIXELS",
         }
     ]
 
@@ -1004,6 +1038,7 @@ Question: {question}"""
         "quantization": generation.quantization,
         "generation_options": generation.options,
         "fallback": False,
+        "fallback_reason": None,
         "citations": citations,
         "bbox_normalized": bbox_norm,
         "image_url": f"/api/papers/{paper_id}/snippets/{snippet_id}.png",

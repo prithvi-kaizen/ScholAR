@@ -22,6 +22,13 @@ from evaluation.release.io import sha256_file, write_json  # noqa: E402
 from evaluation.release.schemas import ArtifactHash  # noqa: E402
 
 
+SUBMISSION_BLOCKING_PDF_PHRASES = (
+    "evidence gate pending",
+    "claim-bearing release does not yet exist",
+    "the final version of this section will report",
+)
+
+
 class OfficialStyleManifest(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
     artifact_type: Literal["official_acl_style_manifest"] = "official_acl_style_manifest"
@@ -72,11 +79,35 @@ def _run_tool(command: list[str], cwd: Path) -> tuple[str, str | None]:
     return completed.stdout, None
 
 
+def latex_reference_errors(log_text: str) -> list[str]:
+    patterns = (
+        r"LaTeX Warning: (?:Reference|Citation).+undefined",
+        r"There were undefined (?:references|citations)",
+        r"Please \(re\)run BibTeX",
+    )
+    return [
+        "compiled LaTeX log contains unresolved references or citations"
+        for pattern in patterns
+        if re.search(pattern, log_text, re.I)
+    ][:1]
+
+
+def submission_draft_errors(pdf_text: str) -> list[str]:
+    lowered_text = " ".join(pdf_text.casefold().split())
+    return [
+        f"compiled review PDF contains submission-blocking draft text: {phrase}"
+        for phrase in SUBMISSION_BLOCKING_PDF_PHRASES
+        if phrase in lowered_text
+    ]
+
+
 def validate_submission_pdf(paper_dir: Path, output: Path | None = None) -> list[str]:
     paper_dir = paper_dir.resolve()
     errors = validate_style_provenance(paper_dir)
+    checks_performed = ["official_style_provenance"]
     pdf = paper_dir / "main.pdf"
     aux = paper_dir / "main.aux"
+    log = paper_dir / "main.log"
     if not pdf.is_file():
         return errors + ["compiled submission PDF is missing: main.pdf"]
 
@@ -84,12 +115,17 @@ def validate_submission_pdf(paper_dir: Path, output: Path | None = None) -> list
         _stdout, error = _run_tool(["qpdf", "--check", "main.pdf"], paper_dir)
         if error:
             errors.append(error)
+        else:
+            checks_performed.append("qpdf")
 
+    fonts_checked_with_pdffonts = False
     if shutil.which("pdffonts"):
         fonts, error = _run_tool(["pdffonts", "main.pdf"], paper_dir)
         if error:
             errors.append(error)
         else:
+            fonts_checked_with_pdffonts = True
+            checks_performed.append("embedded_fonts_pdffonts")
             for line in fonts.splitlines()[2:]:
                 if not line.strip():
                     continue
@@ -103,6 +139,7 @@ def validate_submission_pdf(paper_dir: Path, output: Path | None = None) -> list
         import fitz
 
         document = fitz.open(pdf)
+        checks_performed.extend(["pdf_parse", "A4", "anonymous_review", "submission_placeholders"])
         if not document.page_count:
             errors.append("compiled PDF has no pages")
         for index, page in enumerate(document, start=1):
@@ -111,11 +148,36 @@ def validate_submission_pdf(paper_dir: Path, output: Path | None = None) -> list
                 errors.append(f"PDF page {index} is not A4: {width:.2f}x{height:.2f} pt")
         text = "\n".join(page.get_text() for page in document)
         metadata = document.metadata or {}
+        if not fonts_checked_with_pdffonts:
+            checks_performed.append("embedded_fonts_pymupdf")
+            font_records = {
+                font
+                for page in document
+                for font in page.get_fonts(full=True)
+            }
+            for font in sorted(font_records):
+                xref, _extension, font_type, base_name = font[:4]
+                if "type3" in str(font_type).replace(" ", "").casefold():
+                    errors.append(f"compiled PDF contains a forbidden Type 3 font: {base_name}")
+                try:
+                    embedded = document.extract_font(xref)[-1]
+                except Exception as exc:
+                    errors.append(f"compiled PDF font extraction failed for {base_name}: {exc}")
+                    continue
+                if not embedded:
+                    errors.append(f"compiled PDF contains an unembedded font: {base_name}")
         document.close()
         if "Anonymous ACL submission" not in text:
             errors.append("compiled review PDF lacks the anonymous author marker")
+        if "??" in text:
+            errors.append("compiled review PDF contains an unresolved reference marker")
+        errors.extend(submission_draft_errors(text))
         for value in metadata.values():
-            if value and re.search(r"prithviraj|github\.com/prithvi-kaizen|/Users/", str(value), re.I):
+            if value and re.search(
+                r"/(?:Users|home)/[A-Za-z0-9._-]+/|[A-Za-z]:\\Users\\[^\\\s]+\\",
+                str(value),
+                re.I,
+            ):
                 errors.append("compiled PDF metadata contains a deanonymizing token")
     except Exception as exc:
         errors.append(f"compiled PDF inspection failed: {exc}")
@@ -128,16 +190,23 @@ def validate_submission_pdf(paper_dir: Path, output: Path | None = None) -> list
             errors.append("content:end label is missing from main.aux")
         elif int(match.group(1)) > 6:
             errors.append(f"review content exceeds six pages: {match.group(1)}")
+        else:
+            checks_performed.append("six_content_pages")
+    if not log.is_file():
+        errors.append("LaTeX log is missing; unresolved references cannot be audited")
+    else:
+        errors.extend(latex_reference_errors(log.read_text(encoding="utf-8", errors="replace")))
 
-    if not errors and output is not None:
+    if output is not None:
         write_json(output, {
             "schema_version": "1.0",
             "artifact_type": "compiled_pdf_compliance_report",
-            "status": "PASS",
+            "status": "PASS" if not errors else "FAIL",
             "pdf_path": "paper/eacl_industry/main.pdf",
             "pdf_sha256": sha256_file(pdf),
             "style_manifest_sha256": sha256_file(paper_dir / "style/official_style_manifest.json"),
-            "checks": ["qpdf", "A4", "embedded_fonts", "no_type3", "anonymous_review", "six_content_pages"],
+            "checks": sorted(set(checks_performed)),
+            "errors": sorted(set(errors)),
         })
     return sorted(set(errors))
 

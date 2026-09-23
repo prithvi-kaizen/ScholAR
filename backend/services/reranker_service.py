@@ -9,6 +9,8 @@ Scores query-evidence candidate pairs using a local cross-encoder model:
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import math
 import os
@@ -18,6 +20,7 @@ from typing import Any
 logger = logging.getLogger("scholar.reranker")
 
 DEFAULT_RERANKER_MODEL = os.getenv("SCHOLAR_RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+RERANKER_ENCODER_VERSION = "transformers-sequence-classification-v1"
 
 
 class RerankerService:
@@ -27,6 +30,23 @@ class RerankerService:
     _tokenizer: Any = None
     _is_initialized: bool = False
     _fallback_mode: bool = False
+
+    @classmethod
+    def status(cls) -> dict[str, Any]:
+        descriptor = {
+            "requested_model": DEFAULT_RERANKER_MODEL,
+            "encoder_version": RERANKER_ENCODER_VERSION,
+        }
+        fingerprint = hashlib.sha256(json.dumps(
+            descriptor, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")).hexdigest()
+        return {
+            **descriptor,
+            "encoder_fingerprint": fingerprint,
+            "initialized": cls._is_initialized,
+            "model_loaded": cls._is_initialized and not cls._fallback_mode and cls._model is not None,
+            "fallback_mode": cls._fallback_mode,
+        }
 
     @classmethod
     def initialize(cls, model_name: str | None = None) -> None:
@@ -112,6 +132,8 @@ class RerankerService:
         query: str,
         candidates: list[dict[str, Any]],
         top_k: int = 10,
+        *,
+        require_model: bool = False,
     ) -> list[dict[str, Any]]:
         """Rerank candidates using cross-encoder scores and return top-K."""
         if not candidates:
@@ -120,6 +142,10 @@ class RerankerService:
         if not cls._is_initialized:
             cls.initialize()
 
+        if require_model and (cls._fallback_mode or cls._model is None):
+            raise RuntimeError(
+                "Measured condition requires the cross-encoder reranker; heuristic fallback is forbidden"
+            )
         if cls._fallback_mode or cls._model is None:
             return cls._rerank_fallback(query, candidates, top_k)
 
@@ -168,6 +194,10 @@ class RerankerService:
             return scored_candidates[:top_k]
 
         except Exception as exc:
+            if require_model:
+                raise RuntimeError(
+                    "Measured cross-encoder reranking failed; heuristic fallback is forbidden"
+                ) from exc
             logger.warning("Cross-encoder inference failed (%s). Falling back to heuristic reranking.", exc)
             return cls._rerank_fallback(query, candidates, top_k)
 

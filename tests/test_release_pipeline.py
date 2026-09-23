@@ -25,7 +25,7 @@ from backend.services.telemetry_service import TelemetryService
 from evaluation.fixtures.releases.release_v1_minimal.build_fixture import _generate as generate_fixture_row
 from evaluation.reproduce_release_fixture import main as reproduce_fixture
 from evaluation.release.aggregate import aggregate_rows
-from evaluation.release.identity import build_frozen_identity, expected_context
+from evaluation.release.identity import _condition_digest, build_frozen_identity, expected_context
 from evaluation.release.io import (
     key_index,
     load_config,
@@ -70,6 +70,20 @@ class ReleaseArtifactTests(unittest.TestCase):
         self.assertEqual(group["metrics"]["success_rate"], 0.5)
         self.assertEqual(group["metrics"]["error_rate"], 0.25)
         self.assertEqual(group["metric_case_denominators"]["error_rate"], 2)
+
+    def test_gitless_fixture_identity_has_a_stable_digest(self) -> None:
+        config = load_config(FIXTURE / "configs/release_config.json")
+        case = CaseRecord.model_validate(read_json(FIXTURE / "data_cards/cases.json")[0])
+        key = CanonicalKey(
+            system=config.systems[0].name,
+            model=config.models[0].tag,
+            seed=config.seeds[0],
+            case_id=case.case_id,
+        )
+        identity = build_frozen_identity(
+            config, key, case, git_revision=None, git_dirty=None
+        )
+        self.assertEqual(identity.condition_sha256, _condition_digest(identity))
 
     def test_duplicate_and_truncated_jsonl_are_rejected(self) -> None:
         rows = read_jsonl(FIXTURE / "raw/rows.jsonl", RawReleaseRow)
@@ -124,6 +138,8 @@ class ReleaseArtifactTests(unittest.TestCase):
         corpus_hash = "a" * 64
         payload["dataset"]["corpus_sha256"] = corpus_hash
         payload["prompt_hashes"] = {"fixture": "sha256:" + "b" * 64}
+        payload["protocol_path"] = "evaluation/protocols/test.json"
+        payload["protocol_sha256"] = "c" * 64
         config = ReleaseConfig.model_validate(payload)
         key = CanonicalKey(
             system=config.systems[0].name,
@@ -220,7 +236,10 @@ class ReleaseArtifactTests(unittest.TestCase):
         self.assertTrue(notices)
         submission_errors, _ = validate_paper(paper, submission=True)
         self.assertTrue(any("required release/study gates" in error for error in submission_errors))
-        self.assertTrue(any("pending claims" in error for error in submission_errors))
+        # The retrospective manuscript contains no unmeasured positive claims;
+        # the independent human/held-out release is still required by the
+        # stricter submission gate.
+        self.assertFalse(any("pending claims" in error for error in submission_errors))
         self.assertNotIn("pdf: compiled review PDF lacks the anonymous author marker", submission_errors)
 
 

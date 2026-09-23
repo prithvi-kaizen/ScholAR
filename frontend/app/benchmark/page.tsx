@@ -145,7 +145,6 @@ const DEFAULT_HARDWARE_TIERS = [
 
 export default function BenchmarkPage() {
   const [data, setData] = useState<BenchmarkData | null>(null);
-  const [loading, setLoading] = useState(true);
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
   useEffect(() => {
@@ -159,8 +158,6 @@ export default function BenchmarkPage() {
         }
       } catch {
         // Leave null; default fallbacks with unmeasured disclaimer will render
-      } finally {
-        if (mounted) setLoading(false);
       }
     }
     fetchSummary();
@@ -174,7 +171,6 @@ export default function BenchmarkPage() {
   const methods = data?.empirical_summary ?? {};
   const scholarEmpirical = methods["Method 3 (ScholAR Hierarchical MLR)"];
   const flatRagEmpirical = methods["Method 1 (Baseline Flat RAG)"];
-  const captionEmpirical = methods["Method 2 (Caption Concatenation)"];
 
   return (
     <div className="min-h-screen bg-ink text-zinc-100 flex flex-col">

@@ -1,16 +1,16 @@
 \section{Interactive Demonstration}
 \label{sec:demo}
 
-The core user experience of \textsc{ScholAR} is direct verification: readers can check the evidence behind each citation in the same workspace as the answer. Figure~\ref{fig:ui_demo_early} shows the workspace; the screencast supplies the full click-to-region sequence.
+The core user experience of \textsc{SCHOLAR} is direct verification: readers can check the evidence behind each citation in the same workspace as the answer. Figure~\ref{fig:ui_demo_early} shows the workspace; the screencast supplies the full click-to-region sequence.
 
 \subsection{Representative scenarios}
 The demonstration uses three short scenarios.
 
 \paragraph{Text and numerical verification.}
-The user uploads a paper and asks, \textquotedblleft What improvement does the proposed method report over baseline X?\textquotedblright ScholAR retrieves the relevant passages and tables, produces a cited answer, and lets the user click the citation to inspect the source page and region.
+The user uploads a paper and asks, \textquotedblleft What improvement does the proposed method report over baseline X?\textquotedblright\ SCHOLAR retrieves the relevant passages and tables, produces a cited answer, and lets the user click the citation to inspect the source page and region.
 
 \paragraph{Visual evidence inspection.}
-The user asks, \textquotedblleft What does Figure 3 show about the ablation?\textquotedblright ScholAR supplies the figure or table crop with its caption and keeps the citation linked to the original page, allowing the reader to compare the generated description with the source pixels.
+The user asks, \textquotedblleft What does Figure 3 show about the ablation?\textquotedblright\ SCHOLAR supplies the figure or table crop with its caption and keeps the citation linked to the original page, allowing the reader to compare the generated description with the source pixels.
 
 \paragraph{Insufficient evidence and audit.}
 The user asks for a fact that is not present in the retrieved paper. The system can expose weak or missing support rather than presenting provenance as proof; the user then opens the trace or Evidence Graph to inspect retrieved candidates, citation origins, verifier actions, and terminal status.
@@ -18,7 +18,7 @@ The user asks for a fact that is not present in the retrieved paper. The system 
 The live demonstration follows the complete path: upload and index a PDF, ask one text or visual question, inspect the cited region, open the graph, and export the trace. Clicking a citation synchronizes the answer and viewer; the interface distinguishes text evidence from figure/table crops and displays the current verification status.
 
 \subsection{Intended audience and interface}
-\textsc{ScholAR} targets academic researchers comparing results, peer reviewers checking claims, and graduate students reading technical papers. The value of the demo is not a claim that every answer is correct; it is that the user can move from generated prose to the original evidence with a visible, inspectable path.
+\textsc{SCHOLAR} targets academic researchers comparing results, peer reviewers checking claims, and graduate students reading technical papers. The value of the demo is not a claim that every answer is correct; it is that the user can move from generated prose to the original evidence with a visible, inspectable path.
 
 Clicking a citation marker triggers an immediate synchronization event:
 \begin{itemize}[leftmargin=*,itemsep=1pt,topsep=2pt]

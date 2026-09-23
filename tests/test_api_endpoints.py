@@ -139,6 +139,7 @@ class TestApiEndpoints(unittest.TestCase):
                 )
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["x-scholar-stream-mode"], "staged-trace-delivery")
         events = []
         for block in response.text.strip().split("\n\n"):
             lines = block.splitlines()
@@ -146,8 +147,9 @@ class TestApiEndpoints(unittest.TestCase):
             data = next(line.removeprefix("data: ") for line in lines if line.startswith("data: "))
             json.loads(data)
             events.append(event)
-        self.assertEqual(events[0:2], ["analysis", "evidence_path"])
-        self.assertIn("token", events)
+        self.assertEqual(events[0:3], ["stream_info", "analysis", "evidence_path"])
+        self.assertIn("answer", events)
+        self.assertNotIn("token", events)
         self.assertEqual(events[-2:], ["verification", "done"])
         trace.assert_called_once()
         persisted = trace.call_args.args[0]

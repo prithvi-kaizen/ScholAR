@@ -47,6 +47,29 @@ class DenseEmbeddingService:
     _encoder_mode: str = "uninitialized"
 
     @classmethod
+    def status(cls) -> dict[str, Any]:
+        if not cls._is_initialized:
+            cls.initialize()
+        metadata = cls._encoder_metadata()
+        return {
+            **metadata,
+            "model_loaded": cls._model is not None and not cls._fallback_mode,
+            "fallback_mode": cls._fallback_mode,
+        }
+
+    @classmethod
+    def encode_strict(cls, texts: list[str]) -> np.ndarray:
+        """Encode with the local transformer or fail; never use feature hashing."""
+        if not cls._is_initialized:
+            cls.initialize()
+        if cls._fallback_mode or cls._model is None:
+            raise RuntimeError("Local semantic encoder is unavailable; fallback vectors are forbidden")
+        vectors = cls.encode(texts)
+        if cls._fallback_mode or cls._model is None:
+            raise RuntimeError("Local semantic encoding failed; fallback vectors are forbidden")
+        return vectors
+
+    @classmethod
     def initialize(cls, model_name: str | None = None) -> None:
         """Initialize the local embedding model with PyTorch/Transformers."""
         if cls._is_initialized:

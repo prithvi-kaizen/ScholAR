@@ -42,7 +42,15 @@ export type VerificationLabel =
   | "PARTIAL"
   | "PARTIALLY_SUPPORTED" // accepted only for legacy persisted traces
   | "UNSUPPORTED"
-  | "CONTRADICTED";
+  | "CONTRADICTED"
+  | "UNVERIFIED_VISUAL";
+
+export type EvidenceOrigin =
+  | "SOURCE_TEXT"
+  | "SOURCE_TABLE"
+  | "SOURCE_PIXELS"
+  | "MODEL_VISUAL_OBSERVATION"
+  | "APPLICATION_IMPUTED";
 
 export type VisualSubregion = {
   region_id?: string;
@@ -73,6 +81,10 @@ export type Citation = {
   caption?: string;
   verification?: VerificationLabel;
   confidence?: number;
+  evidence_origin?: EvidenceOrigin;
+  vision_input_kind?: "full_visual" | "retrieval_crop" | "user_crop" | string;
+  visual_retrieval_backend?: string;
+  visual_retrieval_model?: string;
   bbox_normalized?: { x0: number; y0: number; x1: number; y1: number };
   subregions?: VisualSubregion[];
 };
@@ -99,6 +111,28 @@ export type NumericExecutionResult = {
   formatted_statement: string;
   is_exact: boolean;
   evidence_ids?: string[];
+};
+
+export type VisualInspectionInput = {
+  source_paper_id?: string | null;
+  page?: number | null;
+  region?: { x0: number; y0: number; x1: number; y1: number } | null;
+  input_kind: string;
+  inspection_scope?: string;
+  evidence_origin?: EvidenceOrigin | null;
+  verification?: VerificationLabel | null;
+  figure_id?: string | null;
+};
+
+export type VisualInspectionSummary = {
+  status: "completed" | "fallback" | "failed";
+  inspection_mode: string;
+  inspection_model?: string | null;
+  retrieval_backends: string[];
+  retrieval_models: string[];
+  fallback_reason?: string | null;
+  verification_origins: string[];
+  inputs: VisualInspectionInput[];
 };
 
 export type CitationSpan = {
@@ -168,6 +202,7 @@ export type VerificationReport = {
   partial_count?: number;
   unsupported_count: number;
   contradicted_count: number;
+  unverified_visual_count?: number;
   has_abstained: boolean;
   abstention_reason?: string | null;
   final_verified_response?: string;
@@ -222,5 +257,7 @@ export type ChatMessage = {
   reasoning_level?: string;
   reasoning_steps?: ReasoningPathStep[];
   numeric_plan?: NumericExecutionResult;
+  numeric_plan_used_for_generation?: boolean;
+  visual_inspection?: VisualInspectionSummary;
   verification_report?: VerificationReport;
 };

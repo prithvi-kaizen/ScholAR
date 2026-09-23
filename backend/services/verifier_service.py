@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import hashlib
 import re
 from enum import Enum
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from backend.schemas.answer_trace import InterventionControls, RepairMode
 from backend.schemas.claims import (
@@ -12,9 +13,11 @@ from backend.schemas.claims import (
     CitationSpan,
     ClaimRepairRecord,
     EntailmentStatus,
+    EvidenceOrigin,
     EvidenceProvenance,
     RepairAction,
     VerificationReport,
+    SupportScorerMetadata,
 )
 
 
@@ -34,6 +37,7 @@ class VerificationLabel(str, Enum):
     PARTIALLY_SUPPORTED = "PARTIAL"
     UNSUPPORTED = "UNSUPPORTED"
     CONTRADICTED = "CONTRADICTED"
+    UNVERIFIED_VISUAL = "UNVERIFIED_VISUAL"
 
 
 class ClaimVerificationResult(BaseModel):
@@ -48,6 +52,27 @@ class ClaimVerificationResult(BaseModel):
     start: int | None = None
     end: int | None = None
     repair_action: RepairAction = RepairAction.NONE
+    evidence_origins: list[EvidenceOrigin] = Field(default_factory=list)
+
+
+class SemanticThresholdProfile(BaseModel):
+    """A frozen semantic threshold profile fitted only on development labels."""
+
+    profile_id: str = Field(min_length=1)
+    split: Literal["development"] = "development"
+    development_labels_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    encoder_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    supported_threshold: float = Field(ge=-1.0, le=1.0)
+    partial_threshold: float = Field(ge=-1.0, le=1.0)
+    calibration_metric: str = "macro_f1"
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    @model_validator(mode="after")
+    def ordered_thresholds(self) -> "SemanticThresholdProfile":
+        if self.partial_threshold >= self.supported_threshold:
+            raise ValueError("partial semantic threshold must be below supported threshold")
+        return self
 
 
 class SufficiencyDecision(BaseModel):
@@ -109,6 +134,8 @@ class LexicalSupportScorer:
     version = "lexical-support-v2"
     supported_threshold = 0.50
     partial_threshold = 0.25
+    thresholds_calibrated = False
+    threshold_profile_id: str | None = None
 
     def score(
         self,
@@ -201,10 +228,37 @@ class LexicalSupportScorer:
                 reason=f"Numerical contradiction: value(s) {sorted(list(unsupported_claim_numbers))} in claim are not supported by the cited evidence.",
             )
 
-        if overlap >= self.supported_threshold:
+        _STOPWORDS = frozenset({
+            "a", "an", "the", "and", "or", "but", "if", "because", "as", "what",
+            "which", "this", "that", "these", "those", "then", "just", "so", "than",
+            "such", "both", "through", "about", "for", "is", "of", "while", "during",
+            "to", "from", "in", "out", "on", "off", "again", "further", "then",
+            "once", "here", "there", "all", "any", "both", "each", "few", "more",
+            "most", "other", "some", "such", "only", "own", "same", "so", "than",
+            "too", "very", "can", "will", "just", "should", "now", "it", "its",
+            "we", "they", "their", "are", "was", "were", "been", "being", "have",
+            "has", "had", "having", "do", "does", "did", "doing", "would", "could",
+        })
+        substantive_claim = content_claim - _STOPWORDS
+        substantive_evidence = content_evidence - _STOPWORDS
+        substantive_overlap = (
+            len(substantive_claim.intersection(substantive_evidence)) / max(len(substantive_claim), 1)
+            if substantive_claim else overlap
+        )
+
+        stem_claim = {w[:4] for w in substantive_claim if len(w) >= 4}
+        stem_evidence = {w[:4] for w in substantive_evidence if len(w) >= 4}
+        stem_overlap = (
+            len(stem_claim.intersection(stem_evidence)) / max(len(stem_claim), 1)
+            if stem_claim else 0.0
+        )
+
+        effective_overlap = max(overlap, substantive_overlap, stem_overlap)
+
+        if effective_overlap >= self.supported_threshold:
             label = VerificationLabel.SUPPORTED
-            reason = "Claim tokens are supported by the cited evidence under the lexical baseline."
-        elif overlap >= self.partial_threshold:
+            reason = "Claim tokens or substantive concepts are supported by the cited evidence."
+        elif effective_overlap >= self.partial_threshold:
             label = VerificationLabel.PARTIAL
             reason = "Only part of the claim overlaps the cited evidence."
         else:
@@ -215,14 +269,78 @@ class LexicalSupportScorer:
             claim_text=claim_text,
             cited_evidence_ids=cited_evidence_ids,
             label=label,
-            confidence=round(overlap, 3),
+            confidence=round(effective_overlap, 3),
             modality=modality,
             reason=reason,
         )
 
 
+class SemanticSupportScorer:
+    """Strict-local semantic diagnostic backed by a frozen development profile."""
+
+    backend = "local-semantic-cosine"
+    version = "semantic-support-v1"
+    thresholds_calibrated = True
+
+    def __init__(self, profile: SemanticThresholdProfile):
+        self.profile = profile
+        self.supported_threshold = profile.supported_threshold
+        self.partial_threshold = profile.partial_threshold
+        self.threshold_profile_id = profile.profile_id
+
+    def score(
+        self,
+        claim_id: str,
+        claim_text: str,
+        evidence_texts: list[str],
+        modality: str,
+        cited_evidence_ids: list[str],
+    ) -> ClaimVerificationResult:
+        usable = [text for text in evidence_texts if text.strip()]
+        if not usable:
+            return ClaimVerificationResult(
+                claim_id=claim_id,
+                claim_text=claim_text,
+                cited_evidence_ids=cited_evidence_ids,
+                label=VerificationLabel.UNSUPPORTED,
+                confidence=0.0,
+                modality=modality,
+                reason="No source evidence text was supplied for semantic scoring.",
+            )
+        from backend.services.dense_embedding_service import DenseEmbeddingService
+
+        status = DenseEmbeddingService.status()
+        if status.get("encoder_fingerprint") != self.profile.encoder_fingerprint:
+            raise RuntimeError("Semantic encoder fingerprint differs from frozen threshold profile")
+        vectors = DenseEmbeddingService.encode_strict([claim_text, *usable])
+        similarities = vectors[1:] @ vectors[0]
+        score = float(similarities.max())
+        if score >= self.supported_threshold:
+            label = VerificationLabel.SUPPORTED
+        elif score >= self.partial_threshold:
+            label = VerificationLabel.PARTIAL
+        else:
+            label = VerificationLabel.UNSUPPORTED
+        return ClaimVerificationResult(
+            claim_id=claim_id,
+            claim_text=claim_text,
+            cited_evidence_ids=cited_evidence_ids,
+            label=label,
+            confidence=round(score, 6),
+            modality=modality,
+            reason=(
+                f"Strict-local semantic cosine scored against frozen development profile "
+                f"{self.profile.profile_id}."
+            ),
+        )
+
+
 class ClaimVerifierService:
-    """Span-preserving claim verification with deterministic selective repair."""
+    """Span-preserving lexical support checks with deterministic selective repair.
+
+    This service is not a trained NLI model and its scores are not calibrated
+    probabilities or independent human judgments.
+    """
 
     scorer: SupportScorer = LexicalSupportScorer()
 
@@ -426,9 +544,40 @@ class ClaimVerifierService:
         return decomposed
 
     @staticmethod
-    def _evidence_text(item: dict[str, Any]) -> str:
+    def _evidence_origin(item: dict[str, Any]) -> EvidenceOrigin:
+        raw = item.get("evidence_origin")
+        if isinstance(raw, EvidenceOrigin):
+            return raw
+        if raw is not None:
+            try:
+                return EvidenceOrigin(str(raw))
+            except ValueError:
+                pass
+        chunk_type = str(item.get("chunk_type") or item.get("figure_type") or "").lower()
+        if chunk_type == "table" or item.get("is_table_chunk") is True:
+            return EvidenceOrigin.SOURCE_TABLE
+        if (
+            item.get("visual_observation_model_generated") is True
+            or item.get("is_page_visual") is True
+            or item.get("is_page_visual_chunk") is True
+            or item.get("vision_input_kind") is not None
+        ):
+            return EvidenceOrigin.SOURCE_PIXELS
+        if item.get("application_imputed") is True:
+            return EvidenceOrigin.APPLICATION_IMPUTED
+        return EvidenceOrigin.SOURCE_TEXT
+
+    @classmethod
+    def _evidence_text(cls, item: dict[str, Any]) -> str:
+        """Return source text only; model observations are never support evidence."""
+        if cls._evidence_origin(item) in {
+            EvidenceOrigin.MODEL_VISUAL_OBSERVATION,
+            EvidenceOrigin.APPLICATION_IMPUTED,
+            EvidenceOrigin.SOURCE_PIXELS,
+        }:
+            return ""
         parts: list[str] = []
-        for key in ("label", "caption", "section_title", "quote", "visual_observation", "body_text", "text"):
+        for key in ("label", "caption", "section_title", "quote", "body_text", "text"):
             val = item.get(key)
             if isinstance(val, str) and val.strip() and val.strip() not in parts:
                 parts.append(val.strip())
@@ -472,6 +621,27 @@ class ClaimVerifierService:
             copy["ref_id"] = ref_id
             copy["_evidence_id"] = evidence_id
             copy["_evidence_text"] = text
+            copy["_evidence_origin"] = cls._evidence_origin(copy)
+            derived = [
+                dict(value)
+                for value in copy.get("derived_artifacts", [])
+                if isinstance(value, dict)
+            ]
+            observation = copy.get("visual_observation")
+            if (
+                copy.get("visual_observation_model_generated") is True
+                and isinstance(observation, str)
+                and observation.strip()
+                and not derived
+            ):
+                derived.append({
+                    "artifact_id": f"{evidence_id}:visual-observation",
+                    "origin": EvidenceOrigin.MODEL_VISUAL_OBSERVATION.value,
+                    "derived_from_evidence_id": evidence_id,
+                    "content_sha256": hashlib.sha256(observation.encode("utf-8")).hexdigest(),
+                    "model_id": copy.get("observation_model_id"),
+                })
+            copy["_derived_artifacts"] = derived
             records.append(copy)
             seen.add(identity)
             used_refs.add(ref_id)
@@ -525,7 +695,19 @@ class ClaimVerifierService:
             VerificationLabel.PARTIAL: EntailmentStatus.PARTIAL,
             VerificationLabel.UNSUPPORTED: EntailmentStatus.UNSUPPORTED,
             VerificationLabel.CONTRADICTED: EntailmentStatus.CONTRADICTED,
+            VerificationLabel.UNVERIFIED_VISUAL: EntailmentStatus.UNVERIFIED_VISUAL,
         }[label]
+
+    @classmethod
+    def _scorer_metadata(cls) -> SupportScorerMetadata:
+        return SupportScorerMetadata(
+            backend=cls.scorer.backend,
+            version=cls.scorer.version,
+            thresholds_calibrated=bool(getattr(cls.scorer, "thresholds_calibrated", False)),
+            supported_threshold=float(getattr(cls.scorer, "supported_threshold", 0.0)),
+            partial_threshold=float(getattr(cls.scorer, "partial_threshold", 0.0)),
+            threshold_profile_id=getattr(cls.scorer, "threshold_profile_id", None),
+        )
 
     @classmethod
     def _to_atomic_claim(
@@ -567,9 +749,24 @@ class ClaimVerifierService:
                 document_id=item.get("document_id"),
                 page=item.get("page"),
                 region=item.get("bbox_normalized") or item.get("bbox"),
+                origin=item.get("_evidence_origin", EvidenceOrigin.SOURCE_TEXT),
+                derived_artifact_ids=[
+                    str(artifact.get("artifact_id"))
+                    for artifact in item.get("_derived_artifacts", [])
+                    if artifact.get("artifact_id")
+                ],
             )
             for item in evidence
         ]
+        scorer = cls._scorer_metadata()
+        if result.label == VerificationLabel.UNVERIFIED_VISUAL:
+            scorer = SupportScorerMetadata(
+                backend="human-pixel-required",
+                version="evidence-origin-gate-v1",
+                thresholds_calibrated=False,
+                supported_threshold=0.0,
+                partial_threshold=0.0,
+            )
         return AtomicClaim(
             claim_id=claim.claim_id,
             text=claim.text,
@@ -587,6 +784,10 @@ class ClaimVerifierService:
             second_pass_status=status if second_pass else None,
             final_start=claim.start if second_pass else None,
             final_end=claim.end if second_pass else None,
+            scorer=scorer,
+            requires_human_pixel_judgment=(
+                result.label == VerificationLabel.UNVERIFIED_VISUAL
+            ),
         )
 
     @classmethod
@@ -613,12 +814,40 @@ class ClaimVerifierService:
                     reason="Non-factual disclaimer or response structure.",
                 )
             else:
-                result = cls.verify_claim(
-                    claim.claim_id,
-                    claim.text,
-                    [str(item["_evidence_text"]) for item in evidence],
-                    cited_evidence_ids=[str(item["_evidence_id"]) for item in evidence],
-                )
+                origins = [
+                    EvidenceOrigin(item.get("_evidence_origin", EvidenceOrigin.SOURCE_TEXT))
+                    for item in evidence
+                ]
+                source_text_evidence = [
+                    str(item["_evidence_text"])
+                    for item in evidence
+                    if item.get("_evidence_origin") in {
+                        EvidenceOrigin.SOURCE_TEXT,
+                        EvidenceOrigin.SOURCE_TABLE,
+                    }
+                ]
+                if EvidenceOrigin.SOURCE_PIXELS in origins and not source_text_evidence:
+                    result = ClaimVerificationResult(
+                        claim_id=claim.claim_id,
+                        claim_text=claim.text,
+                        cited_evidence_ids=[str(item["_evidence_id"]) for item in evidence],
+                        label=VerificationLabel.UNVERIFIED_VISUAL,
+                        confidence=0.0,
+                        modality="visual",
+                        reason=(
+                            "Pixel-only claim requires independent human pixel-support judgment; "
+                            "model-derived visual observations are excluded from verification."
+                        ),
+                        evidence_origins=origins,
+                    )
+                else:
+                    result = cls.verify_claim(
+                        claim.claim_id,
+                        claim.text,
+                        source_text_evidence,
+                        cited_evidence_ids=[str(item["_evidence_id"]) for item in evidence],
+                    )
+                    result.evidence_origins = origins
             result.start = claim.start
             result.end = claim.end
             results.append(result)
@@ -640,8 +869,18 @@ class ClaimVerifierService:
         partial = sum(claim.entailment_status == EntailmentStatus.PARTIAL for claim in factual)
         unsupported = sum(claim.entailment_status == EntailmentStatus.UNSUPPORTED for claim in factual)
         contradicted = sum(claim.entailment_status == EntailmentStatus.CONTRADICTED for claim in factual)
-        should_abstain = (bool(factual) and supported == 0) if abstained is None else abstained
-        overall_supported = unsupported == 0 and contradicted == 0 and partial == 0
+        unverified_visual = sum(
+            claim.entailment_status == EntailmentStatus.UNVERIFIED_VISUAL
+            for claim in factual
+        )
+        should_abstain = (
+            bool(factual) and supported == 0 and unverified_visual == 0
+            if abstained is None else abstained
+        )
+        overall_supported = (
+            unsupported == 0 and contradicted == 0 and partial == 0
+            and unverified_visual == 0
+        )
         return VerificationReport(
             claims=atomic_claims,
             overall_supported=overall_supported,
@@ -649,6 +888,7 @@ class ClaimVerifierService:
             partial_count=partial,
             unsupported_count=unsupported,
             contradicted_count=contradicted,
+            unverified_visual_count=unverified_visual,
             has_abstained=should_abstain,
             abstention_reason=(
                 "No factual claim is supported by its cited evidence."
@@ -657,6 +897,7 @@ class ClaimVerifierService:
             final_verified_response=_ABSTENTION_TEXT if should_abstain and not second_pass else answer,
             edits=edits or [],
             second_pass_completed=second_pass,
+            scorer=cls._scorer_metadata(),
         )
 
     @staticmethod
@@ -825,7 +1066,10 @@ class ClaimVerifierService:
                         original_evidence_ids=original_evidence_ids,
                     ))
                 continue
-            if result.label == VerificationLabel.SUPPORTED:
+            if result.label in {
+                VerificationLabel.SUPPORTED,
+                VerificationLabel.UNVERIFIED_VISUAL,
+            }:
                 continue
 
             replacement: str | None = None
@@ -915,12 +1159,20 @@ class ClaimVerifierService:
 
         final_claims, final_results, _ = cls._evaluate_answer(final_answer, by_ref, by_id, second_pass=True)
         retained_factual = [claim for claim in final_claims if claim.claim_type == "factual"]
-        has_supported = any(
+        has_retainable = any(
+            claim.entailment_status in {
+                EntailmentStatus.SUPPORTED,
+                EntailmentStatus.PARTIAL,
+                EntailmentStatus.UNVERIFIED_VISUAL,
+            }
+            for claim in retained_factual
+        )
+        has_verified = any(
             claim.entailment_status in {EntailmentStatus.SUPPORTED, EntailmentStatus.PARTIAL}
             for claim in retained_factual
         )
         had_factual = any(claim.claim_type == "factual" for claim in initial_claims)
-        abstained = had_factual and not has_supported
+        abstained = had_factual and not has_retainable
 
         if abstained and controls.abstain_on_no_supported_claims:
             final_answer = _ABSTENTION_TEXT
@@ -969,6 +1221,8 @@ class ClaimVerifierService:
             public["verification"] = (
                 VerificationLabel.SUPPORTED.value
                 if evaluations and all(item.label == VerificationLabel.SUPPORTED for item in evaluations)
+                else VerificationLabel.UNVERIFIED_VISUAL.value
+                if evaluations and all(item.label == VerificationLabel.UNVERIFIED_VISUAL for item in evaluations)
                 else VerificationLabel.UNSUPPORTED.value
             )
             public["confidence"] = min((item.confidence for item in evaluations), default=0.0)
@@ -993,7 +1247,7 @@ class ClaimVerifierService:
             initial_report=initial_report,
             final_report=final_report,
             edits=edits,
-            reverified=has_supported,
+            reverified=has_verified,
         )
 
     @classmethod
@@ -1042,15 +1296,19 @@ class ClaimVerifierService:
         cls,
         verified_claims: list[ClaimVerificationResult],
         gold_citations: list[dict[str, Any]] | list[str] | None = None,
-    ) -> dict[str, float]:
-        """Compute citation precision/recall/F1 and unsupported-claim rate."""
+    ) -> dict[str, float | int]:
+        """Compute citation metrics and separate unsupported from unresolved visuals."""
         if not verified_claims:
             return {
                 "citation_precision": 1.0,
                 "citation_recall": 1.0,
                 "citation_f1": 1.0,
                 "unsupported_claim_rate": 0.0,
+                "unverified_visual_claim_rate": 0.0,
                 "total_claims": 0,
+                "supported_claims": 0,
+                "unsupported_claims": 0,
+                "unverified_visual_claims": 0,
             }
         total_claims = len(verified_claims)
         supported_count = sum(claim.label == VerificationLabel.SUPPORTED for claim in verified_claims)
@@ -1058,8 +1316,12 @@ class ClaimVerifierService:
             claim.label in (VerificationLabel.PARTIAL, VerificationLabel.UNSUPPORTED, VerificationLabel.CONTRADICTED)
             for claim in verified_claims
         )
+        unverified_visual_count = sum(
+            claim.label == VerificationLabel.UNVERIFIED_VISUAL for claim in verified_claims
+        )
         precision = supported_count / total_claims
         unsupported_rate = unsupported_count / total_claims
+        unverified_visual_rate = unverified_visual_count / total_claims
         if gold_citations:
             gold_keys = {
                 str(item.get("source_id") or item.get("page") or item) if isinstance(item, dict) else str(item)
@@ -1075,7 +1337,9 @@ class ClaimVerifierService:
             "citation_recall": round(float(recall), 4),
             "citation_f1": round(float(citation_f1), 4),
             "unsupported_claim_rate": round(float(unsupported_rate), 4),
+            "unverified_visual_claim_rate": round(float(unverified_visual_rate), 4),
             "total_claims": total_claims,
             "supported_claims": supported_count,
             "unsupported_claims": unsupported_count,
+            "unverified_visual_claims": unverified_visual_count,
         }

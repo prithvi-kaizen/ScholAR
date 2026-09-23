@@ -40,7 +40,7 @@ export function Navbar() {
                 </span>
               </span>
               <span className="text-[10px] text-zinc-400 font-medium hidden sm:inline">
-                Local Multi-Level Reasoning Engine
+                Local Evidence-Grounded Assistant
               </span>
             </div>
           </Link>

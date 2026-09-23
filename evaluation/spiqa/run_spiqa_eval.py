@@ -34,6 +34,7 @@ sys.path.insert(0, str(EVAL))
 
 from backend.services.pdf_service import paper_dir
 from evaluation.benchmarks.spiqa import SPIQAAdapter, _compute_token_f1, _normalize_text
+from evaluation.scholar_runner import run_scholar_http
 
 DEFAULT_CASES = HERE / "spiqa_cases_sample.json"
 DEFAULT_OUTPUT = EVAL / "results" / "spiqa_results.json"
@@ -64,10 +65,18 @@ def evaluate_retrieval(adapter: SPIQAAdapter, split: str = "test") -> dict[str, 
             continue
 
         try:
+            chunks = json.loads((p_dir / "chunks.json").read_text(encoding="utf-8"))
+            retrieval_metadata: dict[str, Any] = {}
             hits = retrieve_chunks(
-                paper_id=ex.document_id,
-                query=ex.question,
+                ex.question,
+                chunks,
                 limit=10,
+                paper_id=ex.document_id,
+                include_image_channel=True,
+                include_crop_image_channel=True,
+                include_page_image_channel=True,
+                include_modality_channel=True,
+                retrieval_metadata=retrieval_metadata,
             )
 
             retrieved_pages = [int(h.get("page", 0)) for h in hits if "page" in h]
@@ -94,6 +103,7 @@ def evaluate_retrieval(adapter: SPIQAAdapter, split: str = "test") -> dict[str, 
                 "visual_rank": gold_rank,
                 "figure_found": figure_found,
                 "status": "evaluated",
+                "retrieval_metadata": retrieval_metadata,
             })
         except Exception as exc:
             predictions.append({
@@ -120,8 +130,6 @@ async def evaluate_generation(
     backend_url: str = "http://localhost:8000",
 ) -> dict[str, Any]:
     """Evaluate end-to-end multimodal answer synthesis with a local model."""
-    from scholar_runner import run_scholar_http
-
     examples = adapter.load_examples(split=split)
     predictions: list[dict[str, Any]] = []
 
@@ -138,21 +146,22 @@ async def evaluate_generation(
 
         try:
             res = run_scholar_http(
-                paper_id=ex.document_id,
-                query=ex.question,
-                model=model,
-                backend_url=backend_url,
+                backend_url,
+                ex.document_id,
+                ex.question,
+                model,
+                require_local_model=True,
             )
-            pred_text = res.get("final_answer", "")
-            verification = res.get("verification_report", {})
+            pred_text = res.answer
+            verification = res.trace.verification_report
 
             predictions.append({
                 "example_id": ex.example_id,
                 "document_id": ex.document_id,
                 "gold_answers": ex.gold_answers,
                 "prediction": pred_text,
-                "verified": verification.get("overall_supported", False),
-                "figure_found": bool(res.get("response_metadata", {}).get("vision")),
+                "verified": bool(verification and verification.overall_supported),
+                "figure_found": bool(res.trace.response_metadata.get("vision")),
                 "status": "ok",
             })
         except Exception as exc:
@@ -189,7 +198,7 @@ def main() -> None:
     results: dict[str, Any] = {
         "timestamp": datetime.now().isoformat(),
         "benchmark": "SPIQA",
-        "cases_file": str(args.cases),
+        "cases_file": str(args.cases.resolve().relative_to(ROOT)),
         "tiers": {},
     }
 

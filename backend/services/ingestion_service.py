@@ -13,6 +13,7 @@ Features:
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import re
 import time
@@ -87,6 +88,36 @@ PARSER_ABLATIONS: dict[str, ParserAblationConfig] = {
         description="Full ScholAR dual-engine: Docling semantics + PyMuPDF geometry + Provenance EvidenceAST",
     ),
 }
+
+INGESTION_POLICY_VERSION = "dual-engine-ingestion-v2"
+CHUNKING_POLICY_VERSION = "parser-ablation-chunking-v1"
+
+
+def ingestion_policy_identity() -> dict[str, str]:
+    descriptor = {
+        "component_id": "scholar-dual-engine-ingestion",
+        "version": INGESTION_POLICY_VERSION,
+        "docling_fallback": "pymupdf_heuristic",
+        "geometry_backend": "pymupdf",
+    }
+    digest = hashlib.sha256(json.dumps(
+        descriptor, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")).hexdigest()
+    return {**descriptor, "identity_sha256": digest}
+
+
+def chunking_policy_identity(config: ParserAblationConfig) -> dict[str, str]:
+    descriptor = {
+        "component_id": config.config_id,
+        "version": CHUNKING_POLICY_VERSION,
+        "chunking_strategy": config.chunking_strategy,
+        "chunk_token_size": str(config.chunk_token_size),
+        "chunk_overlap": str(config.chunk_overlap),
+    }
+    digest = hashlib.sha256(json.dumps(
+        descriptor, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")).hexdigest()
+    return {**descriptor, "identity_sha256": digest}
 
 
 class DualEngineIngestionService:
@@ -298,6 +329,8 @@ class DualEngineIngestionService:
             "parser_engine": parser_engine,
             "degraded_mode": degraded_mode,
             "ablation_config": config.config_id,
+            "ingestion_policy_identity": ingestion_policy_identity(),
+            "chunking_policy_identity": chunking_policy_identity(config),
             "ingested_at": time.time(),
         })
         write_json(output_dir / "metadata.json", meta)

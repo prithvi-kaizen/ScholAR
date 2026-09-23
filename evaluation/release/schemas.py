@@ -1,7 +1,8 @@
-"""Pydantic contracts for release-v1 configuration and artifacts."""
+"""Pydantic contracts for backward-compatible v1 and claim-bearing v2 releases."""
 
 from __future__ import annotations
 
+import re
 from enum import Enum
 from typing import Any, Literal
 
@@ -13,10 +14,13 @@ from backend.schemas.answer_trace import (
     ExecutionPolicy,
     InterventionControls,
     PipelineStatus,
+    RetrievalControls,
 )
 
 
 RELEASE_SCHEMA_VERSION = "1.0"
+LATEST_RELEASE_SCHEMA_VERSION = "2.0"
+ReleaseSchemaVersion = Literal["1.0", "2.0"]
 
 
 class StrictModel(BaseModel):
@@ -53,6 +57,7 @@ class DatasetSpec(StrictModel):
     cases_path: str = Field(min_length=1)
     sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     corpus_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    corpus_manifest_path: str | None = None
     evidence_class: Literal["measured", "proxy", "toy"]
     claim_status: Literal["current", "non_release"]
     paper_disjoint_from_development: bool = False
@@ -62,6 +67,8 @@ class DatasetSpec(StrictModel):
         payload = handler(self)
         if self.corpus_sha256 is None:
             payload.pop("corpus_sha256", None)
+        if self.corpus_manifest_path is None:
+            payload.pop("corpus_manifest_path", None)
         return payload
 
 
@@ -69,6 +76,14 @@ class SystemOptions(StrictModel):
     execution_policy: ExecutionPolicy = ExecutionPolicy.REQUIRE_LOCAL_MODEL
     intervention: InterventionControls = Field(default_factory=InterventionControls)
     decoding: DecodingOptions = Field(default_factory=DecodingOptions)
+    retrieval: RetrievalControls | None = None
+
+    @model_serializer(mode="wrap")
+    def omit_unset_retrieval(self, handler: Any) -> dict[str, Any]:
+        payload = handler(self)
+        if self.retrieval is None:
+            payload.pop("retrieval", None)
+        return payload
 
 
 class SystemSpec(StrictModel):
@@ -84,6 +99,54 @@ class ModelSpec(StrictModel):
     quantization: str | None = None
 
 
+class ComponentIdentity(StrictModel):
+    """Stable identity for one non-generator experiment component."""
+
+    component_id: str = Field(min_length=1)
+    version: str = Field(min_length=1)
+    identity_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class HardwareIdentity(StrictModel):
+    tier: str = Field(min_length=1)
+    exact_device: str = Field(min_length=1)
+    profile_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class FallbackPolicy(StrictModel):
+    silent_fallback_allowed: Literal[False] = False
+    missing_component_action: Literal["ERROR_ROW"] = "ERROR_ROW"
+    condition_mismatch_action: Literal["ERROR_ROW"] = "ERROR_ROW"
+
+
+class ExperimentIdentitySpec(StrictModel):
+    """Full experiment identity required by schema v2 measured releases."""
+
+    corpus_manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    ingestion_policy: ComponentIdentity
+    chunking_policy: ComponentIdentity
+    dense: ComponentIdentity
+    reranker: ComponentIdentity
+    clip: ComponentIdentity
+    colqwen: ComponentIdentity
+    verifier: ComponentIdentity
+    calibration_artifact_hashes: dict[str, str] = Field(min_length=1)
+    hardware: HardwareIdentity
+    visual_observation_prompt_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    answer_prompt_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    fallback_policy: FallbackPolicy = Field(default_factory=FallbackPolicy)
+
+    @model_validator(mode="after")
+    def validate_calibration_hashes(self) -> "ExperimentIdentitySpec":
+        invalid = [
+            name for name, digest in self.calibration_artifact_hashes.items()
+            if not name or not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None
+        ]
+        if invalid:
+            raise ValueError(f"invalid calibration artifact hashes: {invalid}")
+        return self
+
+
 MetricSource = Literal[
     "success_rate",
     "abstention_rate",
@@ -94,20 +157,36 @@ MetricSource = Literal[
     "contradiction_rate",
     "retained_claim_rate",
     "answer_word_count",
+    "page_recall_at_1",
+    "page_recall_at_3",
+    "page_recall_at_5",
+    "mrr",
+    "region_recall_iou_0_5",
+    "citation_precision",
+    "citation_page_accuracy",
+    "answerable_coverage",
+    "unanswerable_abstention",
 ]
 
 
 class MetricSpec(StrictModel):
     name: str = Field(min_length=1, max_length=100)
     source: MetricSource
-    denominator: Literal["all_expected", "eligible_only"] = "all_expected"
+    denominator: Literal[
+        "all_expected",
+        "eligible_only",
+        "all_answerable_cases",
+        "all_answerable_visual_cases",
+        "all_unanswerable_cases",
+        "all_emitted_citations",
+    ] = "all_expected"
     on_error: float | None = None
     on_abstained: float | None = None
     description: str = ""
 
 
 class ReleaseConfig(StrictModel):
-    schema_version: Literal["1.0"] = RELEASE_SCHEMA_VERSION
+    schema_version: ReleaseSchemaVersion = RELEASE_SCHEMA_VERSION
     release_id: str = Field(pattern=r"^[a-z0-9][a-z0-9_-]*$")
     run_id: str = Field(pattern=r"^[a-zA-Z0-9][a-zA-Z0-9_.-]*$")
     study_status: ReleaseStudyStatus
@@ -120,6 +199,9 @@ class ReleaseConfig(StrictModel):
     backend_url: str = "http://127.0.0.1:8000"
     command: list[str] = Field(default_factory=list)
     prompt_hashes: dict[str, str] = Field(default_factory=dict)
+    protocol_path: str | None = None
+    protocol_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    experiment: ExperimentIdentitySpec | None = None
 
     @model_validator(mode="after")
     def validate_identity(self) -> "ReleaseConfig":
@@ -144,6 +226,8 @@ class ReleaseConfig(StrictModel):
             if missing:
                 raise ValueError(f"READY release config requires model digests and quantization: {missing}")
             if self.dataset.evidence_class != "toy":
+                if not self.protocol_path or not self.protocol_sha256:
+                    raise ValueError("READY empirical release config requires a frozen protocol")
                 if not self.prompt_hashes:
                     raise ValueError("READY empirical release config requires prompt hashes")
                 invalid_hashes = [
@@ -152,22 +236,137 @@ class ReleaseConfig(StrictModel):
                 ]
                 if invalid_hashes:
                     raise ValueError(f"READY empirical release config has invalid prompt hashes: {invalid_hashes}")
+                if self.release_id in {"eacl_industry_v1", "eacl_industry_v2"}:
+                    self._validate_eacl_condition_matrix()
+                if self.schema_version == LATEST_RELEASE_SCHEMA_VERSION:
+                    if self.experiment is None:
+                        raise ValueError("READY schema-v2 empirical release requires full experiment identity")
+                    if self.dataset.corpus_sha256 != self.experiment.corpus_manifest_sha256:
+                        raise ValueError("dataset corpus hash differs from v2 corpus manifest identity")
+                    if not self.dataset.corpus_manifest_path:
+                        raise ValueError("READY schema-v2 empirical release requires corpus_manifest_path")
+                    expected_prompt_hashes = {
+                        "answer": "sha256:" + self.experiment.answer_prompt_sha256,
+                        "visual_observation": "sha256:" + self.experiment.visual_observation_prompt_sha256,
+                    }
+                    for name, digest in expected_prompt_hashes.items():
+                        if self.prompt_hashes.get(name) != digest:
+                            raise ValueError(f"v2 prompt hash {name!r} differs from experiment identity")
+            elif self.schema_version == LATEST_RELEASE_SCHEMA_VERSION and self.experiment is not None:
+                raise ValueError("toy schema-v2 releases must not carry claim-bearing experiment identity")
         for metric in self.metrics:
             if metric.denominator == "all_expected" and metric.on_error is None:
                 raise ValueError(f"all_expected metric {metric.name!r} requires on_error")
         return self
 
+    def _validate_eacl_condition_matrix(self) -> None:
+        expected = {
+            "S0": (False, "disabled", False, "NONE"),
+            "S1": (True, "disabled", False, "NONE"),
+            "S2": (False, "clip", False, "NONE"),
+            "S3": (False, "colqwen2", False, "NONE"),
+            "S4": (False, "colqwen2", True, "NONE"),
+            "S5": (False, "colqwen2", True, "SELECTIVE"),
+        }
+        if {system.name for system in self.systems} != set(expected):
+            raise ValueError("EACL release requires exactly the S0-S5 condition matrix")
+        for system in self.systems:
+            controls = system.options.retrieval
+            if controls is None or controls.condition_id != system.name:
+                raise ValueError(f"{system.name} requires matching typed retrieval controls")
+            actual = (
+                controls.include_crop_image_channel,
+                controls.visual_page_backend,
+                controls.pixel_inspection,
+                system.options.intervention.repair_mode.value,
+            )
+            if actual != expected[system.name]:
+                raise ValueError(f"{system.name} differs from the preregistered EACL condition")
+            if controls.include_modality_channel:
+                raise ValueError(f"{system.name} must keep the uncontrolled modality channel disabled")
+
+
+class EvidenceRegion(StrictModel):
+    page: int = Field(ge=1)
+    bbox_norm: tuple[
+        float,
+        float,
+        float,
+        float,
+    ]
+
+    @model_validator(mode="after")
+    def validate_bbox(self) -> "EvidenceRegion":
+        x0, y0, x1, y1 = self.bbox_norm
+        if not all(0.0 <= value <= 1.0 for value in self.bbox_norm):
+            raise ValueError("normalized region coordinates must be in [0, 1]")
+        if x0 >= x1 or y0 >= y1:
+            raise ValueError("normalized region must have positive area")
+        return self
+
 
 class CaseRecord(StrictModel):
     case_id: str = Field(min_length=1, max_length=200)
+    slot_id: str | None = None
     paper_id: str = Field(min_length=1, max_length=200)
     query: str = Field(min_length=1, max_length=8000)
     secondary_paper_ids: list[str] = Field(default_factory=list)
+    split: Literal["development", "test"] | None = None
+    pair_id: str | None = None
+    formulation: Literal["explicit", "implicit", "not_applicable"] | None = None
+    evidence_modality: Literal["text", "table", "plot", "diagram", "mixed"] | None = None
+    answerable: bool | None = None
+    gold_pages: list[int] = Field(default_factory=list)
+    gold_regions: list[EvidenceRegion] = Field(default_factory=list)
+    required_key_points: list[str] = Field(default_factory=list)
+    acceptable_answers: list[str] = Field(default_factory=list)
+    source_license: str | None = None
+    redistribution_status: Literal["allowed", "restricted", "unknown"] | None = None
+    annotation_status: Literal["UNANNOTATED", "DOUBLE_ANNOTATED", "ADJUDICATED"] = "UNANNOTATED"
+    annotator_count: int = Field(default=0, ge=0)
+    adjudication_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    def measured_readiness_errors(self) -> list[str]:
+        errors: list[str] = []
+        if not self.slot_id:
+            errors.append("slot_id is required")
+        if self.split != "test":
+            errors.append("split must be test")
+        for label, value in (
+            ("formulation", self.formulation),
+            ("evidence_modality", self.evidence_modality),
+            ("answerable", self.answerable),
+            ("source_license", self.source_license),
+            ("redistribution_status", self.redistribution_status),
+        ):
+            if value is None or value == "":
+                errors.append(f"{label} is required")
+        if self.answerable is True:
+            if not self.gold_pages:
+                errors.append("answerable case requires gold_pages")
+            if not self.required_key_points:
+                errors.append("answerable case requires required_key_points")
+            if not self.acceptable_answers:
+                errors.append("answerable case requires acceptable_answers")
+        if any(page < 1 for page in self.gold_pages):
+            errors.append("gold_pages must be positive")
+        if self.formulation in {"explicit", "implicit"} and not self.pair_id:
+            errors.append("explicit/implicit case requires pair_id")
+        if self.evidence_modality in {"table", "plot", "diagram", "mixed"} and self.answerable is True:
+            if not self.gold_regions:
+                errors.append("visual answerable case requires gold_regions")
+        if self.annotation_status != "ADJUDICATED":
+            errors.append("annotation_status must be ADJUDICATED")
+        if self.annotator_count < 2:
+            errors.append("at least two annotators are required")
+        if not self.adjudication_sha256:
+            errors.append("adjudication_sha256 is required")
+        return errors
 
 
 class ExpectedKeySet(StrictModel):
-    schema_version: Literal["1.0"] = RELEASE_SCHEMA_VERSION
+    schema_version: ReleaseSchemaVersion = RELEASE_SCHEMA_VERSION
     release_id: str
     run_id: str
     dataset_sha256: str
@@ -206,6 +405,10 @@ class FrozenRowIdentity(StrictModel):
     quantization: str
     seed: int
     prompt_hashes: dict[str, str] = Field(default_factory=dict)
+    protocol_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    experiment: ExperimentIdentitySpec | None = None
+    retrieval_controls_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    generator_identity_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     git_revision: str | None = None
     git_dirty: bool | None = None
     condition_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -219,7 +422,7 @@ class FrozenRowIdentity(StrictModel):
 
 
 class RawReleaseRow(StrictModel):
-    schema_version: Literal["1.0"] = RELEASE_SCHEMA_VERSION
+    schema_version: ReleaseSchemaVersion = RELEASE_SCHEMA_VERSION
     release_id: str
     run_id: str
     key: CanonicalKey
@@ -231,6 +434,16 @@ class RawReleaseRow(StrictModel):
 
     @model_validator(mode="after")
     def validate_payload(self) -> "RawReleaseRow":
+        if self.schema_version == LATEST_RELEASE_SCHEMA_VERSION:
+            missing = [
+                name for name, value in (
+                    ("experiment", self.identity.experiment),
+                    ("retrieval_controls_sha256", self.identity.retrieval_controls_sha256),
+                    ("generator_identity_sha256", self.identity.generator_identity_sha256),
+                ) if value is None
+            ]
+            if missing:
+                raise ValueError(f"schema-v2 row lacks frozen identity fields: {missing}")
         if self.status == RowStatus.ERROR:
             if self.error is None:
                 raise ValueError("ERROR rows require an error record")
@@ -255,13 +468,21 @@ class RawReleaseRow(StrictModel):
 
 
 class ScoredReleaseRow(StrictModel):
-    schema_version: Literal["1.0"] = RELEASE_SCHEMA_VERSION
+    schema_version: ReleaseSchemaVersion = RELEASE_SCHEMA_VERSION
     release_id: str
     run_id: str
     key: CanonicalKey
     condition_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     status: RowStatus
     metrics: dict[str, float | None]
+    metric_weights: dict[str, int] = Field(default_factory=dict)
+
+    @model_serializer(mode="wrap")
+    def omit_empty_weights(self, handler: Any) -> dict[str, Any]:
+        payload = handler(self)
+        if not self.metric_weights:
+            payload.pop("metric_weights", None)
+        return payload
 
 
 class ArtifactHash(StrictModel):
@@ -271,7 +492,7 @@ class ArtifactHash(StrictModel):
 
 
 class ReleaseManifest(StrictModel):
-    schema_version: Literal["1.0"] = RELEASE_SCHEMA_VERSION
+    schema_version: ReleaseSchemaVersion = RELEASE_SCHEMA_VERSION
     release_id: str
     run_id: str
     evidence_class: Literal["measured", "proxy", "toy"]
@@ -284,6 +505,7 @@ class ReleaseManifest(StrictModel):
     systems: list[dict[str, Any]]
     models: list[dict[str, Any]]
     prompt_hashes: dict[str, str]
+    experiment: ExperimentIdentitySpec | None = None
     seeds: list[int]
     hardware: dict[str, Any]
     software: dict[str, Any]
