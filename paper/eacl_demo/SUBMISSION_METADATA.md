@@ -4,18 +4,18 @@
 - **Conference:** 2027 Conference of the European Chapter of the Association for Computational Linguistics (EACL 2027)
 - **Track:** System Demonstrations Track
 - **Submission Deadline:** September 22, 2026, 23:59 AoE
-- **Paper Title:** ScholAR: Inspectable Local-First Question Answering for Scientific Papers
+- **Paper Title:** SCHOLAR: A Local-First Research Assistant for Scientific Papers
 - **Submission Format:** PDF (ACL 2027 style, A4 paper)
 - **Review Policy:** Single-Blind (Author names and affiliations included)
 
 ## Authors
-- **Primary Author:** Prithviraj Patil
-- **Affiliation:** Independent Researcher
-- **Email:** `prithvisp28@gmail.com`
-- **GitHub:** `@prithvi-kaizen`
+- **Prithviraj** (Primary Contact) — Mahindra University, CSE Dept., Hyderabad, India (`se23uari141@mahindrauniversity.edu.in`)
+- **Sai Amrit Patnaik** — Avykt Ehsaas, Hyderabad, India (`saiamritp@gmail.com`)
+- **Sangeeta Lamba** — Central University of Haryana (CUH), India (`sangeetalamba@cuh.ac.in`)
+- **Nidhi Goyal** — Mahindra University, CSE Dept., Hyderabad, India (`nidhi.goyal@mahindrauniversity.edu.in`)
 
 ## Abstract
-Researchers often need to verify a paper claim against the exact paragraph, table, or figure that supports it. ScholAR is a local-first scientific-document assistant built around that interaction: a user asks a question, receives a cited answer, and clicks a citation to inspect the linked source region in the original PDF. The system preserves page identity and layout coordinates during ingestion, combines lexical and dense retrieval, and records the evidence and verifier actions behind each response. In a retrospective benchmark of 100 questions across 25 papers, fused retrieval reaches gold-page Hit@1 of 0.85; a separate 150-case language-model-based audit reports grounding and citation categories, but is not human ground truth. The demonstration shows how researchers, students, and reviewers can use this inspectable workflow locally, with the final submission providing an installable package and screencast link.
+Scientific-document assistants can answer questions over research papers, but verifying their answers still requires readers to locate and inspect the supporting evidence. We present SCHOLAR, a local-first scientific-document assistant designed around inspectable citation grounding. SCHOLAR preserves source identity throughout document processing, allowing citations in generated answers to resolve directly to the corresponding paragraph, table, or figure region in the original PDF. The system combines lexical and dense retrieval with local answer generation, post-generation citation checks, and an auditable evidence trace. On a retrospective benchmark of 200 questions across 10 scientific papers, fused retrieval achieves a gold-page Hit@1 of 0.85 and an MRR of 0.905. Across 45 questions sampled from 9 papers, five human raters assigned a mean grounding score of 82.6%. A separate automated audit provides additional diagnostics of grounding and citation quality. SCHOLAR turns generated citations into direct, inspectable links to source evidence while keeping the question-answering workflow local. The demo and source code are available at https://github.com/prithvi-kaizen/ScholAR.
 
 ## Classification & Keywords
 - **Primary Track:** System Demonstrations
