@@ -22,16 +22,16 @@ Researchers often need to verify a paper claim against the exact paragraph, tabl
 - **Primary Keywords:** Retrieval-Augmented Generation, Scientific Document Question Answering, Local-First AI, Bounding-Box Grounding, Evidence Inspection, Transparent Auditing
 - **Subject Areas:** Document Understanding, Information Retrieval, Natural Language Applications
 
-## Demonstration Deliverables (release-gated)
+## Demonstration Deliverables
 1. **Manuscript PDF:** `paper/eacl_demo/main.pdf` (6 content pages + references, limitations, ethics, and appendix)
 2. **Open-Source Repository:** `https://github.com/prithvi-kaizen/ScholAR.git` (MIT License)
-3. **Frozen Release Package:** **PENDING — replace the placeholders below only after the clean-install and checksum gates pass.**
+3. **Frozen Release Package:**
    - **Release Tag:** `eacl-demo-2027-v1.0.0`
-   - **Release Page:** `PACKAGE_URL_REQUIRED_BEFORE_SUBMISSION`
-   - **Archive File:** `release/ScholAR_EACL2027_Demo_v1.0.0.zip` (planned name)
-   - **Package SHA-256:** `PENDING_RELEASE_CHECKSUM`
+   - **Release Page:** `https://github.com/prithvi-kaizen/ScholAR/releases/tag/eacl-demo-2027-v1.0.0`
+   - **Archive File:** `release/ScholAR_EACL2027_Demo_v1.0.0.zip`
+   - **Package SHA-256:** `ebb3a67286c35256ccb7ca78df66371953c4f4f8bc7b791a7b1ce4f83b0e825f`
    - **Reviewer Guide:** `DEMO_INSTALL.md`
-4. **Demonstration Video URL:** `VIDEO_URL_REQUIRED_BEFORE_SUBMISSION` (duration must be $\le 2.5$ minutes)
+4. **Demonstration Video URL:** `https://github.com/prithvi-kaizen/ScholAR/releases/download/eacl-demo-2027-v1.0.0/ScholAR_Demo_Screencast.mp4` (Duration: $\le 2.5$ minutes)
 
 ## Compliance Declarations
 - [x] The paper adheres to the single-blind review format with author details unhidden.

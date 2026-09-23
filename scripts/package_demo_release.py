@@ -39,6 +39,7 @@ TOP_LEVEL_FILES = {
     "THIRD_PARTY_NOTICES.md",
     "pytest.ini",
     "requirements.txt",
+    "run_demo.py",
 }
 
 ALLOW_ROOTS = (

@@ -97,10 +97,12 @@ def fetch_status(url: str) -> int | None:
 def check_python() -> None:
     version = sys.version_info
     rendered = f"{version.major}.{version.minor}.{version.micro} at {sys.executable}"
-    if version[:2] != (3, 12):
-        record("FAIL", "Python", f"{rendered}; the locked runtime requires Python 3.12")
+    if version.major != 3 or version.minor < 11:
+        record("FAIL", "Python", f"{rendered}; ScholAR requires Python 3.11 or newer")
+    elif version[:2] != (3, 12):
+        record("PASS", "Python", f"{rendered} (Python 3.11+ compatible; 3.12 is the locked reference version)")
     else:
-        record("PASS", "Python", rendered)
+        record("PASS", "Python", f"{rendered} (pinned reference toolchain)")
 
     venv_root = Path(sys.prefix).resolve()
     expected_venv = (ROOT / ".venv").resolve()
