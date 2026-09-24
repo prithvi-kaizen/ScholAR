@@ -9,21 +9,28 @@
       "Jakob Uszkoreit",
       "Llion Jones",
       "Aidan N. Gomez",
-      "\u0141ukasz Kaiser",
+      "Łukasz Kaiser",
       "Illia Polosukhin"
     ],
     "year": "2017",
     "venue": "NeurIPS 2017",
-    "summary": "The seminal Transformer architecture replacing recurrence with multi-head self-attention mechanisms.",
+    "summary": "The seminal Transformer architecture replacing recurrence and convolutions with multi-head self-attention mechanisms.",
     "pages": 15,
     "imagePrefix": "assets/papers/1706.03762/page_",
     "dataFile": "data/attention.json",
     "tags": [
-      "Transformer",
-      "Self-Attention",
-      "NLP",
-      "Translation"
-    ]
+      "CS.CL",
+      "TRANSFORMER",
+      "SELF-ATTENTION",
+      "WMT 2014"
+    ],
+    "insights": {
+      "question": "Can sequence transduction models be built entirely without recurrence or convolution, relying solely on multi-head self-attention?",
+      "methodology": "Scaled dot-product attention, multi-head attention mechanisms, and sinusoidal positional encodings evaluated on WMT 2014 English-to-German and English-to-French translation benchmarks.",
+      "findings": "Achieved state-of-the-art 28.4 BLEU on En-De (+2.0 BLEU over best ensemble) and 41.8 BLEU on En-Fr, training in only 3.5 days on 8 P100 GPUs.",
+      "contributions": "Introduced the Transformer architecture, establishing the foundational paradigm for all modern Large Language Models (LLMs).",
+      "limitations": "Quadratic memory and compute complexity O(N²) with sequence length; lack of inherent recurrence requires explicit positional encodings."
+    }
   },
   {
     "id": "scholar_eacl2027",
@@ -36,16 +43,23 @@
     ],
     "year": "2027",
     "venue": "EACL 2027 System Demonstrations",
-    "summary": "Inspectable citation grounding preserving document, page, and bounding box coordinates for local-first scientific QA.",
+    "summary": "An offline-capable, local-first research assistant providing inspectable citation grounding with pixel-level PDF bounding box coordinates.",
     "pages": 9,
     "imagePrefix": "assets/papers/scholar_eacl2027/page_",
     "dataFile": "data/scholar.json",
     "tags": [
-      "Citation Grounding",
-      "Local-First",
-      "RAG",
-      "EACL 2027"
-    ]
+      "CS.AI",
+      "EACL 2027",
+      "LOCAL-RAG",
+      "GROUNDING"
+    ],
+    "insights": {
+      "question": "How can an AI assistant provide strict-local, zero-cloud verification of scientific claims with inspectable visual bounding boxes on original PDF pages?",
+      "methodology": "Document AST parsing into multimodal nodes (Text, Tables, Figures, Equations), hybrid BM25 + Dense RRF retrieval, and rule-based Verifier checking numerical match, polarity, and lexical overlap before generation.",
+      "findings": "Maintains an 87.6% Supported grounding category with 0% ungrounded hallucinations on benchmark evaluations, running hermetically on consumer hardware via local Ollama models.",
+      "contributions": "First open-source, local-first scientific paper copilot combining Evidence AST extraction, coordinate-preserving visual bounding boxes, and an interactive Evidence Graph API.",
+      "limitations": "Dependent on local GPU/CPU compute for generation latency; PDF parsing quality depends on OCR/layout fidelity for scanned or degraded manuscripts."
+    }
   },
   {
     "id": "1512.03385",
@@ -63,10 +77,17 @@
     "imagePrefix": "assets/papers/1512.03385/page_",
     "dataFile": "data/resnet.json",
     "tags": [
-      "ResNet",
-      "Deep Learning",
-      "Computer Vision",
-      "Residuals"
-    ]
+      "CS.CV",
+      "RESNET-50",
+      "IMAGENET",
+      "RESIDUALS"
+    ],
+    "insights": {
+      "question": "Why do deeper neural networks degrade in training accuracy, and can residual skip connections overcome the degradation problem?",
+      "methodology": "Identity shortcut connections added to stacked convolutional layers (F(x) + x), allowing optimization of residual mappings rather than unreferenced mappings; tested up to 152 layers on ImageNet.",
+      "findings": "ResNet-152 achieves 3.57% top-5 error on ImageNet test set, winning 1st place in ILSVRC 2015 while being deeper yet having lower complexity than VGG nets.",
+      "contributions": "Introduced residual learning formulation that solved the degradation problem and enabled training of 100+ layer networks.",
+      "limitations": "Requires careful batch normalization tuning; early residual blocks can have representation bottlenecks before deep features emerge."
+    }
   }
 ]

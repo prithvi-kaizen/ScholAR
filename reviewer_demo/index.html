@@ -3,336 +3,531 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ScholAR — Interactive Reviewer Demonstration | EACL 2027</title>
-  <meta name="description" content="Interactive browser demonstration for ScholAR: A Local-First Research Assistant for Scientific Papers. Experience inspectable citation grounding, Evidence Graph, and bounding-box verification.">
+  <title>ScholAR — AI Research Assistant & Interactive Paper Reader | EACL 2027</title>
+  <meta name="description" content="AI research assistant and interactive paper reader with verifiable citation grounding, Evidence AST extraction, and visual bounding boxes. EACL 2027 demonstration.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-  <!-- App Container -->
-  <div id="app" class="app-layout">
-    
+<body class="antialiased">
+
+  <!-- Background Topographic Contour Canvas (PaperMind aesthetic) -->
+  <canvas id="contourCanvas" class="contour-canvas" aria-hidden="true"></canvas>
+
+  <!-- App Wrapper -->
+  <div id="app" class="app-container view-discovery">
+
     <!-- Top Announcement Banner -->
     <header class="reviewer-banner" id="reviewerBanner">
-      <div class="banner-content">
+      <div class="banner-inner">
         <span class="badge-pulse"></span>
         <span class="banner-text">
-          <strong>EACL 2027 Interactive Demo:</strong> Full browser preview with pre-indexed Evidence AST. Click any citation chip <span class="citation-demo">[1]</span> to verify the exact source bounding box.
+          <strong>EACL 2027 Interactive Reviewer Demo:</strong> Client-side Evidence AST active. Click any citation chip <span class="citation-demo">[1]</span> to verify source coordinates on original PDF pages.
         </span>
-        <button class="banner-btn" id="openPackageModalBtn">
+        <button class="banner-action-btn" id="openPackageModalBtn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Download Local Package (.zip)
+          Download Package (v1.0.0)
         </button>
       </div>
-      <button class="banner-close" id="closeBannerBtn" title="Dismiss banner">&times;</button>
+      <button class="banner-close" id="closeBannerBtn" aria-label="Dismiss banner">&times;</button>
     </header>
 
-    <!-- Top Navbar -->
+    <!-- Global Top Navigation Bar -->
     <nav class="navbar" id="navbar">
       <div class="nav-left">
-        <a href="#home" class="logo-link">
-          <span class="logo-text">ScholAR</span>
-          <span class="logo-dot"></span>
+        <a href="#discovery" id="navLogoBtn" class="nav-brand" title="ScholAR Home">
+          <div class="brand-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              <circle cx="12" cy="9" r="2"/>
+              <path d="M12 13v3"/>
+            </svg>
+          </div>
+          <span class="brand-name">ScholAR</span>
         </a>
-        <span class="nav-track-tag">EACL 2027 Demo</span>
+        <span class="nav-track-tag">EACL 2027</span>
+      </div>
 
-        <!-- Paper Selector -->
-        <div class="paper-selector-wrap">
-          <label for="paperSelect" class="sr-only">Select Research Paper</label>
-          <select id="paperSelect" class="paper-select">
-            <option value="1706.03762">Attention Is All You Need (Vaswani et al.)</option>
-            <option value="scholar_eacl2027">SCHOLAR: A Local-First Research Assistant (EACL 2027)</option>
-            <option value="1512.03385">Deep Residual Learning / ResNet (He et al.)</option>
-          </select>
+      <!-- Center View Switcher (PaperMind Discovery vs Reader Workspace) -->
+      <div class="nav-center">
+        <div class="view-switch-pill" role="tablist" aria-label="View Mode">
+          <button id="navDiscoveryBtn" class="view-pill-btn active" role="tab" aria-selected="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Search & Explore
+          </button>
+          <button id="navReaderBtn" class="view-pill-btn" role="tab" aria-selected="false">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            Paper Reader
+          </button>
         </div>
       </div>
 
-      <div class="nav-center">
-        <span class="status-indicator">
-          <span class="status-dot"></span>
-          <span id="systemModeLabel">Web Sandbox • Evidence AST Active</span>
-        </span>
-      </div>
-
       <div class="nav-right">
-        <!-- Theme Toggle -->
-        <button id="themeToggleBtn" class="icon-btn" title="Toggle Light/Dark Theme">
-          <svg id="sunIcon" class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-          <svg id="moonIcon" class="icon hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        </button>
-
-        <!-- API Config Modal Trigger -->
-        <button id="apiConfigBtn" class="pill-btn" title="Optional: Connect Live LLM API or Local Host">
+        <!-- API / Settings -->
+        <button id="apiConfigBtn" class="nav-pill-btn" title="Configure Local or Remote LLM">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          API Settings
+          <span class="btn-text">Settings</span>
         </button>
 
-        <!-- Download Local Package CTA Button -->
-        <button id="navDownloadBtn" class="cta-btn primary">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Download Package (v1.0.0)
+        <!-- Theme Toggle -->
+        <button id="themeToggleBtn" class="nav-icon-btn" title="Toggle Theme" aria-label="Toggle Theme">
+          <svg id="sunIcon" class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg id="moonIcon" class="icon hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
 
-        <!-- GitHub Link -->
-        <a href="https://github.com/prithvi-kaizen/ScholAR" target="_blank" rel="noopener" class="icon-btn" title="GitHub Repository">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+        <!-- Download CTA Button -->
+        <button id="navDownloadBtn" class="nav-cta-btn primary" title="Download ScholAR Offline Package">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Download Package</span>
+        </button>
+
+        <!-- GitHub Repo Link -->
+        <a href="https://github.com/prithvi-kaizen/ScholAR" target="_blank" rel="noopener" class="nav-icon-btn" title="GitHub Repository">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
         </a>
       </div>
     </nav>
 
-    <!-- Main Workspace Split Pane -->
-    <main class="workspace" id="workspace">
-      
-      <!-- Left Pane: Document PDF Viewer -->
-      <section class="viewer-pane" id="viewerPane">
-        
-        <!-- Viewer Control Bar -->
-        <div class="viewer-toolbar">
-          <div class="toolbar-group">
-            <button id="prevPageBtn" class="tool-btn" title="Previous Page (Left Arrow)">
+    <!-- ======================================================== -->
+    <!-- VIEW 1: DISCOVERY / SEARCH LANDING (papermind.ch style) -->
+    <!-- ======================================================== -->
+    <main class="discovery-view" id="discoveryView">
+      <div class="discovery-content">
+
+        <!-- Top Pill Tag -->
+        <div class="hero-tag-wrap">
+          <div class="hero-tag">
+            <span class="tag-pulse"></span>
+            EACL 2027 System Demonstration • Local-First Verifiable AI
+          </div>
+        </div>
+
+        <!-- Hero Title & Subtitle -->
+        <header class="hero-header">
+          <h1 class="hero-title">
+            <span class="gradient-text">ScholAR</span>
+          </h1>
+          <p class="hero-subtitle">
+            Search and explore scientific research papers with AI-assisted queries and pixel-accurate bounding box verification.
+          </p>
+        </header>
+
+        <!-- Suggested Prompt Action Cards (2x2 Grid from PaperMind) -->
+        <section class="suggested-actions-section" aria-label="Suggested Research Queries">
+          <div class="suggested-actions-grid" data-testid="suggested-actions">
+            
+            <button class="action-card" data-paper="1706.03762" data-question="What BLEU score does Transformer achieve on WMT 2014 English-to-German, and how does it compare with existing models?">
+              <span class="action-title">What BLEU score does Transformer achieve</span>
+              <span class="action-sub">on WMT 2014 English-to-German translation?</span>
+              <span class="action-tag">CS.CL · Attention</span>
+            </button>
+
+            <button class="action-card" data-paper="scholar_eacl2027" data-question="What are the three core contributions of the ScholAR system described in the EACL 2027 demo paper?">
+              <span class="action-title">What are the three core contributions</span>
+              <span class="action-sub">in the ScholAR EACL 2027 demo paper?</span>
+              <span class="action-tag">CS.AI · ScholAR</span>
+            </button>
+
+            <button class="action-card" data-paper="1706.03762" data-question="What does Table 2 demonstrate regarding variations in the number of attention heads (h), key dimensions (d_k), and value dimensions (d_v)?">
+              <span class="action-title">What does Table 2 demonstrate</span>
+              <span class="action-sub">regarding attention head ablations in Transformers?</span>
+              <span class="action-tag">CS.CL · Table 2</span>
+            </button>
+
+            <button class="action-card" data-paper="1512.03385" data-question="What top-5 error rate did the 152-layer ResNet achieve on the ImageNet validation set, and how does it compare to VGG-16?">
+              <span class="action-title">What error rate did ResNet-50 achieve</span>
+              <span class="action-sub">on the ImageNet classification benchmark?</span>
+              <span class="action-tag">CS.CV · ResNet</span>
+            </button>
+
+          </div>
+        </section>
+
+        <!-- Signature PaperMind Floating Search Box -->
+        <section class="search-box-section" aria-label="Paper Search">
+          <form id="discoverySearchForm" class="discovery-search-card">
+            <div class="search-input-wrap">
+              <input 
+                type="text" 
+                id="discoverySearchInput" 
+                class="discovery-search-input" 
+                placeholder="I'm looking for... (e.g. How does self-attention compute query-key dot products?)" 
+                autocomplete="off"
+              >
+            </div>
+            <div class="search-footer-row">
+              <div class="search-helper-text">
+                <span class="helper-icon">✦</span>
+                <span>Enter any scientific question to inspect grounded Evidence AST citations and visual bounding boxes.</span>
+              </div>
+              <div class="search-actions-wrap">
+                <span class="hermetic-mode-pill">
+                  <span class="dot-online"></span>
+                  Local Hermetic AST
+                </span>
+                <button type="submit" id="discoverySearchSubmitBtn" class="search-submit-btn" title="Search and open reader">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                </button>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <!-- Featured Research Papers Catalog (2-Column Grid) -->
+        <section class="papers-catalog-section" aria-label="Indexed Research Papers">
+          <div class="catalog-header-row">
+            <div>
+              <h2 class="catalog-title">Indexed Research Papers</h2>
+              <p class="catalog-subtitle">Pre-processed with pixel coordinates, multimodal Evidence ASTs, and verifiable citations.</p>
+            </div>
+            <span class="catalog-badge">3 Pre-Indexed Papers</span>
+          </div>
+
+          <div class="papers-grid" id="discoveryPapersGrid">
+            <!-- Rendered dynamically by app.js -->
+          </div>
+        </section>
+
+        <!-- Minimalist Footer (papermind.ch style) -->
+        <footer class="discovery-footer">
+          <p>© 2027 <strong>ScholAR</strong> — A Local-First Research Assistant for Scientific Papers • <em>EACL 2027 System Demonstrations</em></p>
+          <div class="footer-links">
+            <a href="https://github.com/prithvi-kaizen/ScholAR" target="_blank" rel="noopener">GitHub</a>
+            <span>•</span>
+            <a href="https://github.com/prithvi-kaizen/ScholAR/releases" target="_blank" rel="noopener">Releases</a>
+            <span>•</span>
+            <a href="#package" id="footerDownloadBtn">Download Package (v1.0.0)</a>
+            <span>•</span>
+            <a href="https://arxiv.org/abs/1706.03762" target="_blank" rel="noopener">arXiv Benchmark</a>
+          </div>
+        </footer>
+
+      </div>
+    </main>
+
+    <!-- ======================================================== -->
+    <!-- VIEW 2: ACADEMIC READING WORKSPACE (paperminds.app style) -->
+    <!-- ======================================================== -->
+    <main class="reader-view" id="readerView">
+
+      <!-- Workspace Top Toolbar -->
+      <div class="reader-toolbar">
+        <div class="toolbar-left">
+          <button id="backToDiscoveryBtn" class="nav-back-btn" title="Back to Search & Explore">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+            <span>Back to Search</span>
+          </button>
+
+          <div class="paper-dropdown-wrap">
+            <label for="paperSelect" class="sr-only">Switch Active Paper</label>
+            <select id="paperSelect" class="paper-select">
+              <option value="1706.03762">Attention Is All You Need (Vaswani et al.)</option>
+              <option value="scholar_eacl2027">SCHOLAR: Local-First Research Assistant (EACL 2027)</option>
+              <option value="1512.03385">Deep Residual Learning / ResNet-50 (He et al.)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="toolbar-center">
+          <div class="page-controls-pill">
+            <button id="prevPageBtn" class="tool-icon-btn" title="Previous Page (Left Arrow)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
             <div class="page-indicator">
               Page 
-              <input type="number" id="pageInput" min="1" max="15" value="1" class="page-num-input" aria-label="Current page">
+              <input type="number" id="pageInput" min="1" max="15" value="1" class="page-num-input" aria-label="Page number">
               of <span id="totalPagesSpan">15</span>
             </div>
-            <button id="nextPageBtn" class="tool-btn" title="Next Page (Right Arrow)">
+            <button id="nextPageBtn" class="tool-icon-btn" title="Next Page (Right Arrow)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           </div>
 
-          <div class="toolbar-title-wrap">
-            <span id="documentTitle" class="document-title">Attention Is All You Need</span>
-          </div>
-
-          <div class="toolbar-group">
-            <button id="zoomOutBtn" class="tool-btn" title="Zoom Out (-)">
+          <div class="zoom-controls-pill">
+            <button id="zoomOutBtn" class="tool-icon-btn" title="Zoom Out (-)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
             </button>
-            <span id="zoomLevelSpan" class="zoom-level">100%</span>
-            <button id="zoomInBtn" class="tool-btn" title="Zoom In (+)">
+            <span id="zoomLevelSpan" class="zoom-text">100%</span>
+            <button id="zoomInBtn" class="tool-icon-btn" title="Zoom In (+)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
             </button>
-            <button id="fitWidthBtn" class="tool-btn" title="Fit to Width">
+            <button id="fitWidthBtn" class="tool-icon-btn" title="Fit Width">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
             </button>
-            <button id="snipToolBtn" class="tool-btn" title="Marquee Snippet Tool">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3"/></svg>
-            </button>
           </div>
         </div>
 
-        <!-- Document Canvas & Pages Container -->
-        <div class="document-scroll-container" id="documentScrollContainer">
-          <div class="document-page-stage" id="documentStage">
-            <!-- Active Page Image -->
-            <div class="page-wrapper" id="pageWrapper">
-              <img id="pageImage" class="page-image" src="assets/papers/1706.03762/page_0001.png" alt="Paper page">
-              <!-- Overlay Bounding Box Layer -->
-              <div id="highlightLayer" class="highlight-layer"></div>
-            </div>
-          </div>
+        <div class="toolbar-right">
+          <span class="active-status-badge">
+            <span class="badge-dot-green"></span>
+            AST Coordinates Active
+          </span>
         </div>
-
-        <!-- Document Footer / Coordinates Bar -->
-        <div class="viewer-footer">
-          <div class="coords-display" id="coordsDisplay">
-            <span class="coord-tag">Provenance Coordinate:</span>
-            <span id="activeCoordText" class="coord-val">Awaiting citation click...</span>
-          </div>
-          <div class="viewer-hint">
-            Tip: Press <kbd>←</kbd> / <kbd>→</kbd> to flip pages, or click citation badges in chat.
-          </div>
-        </div>
-      </section>
-
-      <!-- Draggable Split Divider -->
-      <div class="split-divider" id="splitDivider" title="Drag to resize panels">
-        <div class="divider-grip"></div>
       </div>
 
-      <!-- Right Pane: Study Copilot & Evidence Graph -->
-      <section class="study-pane" id="studyPane">
-        
-        <!-- Tab Bar -->
-        <div class="tab-bar">
-          <button class="tab-btn active" data-tab="chat">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            Ask AI
-          </button>
-          <button class="tab-btn" data-tab="graph">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><line x1="8.5" y1="7.5" x2="10" y2="15"/><line x1="15.5" y1="7.5" x2="14" y2="15"/><line x1="9" y1="6" x2="15" y2="6"/></svg>
-            Evidence Graph
-          </button>
-          <button class="tab-btn" data-tab="trace">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            Audit Trace
-          </button>
-          <button class="tab-btn" data-tab="export">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            Export Report
-          </button>
-        </div>
+      <!-- 3-Pane Split Academic Workspace (paperminds.app style) -->
+      <div class="workspace-grid" id="workspaceGrid">
 
-        <!-- Tab 1: Chat / Q&A Content -->
-        <div class="tab-pane active" id="chatTab">
+        <!-- PANE 1: LEFT SIDEBAR (Library & Structured Insights) -->
+        <aside class="sidebar-pane" id="sidebarPane">
           
-          <!-- Preset Questions Section -->
-          <div class="presets-section">
-            <div class="presets-header">
-              <span class="presets-label">Representative Scenarios (Section 4):</span>
-              <span class="presets-badge">Click to Run</span>
-            </div>
-            <div class="presets-container" id="presetsContainer">
-              <!-- Dynamically populated chips -->
-            </div>
+          <!-- Sidebar Mode Tabs -->
+          <div class="sidebar-tabs">
+            <button class="sidebar-tab-btn active" data-side-tab="insights">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              Structured Insights
+            </button>
+            <button class="sidebar-tab-btn" data-side-tab="pages">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+              Thumbnails
+            </button>
           </div>
 
-          <!-- Chat Messages Thread -->
-          <div class="chat-thread" id="chatThread">
-            <!-- Messages rendered dynamically -->
-          </div>
+          <!-- Tab Content 1: Structured Insights (paperminds.app key feature) -->
+          <div class="sidebar-tab-content active" id="sideTabInsights">
+            <div class="paper-meta-header">
+              <h3 id="sidePaperTitle" class="side-paper-title">Attention Is All You Need</h3>
+              <p id="sidePaperAuthors" class="side-paper-authors">Ashish Vaswani et al. (2017)</p>
+              <div id="sidePaperTags" class="side-paper-tags"></div>
+            </div>
 
-          <!-- Chat Input Area -->
-          <div class="chat-input-area">
-            <form id="chatForm" class="chat-form">
-              <div class="input-wrapper">
-                <textarea id="chatInput" class="chat-textarea" placeholder="Ask a question about this paper... (e.g. What BLEU score is reported?)" rows="2"></textarea>
-                <div class="input-actions">
-                  <span class="input-status-note">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                    BM25 + Dense RRF & AST Grounding
-                  </span>
-                  <button type="submit" id="sendBtn" class="send-btn" title="Send question">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                  </button>
+            <div class="structured-insights-list" id="insightsContainer">
+              <!-- Dynamically populated -->
+            </div>
+
+            <!-- Download Local Package Card -->
+            <div class="local-package-card">
+              <div class="pkg-card-header">
+                <span class="pkg-icon">📦</span>
+                <div>
+                  <div class="pkg-title">Offline Package (v1.0.0)</div>
+                  <div class="pkg-sub">Hermetic local CLI with Ollama</div>
                 </div>
               </div>
-            </form>
-          </div>
-        </div>
-
-        <!-- Tab 2: Interactive Evidence Graph -->
-        <div class="tab-pane" id="graphTab">
-          <div class="graph-toolbar">
-            <div class="graph-legend">
-              <span class="legend-item"><span class="legend-dot dot-query"></span> Query</span>
-              <span class="legend-item"><span class="legend-dot dot-text"></span> Text</span>
-              <span class="legend-item"><span class="legend-dot dot-table"></span> Table</span>
-              <span class="legend-item"><span class="legend-dot dot-claim"></span> Claim</span>
-            </div>
-            <div class="graph-controls">
-              <button id="resetGraphBtn" class="tool-btn" title="Reset Graph View">Reset Layout</button>
-            </div>
-          </div>
-          <div class="graph-canvas-container" id="graphContainer">
-            <svg id="evidenceGraphSvg" class="evidence-graph-svg"></svg>
-          </div>
-          <div class="graph-node-details" id="graphNodeDetails">
-            <div class="details-placeholder">Click any graph node to inspect coordinates, modality, and verifier score.</div>
-          </div>
-        </div>
-
-        <!-- Tab 3: Verifier & Audit Trace -->
-        <div class="tab-pane" id="traceTab">
-          <div class="trace-header">
-            <h3>Diagnostic JSON Audit Trace</h3>
-            <span class="trace-badge">Trace Hash: <span id="traceHashSpan">sha256:d8b2e1...</span></span>
-          </div>
-          <div class="telemetry-grid">
-            <div class="telemetry-card">
-              <span class="metric-label">Retrieval Latency</span>
-              <span class="metric-val" id="telemetryRetrieval">523 ms</span>
-              <span class="metric-sub">BM25 + all-MiniLM-L6-v2 (k=60)</span>
-            </div>
-            <div class="telemetry-card">
-              <span class="metric-label">Generation Latency</span>
-              <span class="metric-val" id="telemetryGen">26.59 s</span>
-              <span class="metric-sub">Local Ollama (qwen3.5:9b)</span>
-            </div>
-            <div class="telemetry-card">
-              <span class="metric-label">Verifier Latency</span>
-              <span class="metric-val" id="telemetryVerif">15 ms</span>
-              <span class="metric-sub">Lexical + Polarity + Numerical</span>
-            </div>
-            <div class="telemetry-card">
-              <span class="metric-label">Grounding Status</span>
-              <span class="metric-val highlight" id="telemetryStatus">VERIFIED</span>
-              <span class="metric-sub">87.6% Supported Category</span>
-            </div>
-          </div>
-          <div class="trace-code-wrap">
-            <pre><code id="traceJsonBlock" class="json-code"></code></pre>
-          </div>
-        </div>
-
-        <!-- Tab 4: Export Reasoning Report -->
-        <div class="tab-pane" id="exportTab">
-          <div class="export-header">
-            <div class="format-toggle">
-              <button class="format-btn active" data-format="md">Markdown (.md)</button>
-              <button class="format-btn" data-format="latex">LaTeX (.tex)</button>
-            </div>
-            <div class="export-actions">
-              <button id="copyReportBtn" class="pill-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                Copy
-              </button>
-              <button id="downloadReportBtn" class="pill-btn primary">
+              <p class="pkg-desc">Run strict-local verification on your machine without external cloud APIs.</p>
+              <button id="sidePackageBtn" class="pkg-cta-btn">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Download
+                Download Package (.zip)
               </button>
             </div>
           </div>
-          <div class="report-preview-container">
-            <pre><code id="reportPreviewBlock" class="report-code"></code></pre>
-          </div>
-        </div>
 
-      </section>
+          <!-- Tab Content 2: Page Thumbnails -->
+          <div class="sidebar-tab-content" id="sideTabPages">
+            <div class="thumbnails-grid" id="thumbnailsContainer">
+              <!-- Dynamically populated page thumbnails -->
+            </div>
+          </div>
+
+        </aside>
+
+        <!-- PANE 2: CENTER DOCUMENT VIEWER (Interactive PDF with Gold Bounding Box Overlays) -->
+        <section class="document-pane" id="documentPane">
+          <div class="document-scroll-wrap" id="documentScrollContainer">
+            <div class="document-canvas-stage" id="documentStage">
+              <div class="page-wrapper" id="pageWrapper">
+                <img id="pageImage" class="page-image" src="assets/papers/1706.03762/page_0001.png" alt="PDF document page">
+                <!-- Glowing Bounding Box Highlight Overlays (paperminds.app style) -->
+                <div id="highlightLayer" class="highlight-layer"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Document Footer Coordinates Readout -->
+          <div class="document-footer-bar">
+            <div class="coords-indicator">
+              <span class="coord-label">PROVENANCE COORDINATES:</span>
+              <span id="activeCoordText" class="coord-value">Awaiting citation chip click...</span>
+            </div>
+            <div class="nav-hint-text">
+              Tip: Click any <span class="citation-demo">[1]</span> chip to inspect exact bounding box.
+            </div>
+          </div>
+        </section>
+
+        <!-- PANE 3: RIGHT SIDEBAR (AI Assistant Copilot & Evidence Graph) -->
+        <aside class="copilot-pane" id="copilotPane">
+          
+          <!-- Tab Bar -->
+          <div class="copilot-tabs" role="tablist">
+            <button class="copilot-tab-btn active" data-tab="chat" role="tab">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              AI Assistant
+            </button>
+            <button class="copilot-tab-btn" data-tab="graph" role="tab">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><line x1="8.5" y1="7.5" x2="10" y2="15"/><line x1="15.5" y1="7.5" x2="14" y2="15"/><line x1="9" y1="6" x2="15" y2="6"/></svg>
+              Evidence Graph
+            </button>
+            <button class="copilot-tab-btn" data-tab="trace" role="tab">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Audit Trace
+            </button>
+            <button class="copilot-tab-btn" data-tab="export" role="tab">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              Export
+            </button>
+          </div>
+
+          <!-- Tab Content 1: AI Chat Q&A -->
+          <div class="copilot-tab-content active" id="chatTab">
+            
+            <!-- Preset Scenario Chips -->
+            <div class="copilot-presets-wrap">
+              <div class="presets-label-row">
+                <span class="presets-title">Evaluation Scenarios</span>
+                <span class="presets-hint">Click to run</span>
+              </div>
+              <div class="presets-chip-list" id="presetsContainer">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <!-- Chat Messages Conversation Stream -->
+            <div class="chat-thread-container" id="chatThread">
+              <!-- Messages rendered dynamically -->
+            </div>
+
+            <!-- Chat Input Area (paperminds.app style) -->
+            <div class="copilot-input-area">
+              <form id="chatForm" class="copilot-form">
+                <div class="copilot-input-box">
+                  <textarea 
+                    id="chatInput" 
+                    class="copilot-textarea" 
+                    placeholder="Ask any question about this paper..." 
+                    rows="2"
+                  ></textarea>
+                  <div class="copilot-input-bottom">
+                    <span class="copilot-model-tag">
+                      <span class="dot-online"></span>
+                      Local Hermetic AST Grounding
+                    </span>
+                    <button type="submit" id="sendBtn" class="copilot-send-btn" title="Send message">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Tab Content 2: Interactive SVG Evidence Graph -->
+          <div class="copilot-tab-content" id="graphTab">
+            <div class="graph-header-bar">
+              <div class="graph-legend-wrap">
+                <span class="legend-chip"><span class="legend-color color-query"></span> Query</span>
+                <span class="legend-chip"><span class="legend-color color-text"></span> Text</span>
+                <span class="legend-chip"><span class="legend-color color-table"></span> Table</span>
+                <span class="legend-chip"><span class="legend-color color-claim"></span> Claim</span>
+              </div>
+              <button id="resetGraphBtn" class="graph-action-btn">Reset</button>
+            </div>
+            <div class="graph-canvas-wrap" id="graphContainer">
+              <svg id="evidenceGraphSvg" class="graph-svg"></svg>
+            </div>
+            <div class="graph-details-card" id="graphNodeDetails">
+              <div class="details-placeholder">Click any graph node to inspect AST provenance, coordinates, and verifier score.</div>
+            </div>
+          </div>
+
+          <!-- Tab Content 3: Audit Trace Telemetry -->
+          <div class="copilot-tab-content" id="traceTab">
+            <div class="trace-header-card">
+              <div class="trace-title">Hermetic Telemetry & Provenance</div>
+              <div class="trace-hash">Trace Hash: <span id="traceHashSpan" class="font-mono">sha256:d8b2e1...</span></div>
+            </div>
+
+            <div class="telemetry-grid">
+              <div class="telemetry-card">
+                <span class="metric-title">Retrieval Latency</span>
+                <span class="metric-value" id="telemetryRetrieval">523 ms</span>
+                <span class="metric-desc">BM25 + all-MiniLM-L6-v2 (k=60)</span>
+              </div>
+              <div class="telemetry-card">
+                <span class="metric-title">Generation Latency</span>
+                <span class="metric-value" id="telemetryGen">26.59 s</span>
+                <span class="metric-desc">Local Ollama (qwen2.5:7b)</span>
+              </div>
+              <div class="telemetry-card">
+                <span class="metric-title">Verifier Latency</span>
+                <span class="metric-value" id="telemetryVerif">15 ms</span>
+                <span class="metric-desc">Lexical + Polarity + Numerical</span>
+              </div>
+              <div class="telemetry-card">
+                <span class="metric-title">Grounding Status</span>
+                <span class="metric-value highlight" id="telemetryStatus">VERIFIED</span>
+                <span class="metric-desc">87.6% Supported Category</span>
+              </div>
+            </div>
+
+            <div class="trace-json-card">
+              <div class="trace-json-title">Raw Evidence AST Trace</div>
+              <pre><code id="traceJsonBlock" class="json-code font-mono"></code></pre>
+            </div>
+          </div>
+
+          <!-- Tab Content 4: Export Reasoning Report -->
+          <div class="copilot-tab-content" id="exportTab">
+            <div class="export-header-row">
+              <div class="export-format-switch">
+                <button class="format-btn active" data-format="md">Markdown (.md)</button>
+                <button class="format-btn" data-format="latex">LaTeX (.tex)</button>
+              </div>
+              <div class="export-buttons-wrap">
+                <button id="copyReportBtn" class="export-btn">Copy</button>
+                <button id="downloadReportBtn" class="export-btn primary">Download</button>
+              </div>
+            </div>
+            <div class="report-preview-wrap">
+              <pre><code id="reportPreviewBlock" class="report-code font-mono"></code></pre>
+            </div>
+          </div>
+
+        </aside>
+
+      </div>
     </main>
+
   </div>
 
   <!-- Download Local Package Modal -->
-  <div class="modal-backdrop" id="packageModal">
-    <div class="modal-window">
-      <div class="modal-header">
-        <div class="modal-title-wrap">
-          <span class="modal-icon">📦</span>
-          <h2>Download ScholAR Review Package</h2>
+  <div class="modal-backdrop" id="packageModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-top">
+        <div class="modal-title-row">
+          <span class="modal-icon-badge">📦</span>
+          <div>
+            <h2 class="modal-heading">Download ScholAR Review Package</h2>
+            <p class="modal-sub">Strict-local offline execution for macOS, Linux, and Windows</p>
+          </div>
         </div>
-        <button class="modal-close" id="closePackageModal">&times;</button>
+        <button class="modal-close-btn" id="closePackageModal" aria-label="Close modal">&times;</button>
       </div>
 
-      <div class="modal-body">
-        <p class="modal-desc">
-          Run ScholAR locally on your macOS, Linux, or Windows machine without network calls or external cloud dependencies.
-        </p>
-
-        <div class="package-meta-card">
-          <div class="meta-row">
-            <span class="meta-key">Package Archive:</span>
-            <span class="meta-val font-mono">ScholAR_EACL2027_Demo_v1.0.0.zip</span>
+      <div class="modal-content">
+        <div class="package-meta-box">
+          <div class="pkg-row">
+            <span class="pkg-k">Package Archive:</span>
+            <span class="pkg-v font-mono">ScholAR_EACL2027_Demo_v1.0.0.zip</span>
           </div>
-          <div class="meta-row">
-            <span class="meta-key">Release Tag:</span>
-            <span class="meta-val font-mono badge-tag">eacl-demo-2027-v1.0.0</span>
+          <div class="pkg-row">
+            <span class="pkg-k">Release Tag:</span>
+            <span class="pkg-v font-mono tag-badge">eacl-demo-2027-v1.0.0</span>
           </div>
-          <div class="meta-row">
-            <span class="meta-key">SHA-256 Digest:</span>
-            <div class="hash-copy-wrap">
-              <code id="sha256Val" class="hash-code">ebb3a67286c35256ccb7ca78df66371953c4f4f8bc7b791a7b1ce4f83b0e825f</code>
-              <button id="copyHashBtn" class="copy-small-btn" title="Copy SHA-256">Copy</button>
+          <div class="pkg-row">
+            <span class="pkg-k">SHA-256 Digest:</span>
+            <div class="hash-group">
+              <code id="sha256Val" class="hash-text font-mono">ebb3a67286c35256ccb7ca78df66371953c4f4f8bc7b791a7b1ce4f83b0e825f</code>
+              <button id="copyHashBtn" class="hash-copy-btn" title="Copy Checksum">Copy</button>
             </div>
           </div>
         </div>
 
-        <div class="quickstart-box">
-          <div class="quickstart-header">Quickstart Commands (3 steps)</div>
-          <pre class="quickstart-code"><code># 1. Unzip and run universal CLI setup
+        <div class="quickstart-card">
+          <div class="quickstart-title">Quickstart CLI Commands (3 Steps)</div>
+          <pre class="quickstart-code font-mono"><code># 1. Unzip and run universal CLI setup
 unzip ScholAR_EACL2027_Demo_v1.0.0.zip
 cd ScholAR-EACL2027-Demo-v1.0.0
 python run_demo.py setup
@@ -345,12 +540,12 @@ python run_demo.py backend   # http://localhost:8000
 python run_demo.py frontend  # http://localhost:3000</code></pre>
         </div>
 
-        <div class="modal-actions">
-          <a href="https://github.com/prithvi-kaizen/ScholAR/releases/download/eacl-demo-2027-v1.0.0/ScholAR_EACL2027_Demo_v1.0.0.zip" class="modal-cta primary" download>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <div class="modal-action-row">
+          <a href="https://github.com/prithvi-kaizen/ScholAR/releases/download/eacl-demo-2027-v1.0.0/ScholAR_EACL2027_Demo_v1.0.0.zip" class="modal-btn primary" download>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Download ZIP Archive (Direct)
           </a>
-          <a href="https://github.com/prithvi-kaizen/ScholAR/releases/tag/eacl-demo-2027-v1.0.0" target="_blank" rel="noopener" class="modal-cta secondary">
+          <a href="https://github.com/prithvi-kaizen/ScholAR/releases/tag/eacl-demo-2027-v1.0.0" target="_blank" rel="noopener" class="modal-btn secondary">
             View on GitHub Releases
           </a>
         </div>
@@ -358,42 +553,42 @@ python run_demo.py frontend  # http://localhost:3000</code></pre>
     </div>
   </div>
 
-  <!-- API Settings Modal -->
-  <div class="modal-backdrop" id="apiModal">
-    <div class="modal-window">
-      <div class="modal-header">
-        <div class="modal-title-wrap">
-          <span class="modal-icon">⚙️</span>
-          <h2>API & Inference Settings</h2>
+  <!-- API / Inference Settings Modal -->
+  <div class="modal-backdrop" id="apiModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-top">
+        <div class="modal-title-row">
+          <span class="modal-icon-badge">⚙️</span>
+          <div>
+            <h2 class="modal-heading">Inference & Backend Settings</h2>
+            <p class="modal-sub">ScholAR runs client-side by default with pre-indexed Evidence ASTs</p>
+          </div>
         </div>
-        <button class="modal-close" id="closeApiModal">&times;</button>
+        <button class="modal-close-btn" id="closeApiModal" aria-label="Close modal">&times;</button>
       </div>
 
-      <div class="modal-body">
-        <p class="modal-desc">
-          ScholAR runs client-side by default with pre-indexed Evidence ASTs. You may optionally connect external LLM generation or your local ScholAR instance.
-        </p>
-
-        <div class="form-group">
-          <label for="backendUrlInput" class="form-label">Local Backend URL (Optional)</label>
+      <div class="modal-content">
+        <div class="form-item">
+          <label for="backendUrlInput" class="form-label">Local ScholAR Backend URL (Optional)</label>
           <input type="text" id="backendUrlInput" class="form-input" placeholder="http://localhost:8000" value="http://localhost:8000">
-          <span class="form-hint">Connect to your locally running ScholAR FastAPI backend.</span>
+          <span class="form-hint">Connect to a live FastAPI instance running locally.</span>
         </div>
 
-        <div class="form-group">
+        <div class="form-item">
           <label for="apiKeyInput" class="form-label">Google Gemini API Key (Optional)</label>
           <input type="password" id="apiKeyInput" class="form-input" placeholder="AIzaSy...">
-          <span class="form-hint">Stored strictly in local session memory. Never sent to any third party.</span>
+          <span class="form-hint">Stored strictly in local browser session storage. Never shared.</span>
         </div>
 
-        <div class="modal-actions">
-          <button id="saveApiSettingsBtn" class="modal-cta primary">Save & Apply</button>
-          <button id="resetApiSettingsBtn" class="modal-cta secondary">Reset to Sandbox Mode</button>
+        <div class="modal-action-row">
+          <button id="saveApiSettingsBtn" class="modal-btn primary">Save & Apply</button>
+          <button id="resetApiSettingsBtn" class="modal-btn secondary">Reset to Sandbox</button>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- JavaScript Engine -->
   <script src="app.js"></script>
 </body>
 </html>
